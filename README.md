@@ -66,6 +66,8 @@ npm run plugin:update -- --all     # Update all plugins
 
 **Zero-config plugin system** - add a plugin and restart, no core code changes needed.
 
+See [docs/THEME.md](docs/THEME.md) for theme system documentation (CSS variables, Tailwind classes, styling guidelines).
+
 ```bash
 # Add plugin, restart, done
 git submodule add https://github.com/org/void-plugin-example.git plugins/void-plugin-example
