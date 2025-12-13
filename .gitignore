@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+client/dist/
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/*.log
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Plugins - ignore symlinks (development mode)
+# Submodules will be tracked via .gitmodules
+plugins/*
+!plugins/README.md
+!plugins/.gitkeep
+
+# Config - track structure but not instance-specific settings
+config/*.json
+!config/.gitkeep
+
+.playwright-mcp
