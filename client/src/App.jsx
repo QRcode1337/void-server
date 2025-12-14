@@ -33,6 +33,7 @@ function App() {
         <Route path="logs" element={<LogsPage />} />
         <Route path="plugins" element={<PluginManager />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings/:tab" element={<SettingsPage />} />
 
         {/* Dynamic plugin routes - all handled by PluginViewer */}
         {pluginsLoaded && plugins.map(plugin => (

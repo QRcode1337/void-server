@@ -11,13 +11,15 @@ const AI_PROVIDERS_CONFIG_PATH = path.join(CONFIG_DIR, 'ai-providers.json');
 
 // Default configuration
 const DEFAULT_CONFIG = {
-  activeProvider: 'claude',
+  activeProvider: 'lmstudio',
   providers: {
     claude: {
       name: 'Claude',
       type: 'cli',
       enabled: true,
       command: 'claude',
+      description: 'Use the Claude CLI for local Anthropic-powered responses.',
+      link: 'https://www.anthropic.com/claude',
       models: {
         light: 'haiku',
         medium: 'sonnet',
@@ -31,6 +33,8 @@ const DEFAULT_CONFIG = {
       enabled: false,
       endpoint: 'https://api.openai.com/v1',
       apiKey: '',
+      description: 'Connect to the OpenAI API using your platform API key.',
+      link: 'https://platform.openai.com/docs/overview',
       models: {
         light: 'gpt-4o-mini',
         medium: 'gpt-4o',
@@ -48,6 +52,8 @@ const DEFAULT_CONFIG = {
       enabled: false,
       endpoint: 'https://api.anthropic.com/v1',
       apiKey: '',
+      description: 'Call Anthropic\'s Claude models directly via the API.',
+      link: 'https://docs.anthropic.com/en/api',
       models: {
         light: 'claude-haiku-4-20250514',
         medium: 'claude-sonnet-4-20250514',
@@ -59,12 +65,61 @@ const DEFAULT_CONFIG = {
       },
       timeout: 120000
     },
+    gemini: {
+      name: 'Gemini API',
+      type: 'api',
+      enabled: false,
+      endpoint: 'https://generativelanguage.googleapis.com/v1beta',
+      apiKey: '',
+      description: 'Use Google\'s Gemini API with an AI Studio or Cloud key.',
+      link: 'https://ai.google.dev/gemini-api',
+      models: {
+        light: 'gemini-1.5-flash',
+        medium: 'gemini-1.5-pro',
+        deep: 'gemini-1.5-pro'
+      },
+      settings: {
+        temperature: 0.7,
+        max_tokens: 2048
+      },
+      timeout: 120000
+    },
+    'gemini-cli': {
+      name: 'Gemini CLI',
+      type: 'cli',
+      enabled: false,
+      command: 'gemini',
+      description: 'Run prompts through the local `gemini` command-line client.',
+      link: 'https://ai.google.dev/gemini-api/docs/get-started',
+      models: {
+        light: 'gemini-1.5-flash',
+        medium: 'gemini-1.5-pro',
+        deep: 'gemini-1.5-pro'
+      },
+      timeout: 300000
+    },
+    'codex-cli': {
+      name: 'Codex CLI',
+      type: 'cli',
+      enabled: false,
+      command: 'codex',
+      description: 'Send prompts to a local `codex` CLI binary or script.',
+      link: 'https://openai.com/codex/',
+      models: {
+        light: 'default',
+        medium: 'default',
+        deep: 'default'
+      },
+      timeout: 300000
+    },
     lmstudio: {
       name: 'LM Studio',
       type: 'api',
-      enabled: false,
+      enabled: true,
       endpoint: 'http://localhost:1234/v1',
       apiKey: 'lm-studio',
+      description: 'Connect to the LM Studio local server. Download the desktop app and enable the local API server.',
+      link: 'https://lmstudio.ai/',
       models: {
         light: 'lmstudio-community/Llama-3.2-3B-Instruct-GGUF',
         medium: 'lmstudio-community/Qwen2.5-14B-Instruct-GGUF',
@@ -97,14 +152,30 @@ function loadConfig() {
     config = { ...DEFAULT_CONFIG };
   } else {
     const saved = JSON.parse(fs.readFileSync(AI_PROVIDERS_CONFIG_PATH, 'utf8'));
+    const savedProviders = saved.providers || {};
+    const mergedProviders = {};
+
+    const providerKeys = new Set([
+      ...Object.keys(DEFAULT_CONFIG.providers),
+      ...Object.keys(savedProviders)
+    ]);
+
+    for (const key of providerKeys) {
+      const defaultProvider = DEFAULT_CONFIG.providers[key] || {};
+      const savedProvider = savedProviders[key] || {};
+
+      mergedProviders[key] = {
+        ...defaultProvider,
+        ...savedProvider,
+        models: { ...defaultProvider.models, ...(savedProvider.models || {}) },
+        settings: { ...defaultProvider.settings, ...(savedProvider.settings || {}) }
+      };
+    }
     // Merge with defaults to ensure new providers are available
     config = {
       ...DEFAULT_CONFIG,
       ...saved,
-      providers: {
-        ...DEFAULT_CONFIG.providers,
-        ...saved.providers
-      }
+      providers: mergedProviders
     };
   }
 
@@ -239,6 +310,15 @@ function registerProvider(providerKey) {
       break;
     case 'anthropic':
       ProviderClass = require('./providers/anthropic-provider');
+      break;
+    case 'gemini':
+      ProviderClass = require('./providers/gemini-provider');
+      break;
+    case 'gemini-cli':
+      ProviderClass = require('./providers/gemini-cli-provider');
+      break;
+    case 'codex-cli':
+      ProviderClass = require('./providers/codex-cli-provider');
       break;
     default:
       console.log(`⚠️ Unknown provider type: ${providerKey}`);
