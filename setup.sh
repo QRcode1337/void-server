@@ -120,6 +120,27 @@ else
   print_success "Client dependencies installed"
 fi
 
+# Install plugin dependencies
+PLUGIN_COUNT=0
+for plugin_dir in plugins/*/; do
+  if [[ -f "${plugin_dir}package.json" ]]; then
+    plugin_name=$(basename "$plugin_dir")
+    if [[ -d "${plugin_dir}node_modules" ]] && [[ "${plugin_dir}package.json" -ot "${plugin_dir}node_modules" ]]; then
+      print_skip "Plugin $plugin_name dependencies installed"
+    else
+      print_step "Installing $plugin_name dependencies..."
+      cd "$plugin_dir"
+      npm install --silent
+      cd "$SCRIPT_DIR"
+      print_success "Plugin $plugin_name dependencies installed"
+    fi
+    ((PLUGIN_COUNT++))
+  fi
+done
+if [[ $PLUGIN_COUNT -eq 0 ]]; then
+  print_skip "No plugins with dependencies"
+fi
+
 # Create necessary directories
 for dir in logs config plugins; do
   if [[ ! -d "$dir" ]]; then

@@ -75,7 +75,18 @@ npm install
 print_step "Updating client dependencies..."
 cd client
 npm install
-cd ..
+cd "$SCRIPT_DIR"
+
+# Update plugin dependencies
+for plugin_dir in plugins/*/; do
+  if [[ -f "${plugin_dir}package.json" ]]; then
+    plugin_name=$(basename "$plugin_dir")
+    print_step "Updating $plugin_name dependencies..."
+    cd "$plugin_dir"
+    npm install
+    cd "$SCRIPT_DIR"
+  fi
+done
 
 # Restart services
 print_step "Restarting services..."
