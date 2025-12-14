@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.4.1] - 2025-12-14
+
+Plugin dependency isolation and wallet bug fix.
+
+### Bug Fixes
+
+- **Wallet Plugin** - Fixed `bs58.encode is not a function` error caused by bs58 v6 CJS export changes
+
+### Improvements
+
+#### Plugin Dependency Isolation
+- **Per-plugin node_modules** - Each plugin now manages its own dependencies independently
+- **setup.sh** - Now installs dependencies for each plugin with a `package.json`
+- **update.sh** - Now updates plugin dependencies when running updates
+- **Cleaner parent package.json** - Removed wallet-specific dependencies (`@solana/*`, `bip39`, `ed25519-hd-key`, `tweetnacl`, `bs58`)
+
+### Migration Notes
+
+- Run `./setup.sh` to install plugin dependencies (automatic for new installs)
+- Existing installs: run `npm install` in each plugin directory, or re-run `./setup.sh`
+
+---
+
 ## [0.4.0] - 2025-12-14
 
 A major release introducing the Neo4j-powered memory system, chat interface, and prompt management.
