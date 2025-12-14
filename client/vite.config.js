@@ -48,6 +48,11 @@ export default defineConfig({
       '/socket.io': {
         target: 'http://localhost:4401',
         ws: true
+      },
+      // Plugin routes (e.g., /wallet) should hit the server
+      '/wallet': {
+        target: 'http://localhost:4401',
+        changeOrigin: true
       }
     }
   },
