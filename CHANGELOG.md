@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.2] - 2025-12-14
+
+Documentation release.
+
+### Documentation
+
+- **CHAT.md** - Comprehensive guide for setting up the local chat and memory system:
+  - LM Studio installation and model recommendations
+  - Neo4j setup (Desktop, Homebrew, Docker)
+  - Void Server configuration
+  - Creating custom egregore personas
+  - Memory categories and architecture overview
+  - Troubleshooting guide
+
+---
+
 ## [0.4.1] - 2025-12-14
 
 Plugin dependency isolation and wallet bug fix.
