@@ -103,7 +103,11 @@ docker run -d \
 
 ### Verify Neo4j is Running
 
-Open [http://localhost:7474](http://localhost:7474) in your browser. You should see the Neo4j Browser interface.
+Open the Neo4j Browser in your web browser:
+- **Docker installation:** [http://localhost:4421](http://localhost:4421)
+- **Native installation:** [http://localhost:7474](http://localhost:7474)
+
+You should see the Neo4j Browser interface.
 
 ---
 

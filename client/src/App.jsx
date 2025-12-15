@@ -43,6 +43,7 @@ function App() {
         <Route path="prompts/templates" element={<TemplatesPage />} />
         <Route path="prompts/variables" element={<VariablesPage />} />
         <Route path="memories" element={<MemoriesPage />} />
+        <Route path="memories/:tab" element={<MemoriesPage />} />
 
         {/* Dynamic plugin routes - all handled by PluginViewer */}
         {pluginsLoaded && plugins.map(plugin => (

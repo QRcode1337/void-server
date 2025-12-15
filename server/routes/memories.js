@@ -9,6 +9,7 @@ const router = express.Router();
 const memoryService = require('../services/memory-service');
 const memoryQueryService = require('../services/memory-query-service');
 const { getEmbeddingService } = require('../services/embedding-service');
+const { getNeo4jService } = require('../services/neo4j-service');
 const lmstudioCli = require('../services/lmstudio-cli');
 
 // GET /api/memories - List all memories with stats
@@ -121,6 +122,33 @@ router.get('/status', async (req, res) => {
   res.json({
     success: true,
     neo4j: neo4jStatus
+  });
+});
+
+// GET /api/memories/config - Get Neo4j configuration
+router.get('/config', (req, res) => {
+  console.log(`⚙️ GET /api/memories/config`);
+
+  const neo4j = getNeo4jService();
+  const config = neo4j.getConfig();
+
+  res.json({
+    success: true,
+    config
+  });
+});
+
+// PUT /api/memories/config - Update Neo4j configuration
+router.put('/config', async (req, res) => {
+  console.log(`⚙️ PUT /api/memories/config`);
+
+  const neo4j = getNeo4jService();
+  const result = await neo4j.updateConfig(req.body);
+
+  res.json({
+    success: result.connected,
+    message: result.connected ? 'Connected successfully' : result.error,
+    config: neo4j.getConfig()
   });
 });
 

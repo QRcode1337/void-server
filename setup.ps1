@@ -92,8 +92,8 @@ function Start-DockerSetup {
     Write-Host ""
     Write-Success "Void Server is running with Docker!"
     Write-Host ""
-    Write-Host "  App:     http://localhost:4401"
-    Write-Host "  Neo4j:   http://localhost:7474"
+    Write-Host "  App:     http://localhost:4420"
+    Write-Host "  Neo4j:   http://localhost:4421"
     Write-Host ""
     Write-Host "Commands:" -ForegroundColor Cyan
     Write-Host "  docker compose logs -f    View logs"

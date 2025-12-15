@@ -20,9 +20,15 @@ cd void-server
 docker-compose up -d
 ```
 
-That's it! Access the app at **http://localhost:4401**
+That's it! Access the app at **http://localhost:4420**
 
-Docker Compose starts both Void Server and Neo4j (for the memory system) with persistent storage.
+Docker Compose starts both Void Server and Neo4j (for the memory system) with persistent storage. Docker uses different ports to avoid conflicts with native installations:
+
+| Service | Docker Port | Native Port |
+|---------|-------------|-------------|
+| App | 4420 | 4401 |
+| Neo4j Browser | 4421 | 7474 |
+| Neo4j Bolt | 4422 | 7687 |
 
 **Manage Docker services:**
 ```bash
@@ -113,7 +119,7 @@ Access your Void Server from your phone or anywhere using [Tailscale](https://ta
 
 1. Install Tailscale on your server and phone
 2. Sign in with the same account
-3. Access via Tailscale IP: `http://100.x.y.z:4401`
+3. Access via Tailscale IP: `http://100.x.y.z:4420` (Docker) or `http://100.x.y.z:4401` (native)
 
 See [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md) for detailed setup instructions.
 

@@ -6,13 +6,56 @@
  */
 
 const neo4j = require('neo4j-driver');
+const fs = require('fs');
+const path = require('path');
+
+const CONFIG_DIR = path.resolve(__dirname, '../../config');
+const NEO4J_CONFIG_PATH = path.join(CONFIG_DIR, 'neo4j.json');
+
+const DEFAULT_CONFIG = {
+  uri: 'bolt://localhost:7687',
+  user: 'neo4j',
+  password: 'clawedcode',
+  database: 'neo4j'
+};
+
+/**
+ * Load Neo4j configuration from file
+ */
+function loadConfig() {
+  if (!fs.existsSync(CONFIG_DIR)) {
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+
+  if (!fs.existsSync(NEO4J_CONFIG_PATH)) {
+    fs.writeFileSync(NEO4J_CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
+    return { ...DEFAULT_CONFIG };
+  }
+
+  const saved = JSON.parse(fs.readFileSync(NEO4J_CONFIG_PATH, 'utf8'));
+  return { ...DEFAULT_CONFIG, ...saved };
+}
+
+/**
+ * Save Neo4j configuration to file
+ */
+function saveConfig(config) {
+  if (!fs.existsSync(CONFIG_DIR)) {
+    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+  fs.writeFileSync(NEO4J_CONFIG_PATH, JSON.stringify(config, null, 2));
+}
 
 class Neo4jService {
   constructor(options = {}) {
-    this.uri = options.uri || process.env.NEO4J_URI || 'bolt://localhost:7687';
-    this.user = options.user || process.env.NEO4J_USER || 'neo4j';
-    this.password = options.password || process.env.NEO4J_PASSWORD || 'clawedcode';
-    this.database = options.database || process.env.NEO4J_DATABASE || 'neo4j';
+    // Load config from file first
+    const fileConfig = loadConfig();
+
+    // Priority: options > env vars > file config > defaults
+    this.uri = options.uri || process.env.NEO4J_URI || fileConfig.uri;
+    this.user = options.user || process.env.NEO4J_USER || fileConfig.user;
+    this.password = options.password || process.env.NEO4J_PASSWORD || fileConfig.password;
+    this.database = options.database || process.env.NEO4J_DATABASE || fileConfig.database;
 
     this.driver = null;
     this.connected = false;
@@ -23,6 +66,48 @@ class Neo4jService {
     if (process.env.NEO4J_URI) {
       console.log(`🔧 Neo4j URI from environment: ${this.uri}`);
     }
+  }
+
+  /**
+   * Get current configuration (without password)
+   */
+  getConfig() {
+    return {
+      uri: this.uri,
+      user: this.user,
+      database: this.database,
+      hasPassword: !!this.password
+    };
+  }
+
+  /**
+   * Update configuration and reconnect
+   */
+  async updateConfig(newConfig) {
+    // Update instance properties
+    if (newConfig.uri) this.uri = newConfig.uri;
+    if (newConfig.user) this.user = newConfig.user;
+    if (newConfig.password && newConfig.password !== '••••••••') {
+      this.password = newConfig.password;
+    }
+    if (newConfig.database) this.database = newConfig.database;
+
+    // Save to file (don't save env var overrides)
+    if (!process.env.NEO4J_URI) {
+      const configToSave = {
+        uri: this.uri,
+        user: this.user,
+        password: this.password,
+        database: this.database
+      };
+      saveConfig(configToSave);
+    }
+
+    // Disconnect existing connection
+    await this.disconnect();
+
+    // Try to reconnect with new settings
+    return await this.tryConnect();
   }
 
   /**
@@ -198,9 +283,19 @@ class Neo4jService {
   async close() {
     if (this.driver) {
       await this.driver.close();
+      this.driver = null;
       this.connected = false;
       console.log('🧠 Disconnected from Neo4j');
     }
+  }
+
+  /**
+   * Disconnect and reset for reconnection with new settings
+   */
+  async disconnect() {
+    await this.close();
+    this.connectionError = null;
+    this.lastErrorCode = null;
   }
 
   /**

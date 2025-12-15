@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Brain,
   Plus,
@@ -17,7 +18,10 @@ import {
   Share2,
   Check,
   Info,
-  Users
+  Users,
+  Settings,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Canvas } from '@react-three/fiber';
@@ -45,7 +49,8 @@ const CATEGORY_COLORS = {
 const TABS = [
   { id: 'memories', label: 'Memories', icon: List },
   { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-  { id: 'visualization', label: 'Visualization', icon: Share2 }
+  { id: 'visualization', label: 'Visualization', icon: Share2 },
+  { id: 'settings', label: 'Settings', icon: Settings }
 ];
 
 // ============================================
@@ -1830,11 +1835,250 @@ function VisualizationTab() {
 }
 
 // ============================================
+// SETTINGS TAB COMPONENT
+// ============================================
+function SettingsTab({ neo4jStatus, fetchStatus }) {
+  const [config, setConfig] = useState({
+    uri: '',
+    user: '',
+    password: '',
+    database: ''
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    loadConfig();
+  }, []);
+
+  const loadConfig = async () => {
+    setLoading(true);
+    const response = await fetch('/api/memories/config');
+    const data = await response.json();
+    if (data.success) {
+      setConfig({
+        uri: data.config.uri || '',
+        user: data.config.user || '',
+        password: data.config.hasPassword ? '••••••••' : '',
+        database: data.config.database || ''
+      });
+    }
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const response = await fetch('/api/memories/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    const data = await response.json();
+    setSaving(false);
+
+    if (data.success) {
+      toast.success('Configuration saved and connected');
+      fetchStatus();
+    } else {
+      toast.error(data.message || 'Failed to connect with new settings');
+    }
+  };
+
+  const handleTest = async () => {
+    setTesting(true);
+    const response = await fetch('/api/memories/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    });
+    const data = await response.json();
+    setTesting(false);
+
+    if (data.success) {
+      toast.success('Connection successful!');
+      fetchStatus();
+    } else {
+      toast.error(data.message || 'Connection failed');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="card text-center py-8">
+        <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-primary" />
+        <p className="text-text-secondary">Loading configuration...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Neo4j Connection Settings */}
+      <div className="card">
+        <div className="flex items-center gap-3 mb-4">
+          <Database size={20} className="text-primary" />
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">Neo4j Connection</h2>
+            <p className="text-sm text-text-secondary">Configure your Neo4j database connection</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1">
+              Connection URI
+            </label>
+            <input
+              type="text"
+              value={config.uri}
+              onChange={(e) => setConfig({ ...config, uri: e.target.value })}
+              className="form-input w-full font-mono text-sm"
+              placeholder="bolt://localhost:7687"
+            />
+            <p className="text-xs text-text-tertiary mt-1">
+              Use <code className="bg-border/50 px-1 rounded">bolt://neo4j:7687</code> for Docker,
+              <code className="bg-border/50 px-1 rounded ml-1">bolt://localhost:7687</code> for local
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                Username
+              </label>
+              <input
+                type="text"
+                value={config.user}
+                onChange={(e) => setConfig({ ...config, user: e.target.value })}
+                className="form-input w-full"
+                placeholder="neo4j"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={config.password}
+                  onChange={(e) => setConfig({ ...config, password: e.target.value })}
+                  className="form-input w-full pr-10"
+                  placeholder="Enter password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-text-tertiary hover:text-text-secondary transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-1">
+              Database Name
+            </label>
+            <input
+              type="text"
+              value={config.database}
+              onChange={(e) => setConfig({ ...config, database: e.target.value })}
+              className="form-input w-full"
+              placeholder="neo4j"
+            />
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-border">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${neo4jStatus.connected ? 'bg-success' : 'bg-error'}`} />
+              <span className="text-sm text-text-secondary">
+                {neo4jStatus.connected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleTest}
+                disabled={testing || saving}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                {testing ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Testing...
+                  </>
+                ) : (
+                  <>
+                    <Check size={16} />
+                    Test Connection
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || testing}
+                className="btn btn-primary flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    Save
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Environment Variable Info */}
+      <div className="card bg-info/10 border-info/20">
+        <div className="flex items-start gap-3">
+          <Info size={20} className="text-info flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-text-primary mb-1">Environment Variable Override</p>
+            <p className="text-sm text-text-secondary">
+              If the environment variable <code className="bg-border/50 px-1 rounded">NEO4J_URI</code> is set,
+              it will override the saved configuration. This is useful for Docker deployments where the
+              connection details are injected via environment.
+            </p>
+            <div className="mt-2 text-xs font-mono text-text-tertiary">
+              <p>NEO4J_URI=bolt://neo4j:7687</p>
+              <p>NEO4J_USER=neo4j</p>
+              <p>NEO4J_PASSWORD=yourpassword</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // MAIN MEMORIES PAGE
 // ============================================
 function MemoriesPage() {
-  const [activeTab, setActiveTab] = useState('memories');
+  const { tab } = useParams();
+  const navigate = useNavigate();
+  const activeTab = tab || 'memories';
   const [neo4jStatus, setNeo4jStatus] = useState({ connected: null });
+
+  // Handle tab change
+  const setActiveTab = useCallback((newTab) => {
+    if (newTab === 'memories') {
+      navigate('/memories');
+    } else {
+      navigate(`/memories/${newTab}`);
+    }
+  }, [navigate]);
 
   // Fetch Neo4j status
   const fetchStatus = useCallback(async () => {
@@ -1851,7 +2095,7 @@ function MemoriesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Status */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Brain size={28} className="text-primary" />
@@ -1862,19 +2106,44 @@ function MemoriesPage() {
             </p>
           </div>
         </div>
+
+        {/* Compact Neo4j Status */}
+        {neo4jStatus.connected === true && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
+            <div className="w-2 h-2 rounded-full bg-success" />
+            <span className="text-sm text-success font-medium">Connected</span>
+            <span className="text-xs text-text-tertiary hidden sm:inline">
+              {neo4jStatus.uri}
+            </span>
+          </div>
+        )}
+
+        {neo4jStatus.connected === false && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-error/10 border border-error/20">
+            <div className="w-2 h-2 rounded-full bg-error" />
+            <span className="text-sm text-error font-medium">Disconnected</span>
+          </div>
+        )}
+
+        {neo4jStatus.connected === null && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-border/50">
+            <RefreshCw size={12} className="animate-spin text-text-tertiary" />
+            <span className="text-sm text-text-tertiary">Connecting...</span>
+          </div>
+        )}
       </div>
 
-      {/* Neo4j Status Banner */}
-      {neo4jStatus.connected === false && (
+      {/* Error Details Banner (only when disconnected) */}
+      {neo4jStatus.connected === false && neo4jStatus.error && (
         <div className="card bg-error/10 border-error/20">
           <div className="flex items-start gap-3">
             <AlertTriangle size={20} className="text-error mt-0.5" />
             <div className="flex-1">
               <p className="font-medium text-error">
-                {neo4jStatus.error?.message || 'Neo4j Not Connected'}
+                {neo4jStatus.error?.message || 'Connection Failed'}
               </p>
               <p className="text-sm text-text-secondary">
-                {neo4jStatus.error?.details || `Memory features require Neo4j. Make sure Neo4j is running on ${neo4jStatus.uri || 'bolt://localhost:7687'}.`}
+                {neo4jStatus.error?.details || `Make sure Neo4j is running on ${neo4jStatus.uri || 'bolt://localhost:7687'}.`}
               </p>
               {neo4jStatus.error?.help && (
                 <ul className="mt-2 text-xs text-text-tertiary space-y-1">
@@ -1887,18 +2156,6 @@ function MemoriesPage() {
                 </ul>
               )}
             </div>
-          </div>
-        </div>
-      )}
-
-      {neo4jStatus.connected === true && (
-        <div className="card bg-success/10 border-success/20 flex items-center gap-3">
-          <Database size={20} className="text-success" />
-          <div className="flex-1">
-            <p className="font-medium text-success">Neo4j Connected</p>
-            <p className="text-sm text-text-secondary">
-              Connected to {neo4jStatus.uri} | Database: {neo4jStatus.database}
-            </p>
           </div>
         </div>
       )}
@@ -1927,6 +2184,7 @@ function MemoriesPage() {
       {activeTab === 'memories' && <MemoriesTab neo4jStatus={neo4jStatus} fetchStatus={fetchStatus} />}
       {activeTab === 'maintenance' && <MaintenanceTab />}
       {activeTab === 'visualization' && <VisualizationTab />}
+      {activeTab === 'settings' && <SettingsTab neo4jStatus={neo4jStatus} fetchStatus={fetchStatus} />}
     </div>
   );
 }

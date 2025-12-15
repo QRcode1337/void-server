@@ -23,6 +23,10 @@ Memories are stored as nodes in a Neo4j graph database, enabling:
 | [Neo4j](https://neo4j.com/download/) | Graph database for memory storage |
 | LM Studio (optional) | Embedding model for semantic search |
 
+**Neo4j Browser Access:**
+- Docker: [http://localhost:4421](http://localhost:4421)
+- Native: [http://localhost:7474](http://localhost:7474)
+
 See [CHAT.md](CHAT.md) for Neo4j installation instructions.
 
 ---
@@ -243,6 +247,10 @@ LM_STUDIO_URL=http://localhost:1234/v1
 
 3. Test connection manually:
    ```bash
+   # Docker installation
+   curl http://localhost:4421
+
+   # Native installation
    curl http://localhost:7474
    ```
 

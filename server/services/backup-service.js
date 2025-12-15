@@ -449,6 +449,14 @@ class BackupService extends EventEmitter {
       };
     }
 
+    // Helper to convert Neo4j integers to plain numbers
+    const toNumber = (val) => {
+      if (val === null || val === undefined) return 0;
+      if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
+      if (typeof val === 'object' && 'low' in val) return val.low;
+      return Number(val) || 0;
+    };
+
     const memoryCount = await neo4j.read('MATCH (m:Memory) RETURN count(m) as count').catch(() => [{ count: 0 }]);
     const userCount = await neo4j.read('MATCH (u:User) RETURN count(u) as count').catch(() => [{ count: 0 }]);
     const relationshipCount = await neo4j.read('MATCH ()-[r]-() RETURN count(r) as count').catch(() => [{ count: 0 }]);
@@ -459,9 +467,9 @@ class BackupService extends EventEmitter {
       success: true,
       healthy: true,
       stats: {
-        memories: memoryCount[0]?.count?.low || memoryCount[0]?.count || 0,
-        users: userCount[0]?.count?.low || userCount[0]?.count || 0,
-        relationships: relationshipCount[0]?.count?.low || relationshipCount[0]?.count || 0
+        memories: toNumber(memoryCount[0]?.count),
+        users: toNumber(userCount[0]?.count),
+        relationships: toNumber(relationshipCount[0]?.count)
       }
     };
   }
