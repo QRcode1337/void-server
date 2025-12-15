@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.6.2] - 2025-12-15
+
+Startup script improvements with auto-browser launch.
+
+### New Features
+
+- **docker-start.sh** - New dedicated Docker startup script
+  - Pulls latest image from ghcr.io by default
+  - Use `--build` flag to build from local source
+  - Waits for health check before opening browser
+  - Auto-opens http://localhost:4420 when ready
+
+### Improvements
+
+- **run.sh** - Auto-opens browser after server is healthy
+  - Docker mode: waits for container health check, opens :4420
+  - Native mode: waits for /health endpoint, opens :4401
+  - Cross-platform browser support (macOS `open`, Linux `xdg-open`)
+
+---
+
 ## [0.6.1] - 2025-12-15
 
 Post-release improvements to Docker deployment, Neo4j configuration, and dashboard.
