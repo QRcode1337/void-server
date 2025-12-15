@@ -61,6 +61,7 @@ module.exports = (app, config = {}) => {
 {
   "name": "void-plugin-example",
   "version": "1.0.0",
+  "minServerVersion": "0.7.0",
   "description": "Example plugin",
   "defaultMountPath": "/example",
   "nav": {
@@ -70,6 +71,9 @@ module.exports = (app, config = {}) => {
   }
 }
 ```
+
+**Manifest fields:**
+- `minServerVersion` - Minimum void-server version required (semver, e.g., "0.7.0")
 
 **Nav options:**
 - `section: null` - Standalone nav item (top level)

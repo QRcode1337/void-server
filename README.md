@@ -216,6 +216,7 @@ Plugins should include a `manifest.json`:
 {
   "name": "void-plugin-example",
   "version": "1.0.0",
+  "minServerVersion": "0.7.0",
   "description": "Example plugin",
   "defaultMountPath": "/example",
   "nav": {
@@ -225,6 +226,8 @@ Plugins should include a `manifest.json`:
   }
 }
 ```
+
+See [plugins/README.md](plugins/README.md) for full manifest documentation.
 
 ### Development Mode (Symlinks)
 

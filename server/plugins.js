@@ -333,6 +333,14 @@ const downloadFile = (url, destPath) => {
     encoding: 'utf8'
   });
 
+  if (result.error) {
+    return { success: false, error: `Spawn error: ${result.error.message}` };
+  }
+
+  if (result.signal) {
+    return { success: false, error: `Process killed by signal: ${result.signal}` };
+  }
+
   if (result.status !== 0) {
     return { success: false, error: result.stderr || `curl exited with status ${result.status}` };
   }
