@@ -195,19 +195,21 @@ class BackupService extends EventEmitter {
     const data = {
       metadata: {
         exportedAt: new Date().toISOString(),
-        version: '1.0'
+        version: '1.1'
       },
       users: [],
       memories: [],
       interactions: [],
-      conversations: []
+      conversations: [],
+      mentions: [],
+      relations: []
     };
 
     const userResults = await neo4j.read('MATCH (u:User) RETURN u ORDER BY u.handle').catch(() => []);
-    data.users = userResults.map(r => r.u.properties);
+    data.users = userResults.map(r => this.normalizeProperties(r.u.properties));
 
     const memoryResults = await neo4j.read('MATCH (m:Memory) RETURN m ORDER BY m.timestamp DESC').catch(() => []);
-    data.memories = memoryResults.map(r => r.m.properties);
+    data.memories = memoryResults.map(r => this.normalizeProperties(r.m.properties));
 
     const interactionResults = await neo4j.read(`
       MATCH (u:User)-[r:INTERACTED_WITH]->(s:User)
@@ -216,11 +218,33 @@ class BackupService extends EventEmitter {
     data.interactions = interactionResults.map(r => ({
       from: r.user,
       to: r.system,
-      ...r.relationship
+      ...this.normalizeProperties(r.relationship)
     }));
 
     const conversationResults = await neo4j.read('MATCH (c:Conversation) RETURN c').catch(() => []);
-    data.conversations = conversationResults.map(r => r.c.properties);
+    data.conversations = conversationResults.map(r => this.normalizeProperties(r.c.properties));
+
+    // Export MENTIONS relationships (Memory -> User)
+    const mentionResults = await neo4j.read(`
+      MATCH (m:Memory)-[r:MENTIONS]->(u:User)
+      RETURN m.id as memoryId, u.handle as userHandle, properties(r) as props
+    `).catch(() => []);
+    data.mentions = mentionResults.map(r => ({
+      memoryId: r.memoryId,
+      userHandle: r.userHandle,
+      ...this.normalizeProperties(r.props || {})
+    }));
+
+    // Export RELATES_TO relationships (Memory -> Memory)
+    const relationResults = await neo4j.read(`
+      MATCH (m1:Memory)-[r:RELATES_TO]->(m2:Memory)
+      RETURN m1.id as fromId, m2.id as toId, properties(r) as props
+    `).catch(() => []);
+    data.relations = relationResults.map(r => ({
+      fromId: r.fromId,
+      toId: r.toId,
+      ...this.normalizeProperties(r.props || {})
+    }));
 
     await neo4j.close();
 
@@ -242,12 +266,14 @@ class BackupService extends EventEmitter {
         users: data.users.length,
         memories: data.memories.length,
         interactions: data.interactions.length,
-        conversations: data.conversations.length
+        conversations: data.conversations.length,
+        mentions: data.mentions.length,
+        relations: data.relations.length
       }
     };
 
     this.log(`Backup complete: ${backupFileName} (${this.formatBytes(stats.size)})`);
-    this.log(`   Users: ${data.users.length}, Memories: ${data.memories.length}, Interactions: ${data.interactions.length}`);
+    this.log(`   Users: ${data.users.length}, Memories: ${data.memories.length}, Mentions: ${data.mentions.length}, Relations: ${data.relations.length}`);
 
     await this.runMaintenance();
 
@@ -257,6 +283,208 @@ class BackupService extends EventEmitter {
     broadcast('backup:completed', result);
 
     return result;
+  }
+
+  async restoreBackup(backupData, options = {}) {
+    await this.initialize();
+
+    const { clearExisting = false } = options;
+    this.log('Starting database restore...');
+    broadcast('restore:started', { timestamp: new Date().toISOString() });
+
+    const startTime = Date.now();
+    const result = {
+      success: false,
+      duration: 0,
+      stats: {
+        users: 0,
+        memories: 0,
+        interactions: 0,
+        conversations: 0,
+        mentions: 0,
+        relations: 0
+      },
+      errors: []
+    };
+
+    const neo4j = new Neo4jService();
+    const isAvailable = await neo4j.isAvailable().catch(() => false);
+    if (!isAvailable) {
+      result.errors.push('Neo4j is not available');
+      result.duration = Date.now() - startTime;
+      this.log(`Restore failed: Neo4j not available`, 'error');
+      broadcast('restore:completed', result);
+      return result;
+    }
+
+    // Optionally clear existing data
+    if (clearExisting) {
+      this.log('Clearing existing data...');
+      await neo4j.write('MATCH (n) DETACH DELETE n').catch(err => {
+        result.errors.push(`Failed to clear data: ${err.message}`);
+      });
+    }
+
+    // Restore Users
+    if (backupData.users?.length > 0) {
+      this.log(`Restoring ${backupData.users.length} users...`);
+      for (const user of backupData.users) {
+        await neo4j.write(`
+          MERGE (u:User {handle: $handle})
+          SET u += $props
+        `, { handle: user.handle, props: user }).catch(err => {
+          result.errors.push(`User ${user.handle}: ${err.message}`);
+        });
+        result.stats.users++;
+      }
+    }
+
+    // Restore Memories
+    if (backupData.memories?.length > 0) {
+      this.log(`Restoring ${backupData.memories.length} memories...`);
+      for (const memory of backupData.memories) {
+        await neo4j.write(`
+          MERGE (m:Memory {id: $id})
+          SET m += $props
+        `, { id: memory.id, props: memory }).catch(err => {
+          result.errors.push(`Memory ${memory.id}: ${err.message}`);
+        });
+        result.stats.memories++;
+      }
+    }
+
+    // Restore Conversations
+    if (backupData.conversations?.length > 0) {
+      this.log(`Restoring ${backupData.conversations.length} conversations...`);
+      for (const conv of backupData.conversations) {
+        await neo4j.write(`
+          MERGE (c:Conversation {id: $id})
+          SET c += $props
+        `, { id: conv.id, props: conv }).catch(err => {
+          result.errors.push(`Conversation ${conv.id}: ${err.message}`);
+        });
+        result.stats.conversations++;
+      }
+    }
+
+    // Restore INTERACTED_WITH relationships
+    if (backupData.interactions?.length > 0) {
+      this.log(`Restoring ${backupData.interactions.length} interactions...`);
+      for (const interaction of backupData.interactions) {
+        const { from, to, ...props } = interaction;
+        await neo4j.write(`
+          MATCH (u1:User {handle: $from})
+          MATCH (u2:User {handle: $to})
+          MERGE (u1)-[r:INTERACTED_WITH]->(u2)
+          SET r += $props
+        `, { from, to, props }).catch(err => {
+          result.errors.push(`Interaction ${from}->${to}: ${err.message}`);
+        });
+        result.stats.interactions++;
+      }
+    }
+
+    // Restore MENTIONS relationships
+    if (backupData.mentions?.length > 0) {
+      this.log(`Restoring ${backupData.mentions.length} mentions...`);
+      for (const mention of backupData.mentions) {
+        const { memoryId, userHandle, ...props } = mention;
+        await neo4j.write(`
+          MATCH (m:Memory {id: $memoryId})
+          MATCH (u:User {handle: $userHandle})
+          MERGE (m)-[r:MENTIONS]->(u)
+          SET r += $props
+        `, { memoryId, userHandle, props }).catch(err => {
+          result.errors.push(`Mention ${memoryId}->${userHandle}: ${err.message}`);
+        });
+        result.stats.mentions++;
+      }
+    }
+
+    // Restore RELATES_TO relationships
+    if (backupData.relations?.length > 0) {
+      this.log(`Restoring ${backupData.relations.length} relations...`);
+      for (const relation of backupData.relations) {
+        const { fromId, toId, ...props } = relation;
+        await neo4j.write(`
+          MATCH (m1:Memory {id: $fromId})
+          MATCH (m2:Memory {id: $toId})
+          MERGE (m1)-[r:RELATES_TO]->(m2)
+          SET r += $props
+        `, { fromId, toId, props }).catch(err => {
+          result.errors.push(`Relation ${fromId}->${toId}: ${err.message}`);
+        });
+        result.stats.relations++;
+      }
+    }
+
+    await neo4j.close();
+
+    result.success = result.errors.length === 0;
+    result.duration = Date.now() - startTime;
+
+    this.log(`Restore complete: ${result.stats.users} users, ${result.stats.memories} memories, ${result.stats.mentions} mentions, ${result.stats.relations} relations`);
+    if (result.errors.length > 0) {
+      this.log(`   ${result.errors.length} errors occurred`, 'warning');
+    }
+
+    broadcast('restore:completed', result);
+    return result;
+  }
+
+  async restoreFromFile(fileName) {
+    await this.initialize();
+
+    const backupPath = path.join(this.config.backupPath, fileName);
+    const exists = await fs.access(backupPath).then(() => true).catch(() => false);
+    if (!exists) {
+      return { success: false, error: `Backup file not found: ${fileName}` };
+    }
+
+    let content = await fs.readFile(backupPath, 'utf8');
+
+    // Handle gzipped files
+    if (fileName.endsWith('.gz')) {
+      const zlib = require('zlib');
+      const buffer = await fs.readFile(backupPath);
+      content = zlib.gunzipSync(buffer).toString('utf8');
+    }
+
+    const backupData = JSON.parse(content);
+    return this.restoreBackup(backupData, { clearExisting: false });
+  }
+
+  async listBackups() {
+    await this.initialize();
+
+    const backupDirExists = await fs.access(this.config.backupPath).then(() => true).catch(() => false);
+    if (!backupDirExists) {
+      return { success: true, backups: [] };
+    }
+
+    const files = await fs.readdir(this.config.backupPath);
+    const backups = [];
+
+    for (const file of files) {
+      if (!file.startsWith('backup_') || (!file.endsWith('.json') && !file.endsWith('.json.gz'))) {
+        continue;
+      }
+
+      const filePath = path.join(this.config.backupPath, file);
+      const stats = await fs.stat(filePath);
+
+      backups.push({
+        fileName: file,
+        size: stats.size,
+        created: stats.mtime.toISOString(),
+        compressed: file.endsWith('.gz')
+      });
+    }
+
+    // Sort by date descending
+    backups.sort((a, b) => new Date(b.created) - new Date(a.created));
+
+    return { success: true, backups };
   }
 
   async runMaintenance() {
@@ -423,6 +651,56 @@ class BackupService extends EventEmitter {
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  // Convert Neo4j Integer and DateTime types to plain JS values
+  normalizeProperties(obj) {
+    if (obj === null || obj === undefined) return obj;
+
+    // Handle BigInt
+    if (typeof obj === 'bigint') {
+      return Number(obj);
+    }
+
+    if (typeof obj !== 'object') return obj;
+
+    // Neo4j Integer (has low/high properties) - handle BigInt in low/high
+    if ('low' in obj && 'high' in obj && Object.keys(obj).length === 2) {
+      const low = typeof obj.low === 'bigint' ? Number(obj.low) : obj.low;
+      return low;
+    }
+
+    // Neo4j DateTime (has year, month, day, etc.)
+    if ('year' in obj && 'month' in obj && 'day' in obj) {
+      const toNum = (val) => {
+        if (val === null || val === undefined) return 0;
+        if (typeof val === 'bigint') return Number(val);
+        if (typeof val === 'object' && 'low' in val) {
+          return typeof val.low === 'bigint' ? Number(val.low) : val.low;
+        }
+        return Number(val) || 0;
+      };
+
+      const year = toNum(obj.year);
+      const month = toNum(obj.month);
+      const day = toNum(obj.day);
+      const hour = toNum(obj.hour);
+      const minute = toNum(obj.minute);
+      const second = toNum(obj.second);
+      return new Date(Date.UTC(year, month - 1, day, hour, minute, second)).toISOString();
+    }
+
+    // Array
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.normalizeProperties(item));
+    }
+
+    // Object - recursively normalize
+    const normalized = {};
+    for (const [key, value] of Object.entries(obj)) {
+      normalized[key] = this.normalizeProperties(value);
+    }
+    return normalized;
   }
 
   log(message, level = 'info') {

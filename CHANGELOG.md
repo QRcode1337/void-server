@@ -20,6 +20,18 @@ ASCII generator enhancements and UI polish.
 - **New Memory button** - Fixed button being permanently disabled (was checking wrong status property)
 - **Modal readability** - Changed modal background to solid color for better readability
 
+#### Backup & Restore System
+- **Enhanced backup format** - Now exports MENTIONS and RELATES_TO relationships
+- **Normalized data types** - Neo4j integers/dates converted to plain JSON (BigInt support)
+- **Restore functionality** - New restore system to import backups into any instance
+  - `POST /api/backup/restore` - Restore from server backup file
+  - `POST /api/backup/restore/upload` - Restore from uploaded JSON
+  - `GET /api/backup/list` - List available backup files
+- **Restore UI** - New section in Maintenance tab to select and restore backups
+
+#### Memories Page
+- **Total count** - Added total memory count card to statistics grid
+
 ---
 
 ## [0.6.2] - 2025-12-15

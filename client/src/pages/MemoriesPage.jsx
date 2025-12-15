@@ -218,7 +218,20 @@ function MemoriesTab({ neo4jStatus, fetchStatus }) {
 
       {/* Statistics */}
       {statistics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+          {/* Total Count */}
+          <div
+            className={`card cursor-pointer transition-all ${filterCategory === '' ? 'ring-2 ring-primary' : ''}`}
+            onClick={() => setFilterCategory('')}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Brain size={12} className="text-primary" />
+              <span className="text-xs font-medium text-text-secondary">Total</span>
+            </div>
+            <p className="text-xl font-bold text-primary">
+              {statistics.total || Object.values(statistics.byCategory || {}).reduce((a, b) => a + b, 0)}
+            </p>
+          </div>
           {Object.entries(CATEGORY_COLORS).filter(([cat]) => ['emergence', 'liminal', 'quantum', 'glitch', 'void', 'economic', 'social'].includes(cat)).map(([cat, color]) => (
             <div
               key={cat}
@@ -613,6 +626,9 @@ function MaintenanceTab() {
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const [availableBackups, setAvailableBackups] = useState([]);
+  const [selectedBackup, setSelectedBackup] = useState('');
   const [config, setConfig] = useState({
     schedule: 'daily',
     time: '02:00',
@@ -631,6 +647,7 @@ function MaintenanceTab() {
     loadStatus();
     loadHistory();
     runHealthCheck();
+    loadAvailableBackups();
   }, []);
 
   const loadStatus = async () => {
@@ -653,6 +670,44 @@ function MaintenanceTab() {
     const res = await fetch('/api/backup/health');
     const data = await res.json();
     setHealth(data);
+  };
+
+  const loadAvailableBackups = async () => {
+    const res = await fetch('/api/backup/list');
+    const data = await res.json();
+    if (data.success) {
+      setAvailableBackups(data.backups || []);
+      if (data.backups?.length > 0) {
+        setSelectedBackup(data.backups[0].fileName);
+      }
+    }
+  };
+
+  const runRestore = async () => {
+    if (!selectedBackup) {
+      toast.error('Please select a backup to restore');
+      return;
+    }
+
+    setRestoring(true);
+    toast.loading('Restoring backup...', { id: 'restore-progress' });
+
+    const res = await fetch('/api/backup/restore', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: selectedBackup })
+    });
+    const data = await res.json();
+
+    toast.dismiss('restore-progress');
+    setRestoring(false);
+
+    if (data.success) {
+      toast.success(`Restored ${data.stats.memories} memories, ${data.stats.users} users`);
+      runHealthCheck();
+    } else {
+      toast.error(`Restore failed: ${data.error || data.errors?.join(', ')}`);
+    }
   };
 
   const toggleBackups = async () => {
@@ -1007,6 +1062,60 @@ function MaintenanceTab() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Restore from Backup */}
+      <div className="card">
+        <h3 className="font-semibold text-text-primary mb-4">Restore from Backup</h3>
+        <p className="text-sm text-text-secondary mb-4">
+          Import memories from a backup file. This will merge with existing data (duplicates are skipped).
+        </p>
+
+        {availableBackups.length === 0 ? (
+          <div className="text-center py-4 text-text-secondary">
+            No backup files found. Create a backup first.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-text-secondary mb-1">Select Backup File</label>
+              <select
+                value={selectedBackup}
+                onChange={(e) => setSelectedBackup(e.target.value)}
+                className="form-input w-full"
+              >
+                {availableBackups.map((backup) => (
+                  <option key={backup.fileName} value={backup.fileName}>
+                    {backup.fileName} ({formatBytes(backup.size)}) - {formatDate(backup.created)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-border">
+              <p className="text-xs text-text-tertiary">
+                {availableBackups.length} backup{availableBackups.length !== 1 ? 's' : ''} available
+              </p>
+              <button
+                onClick={runRestore}
+                disabled={restoring || !selectedBackup}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                {restoring ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Restoring...
+                  </>
+                ) : (
+                  <>
+                    <Database size={16} />
+                    Restore
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
       </div>

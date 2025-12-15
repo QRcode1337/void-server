@@ -54,4 +54,37 @@ router.get('/health', async (req, res) => {
   res.json(result);
 });
 
+// GET /api/backup/list - List available backups
+router.get('/list', async (req, res) => {
+  console.log('📦 GET /api/backup/list');
+  const result = await backupService.listBackups();
+  res.json(result);
+});
+
+// POST /api/backup/restore - Restore from a backup file
+router.post('/restore', async (req, res) => {
+  const { fileName, clearExisting } = req.body;
+  console.log(`📦 POST /api/backup/restore fileName=${fileName} clearExisting=${clearExisting}`);
+
+  if (!fileName) {
+    return res.status(400).json({ success: false, error: 'fileName is required' });
+  }
+
+  const result = await backupService.restoreFromFile(fileName);
+  res.json(result);
+});
+
+// POST /api/backup/restore/upload - Restore from uploaded JSON
+router.post('/restore/upload', async (req, res) => {
+  console.log('📦 POST /api/backup/restore/upload');
+
+  const backupData = req.body;
+  if (!backupData || !backupData.metadata) {
+    return res.status(400).json({ success: false, error: 'Invalid backup data' });
+  }
+
+  const result = await backupService.restoreBackup(backupData, { clearExisting: false });
+  res.json(result);
+});
+
 module.exports = router;
