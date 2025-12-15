@@ -23,6 +23,7 @@ Simplified installation by embedding core plugins directly in the repository.
 #### Windows Support
 - **setup.ps1** - PowerShell setup script for Windows users
 - **update.ps1** - PowerShell update script for Windows users
+- **run.ps1** - PowerShell run script for Windows users
 
 ### Migration Notes
 
