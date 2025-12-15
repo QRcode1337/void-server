@@ -16,6 +16,10 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '../../config/browsers');
 const CONFIG_FILE = path.join(DATA_DIR, 'browsers.json');
 
+// Default port range for CDP debugging
+const DEFAULT_PORT_START = 9222;
+const DEFAULT_PORT_END = 9299;
+
 // Detect if running in Docker
 const isDocker = () => {
   try {
@@ -64,6 +68,50 @@ async function saveConfig(config) {
 }
 
 /**
+ * Check if a port is available
+ */
+async function isPortAvailable(port) {
+  const net = require('net');
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => {
+      server.close();
+      resolve(true);
+    });
+    server.listen(port, '127.0.0.1');
+  });
+}
+
+/**
+ * Find the next available port in the configured range
+ */
+async function findAvailablePort(config) {
+  const usedPorts = new Set(
+    Object.values(config.browsers || {})
+      .filter(b => b.port)
+      .map(b => b.port)
+  );
+
+  for (let port = DEFAULT_PORT_START; port <= DEFAULT_PORT_END; port++) {
+    if (!usedPorts.has(port) && await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get all used ports
+ */
+async function getUsedPorts() {
+  const config = await loadConfig();
+  return Object.entries(config.browsers || {})
+    .filter(([_, b]) => b.port)
+    .map(([id, b]) => ({ id, port: b.port }));
+}
+
+/**
  * List all browser profiles
  */
 async function listBrowsers() {
@@ -102,7 +150,7 @@ async function getBrowser(id) {
  * Create a new browser profile
  */
 async function createBrowser(id, options = {}) {
-  const { name, description = '' } = options;
+  const { name, description = '', port: requestedPort, autoAssignPort = true } = options;
 
   if (!id || !id.match(/^[a-z0-9-]+$/)) {
     return { success: false, error: 'Invalid ID. Use lowercase letters, numbers, and hyphens only.' };
@@ -114,19 +162,41 @@ async function createBrowser(id, options = {}) {
     return { success: false, error: 'Browser profile already exists' };
   }
 
+  // Handle port assignment
+  let port = null;
+  if (requestedPort) {
+    // Validate requested port
+    if (requestedPort < 1024 || requestedPort > 65535) {
+      return { success: false, error: 'Port must be between 1024 and 65535' };
+    }
+    // Check if port is already assigned
+    const usedPorts = Object.values(config.browsers || {}).filter(b => b.port).map(b => b.port);
+    if (usedPorts.includes(requestedPort)) {
+      return { success: false, error: `Port ${requestedPort} is already assigned to another profile` };
+    }
+    port = requestedPort;
+  } else if (autoAssignPort) {
+    // Auto-assign from default range
+    port = await findAvailablePort(config);
+    if (!port) {
+      return { success: false, error: 'No available ports in range 9222-9299' };
+    }
+  }
+
   const profileDir = path.join(DATA_DIR, id);
   await fs.mkdir(profileDir, { recursive: true });
 
   config.browsers[id] = {
     name: name || id,
     description,
+    port,
     createdAt: new Date().toISOString(),
     profileDir
   };
 
   await saveConfig(config);
 
-  console.log(`🌐 Created browser profile: ${id}`);
+  console.log(`🌐 Created browser profile: ${id}${port ? ` (port ${port})` : ''}`);
 
   return { success: true, browser: { id, ...config.browsers[id] } };
 }
@@ -226,15 +296,23 @@ async function launchBrowser(id, options = {}) {
   const profileDir = path.join(DATA_DIR, id);
   await fs.mkdir(profileDir, { recursive: true });
 
-  console.log(`🌐 Launching browser: ${id}`);
+  // Build launch args
+  const args = [
+    '--disable-blink-features=AutomationControlled',
+    '--disable-features=IsolateOrigins,site-per-process'
+  ];
+
+  // Add CDP debugging port if configured
+  if (browser.port) {
+    args.push(`--remote-debugging-port=${browser.port}`);
+  }
+
+  console.log(`🌐 Launching browser: ${id}${browser.port ? ` (CDP port ${browser.port})` : ''}`);
 
   const context = await chromium.launchPersistentContext(profileDir, {
     headless: false,
     viewport: { width: 1280, height: 800 },
-    args: [
-      '--disable-blink-features=AutomationControlled',
-      '--disable-features=IsolateOrigins,site-per-process'
-    ]
+    args
   });
 
   // Navigate to URL
@@ -243,8 +321,8 @@ async function launchBrowser(id, options = {}) {
     await page.goto(url);
   }
 
-  // Store reference
-  activeBrowsers.set(id, { context, page });
+  // Store reference with port info
+  activeBrowsers.set(id, { context, page, port: browser.port });
 
   // Set up close handler
   context.on('close', () => {
@@ -252,7 +330,7 @@ async function launchBrowser(id, options = {}) {
     activeBrowsers.delete(id);
   });
 
-  return { success: true, message: 'Browser launched' };
+  return { success: true, message: 'Browser launched', port: browser.port };
 }
 
 /**
@@ -309,17 +387,78 @@ function getProfileDir(id) {
   return path.join(DATA_DIR, id);
 }
 
+/**
+ * Update browser settings (port, name, description)
+ */
+async function updateBrowser(id, updates = {}) {
+  const config = await loadConfig();
+  const browser = config.browsers[id];
+
+  if (!browser) {
+    return { success: false, error: 'Browser profile not found' };
+  }
+
+  // Cannot update while running
+  if (activeBrowsers.has(id)) {
+    return { success: false, error: 'Cannot update browser while running. Close it first.' };
+  }
+
+  // Handle port update
+  if (updates.port !== undefined) {
+    if (updates.port !== null) {
+      if (updates.port < 1024 || updates.port > 65535) {
+        return { success: false, error: 'Port must be between 1024 and 65535' };
+      }
+      // Check if port is already assigned to another profile
+      const usedPorts = Object.entries(config.browsers || {})
+        .filter(([browserId, b]) => b.port && browserId !== id)
+        .map(([_, b]) => b.port);
+      if (usedPorts.includes(updates.port)) {
+        return { success: false, error: `Port ${updates.port} is already assigned to another profile` };
+      }
+    }
+    browser.port = updates.port;
+  }
+
+  // Handle name update
+  if (updates.name !== undefined) {
+    browser.name = updates.name;
+  }
+
+  // Handle description update
+  if (updates.description !== undefined) {
+    browser.description = updates.description;
+  }
+
+  config.browsers[id] = browser;
+  await saveConfig(config);
+
+  console.log(`🌐 Updated browser profile: ${id}`);
+
+  return { success: true, browser: { id, ...browser } };
+}
+
+/**
+ * Get port range info
+ */
+function getPortRange() {
+  return { start: DEFAULT_PORT_START, end: DEFAULT_PORT_END };
+}
+
 module.exports = {
   listBrowsers,
   getBrowser,
   createBrowser,
   deleteBrowser,
+  updateBrowser,
   getBrowserStatus,
   launchBrowser,
   closeBrowser,
   checkAuthentication,
   getBrowserContext,
   getProfileDir,
+  getUsedPorts,
+  getPortRange,
   isDocker,
   DATA_DIR
 };

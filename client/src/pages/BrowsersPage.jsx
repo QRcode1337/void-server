@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, Plus, Trash2, Play, X, RefreshCw, CheckCircle, XCircle, AlertTriangle, ExternalLink } from 'lucide-react';
+import { Globe, Plus, Trash2, Play, X, RefreshCw, CheckCircle, XCircle, AlertTriangle, ExternalLink, Edit2, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function BrowsersPage() {
@@ -7,11 +7,15 @@ export default function BrowsersPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newBrowser, setNewBrowser] = useState({ id: '', name: '', description: '' });
+  const [newBrowser, setNewBrowser] = useState({ id: '', name: '', description: '', port: '' });
   const [isDockerEnv, setIsDockerEnv] = useState(false);
+  const [portRange, setPortRange] = useState({ start: 9222, end: 9299 });
+  const [editingPort, setEditingPort] = useState(null);
+  const [editPortValue, setEditPortValue] = useState('');
 
   useEffect(() => {
     loadBrowsers();
+    loadPortConfig();
   }, []);
 
   const loadBrowsers = async () => {
@@ -27,6 +31,14 @@ export default function BrowsersPage() {
     setLoading(false);
   };
 
+  const loadPortConfig = async () => {
+    const response = await fetch('/api/browsers/config/ports');
+    const data = await response.json();
+    if (data.success) {
+      setPortRange(data.portRange);
+    }
+  };
+
   const handleCreate = async () => {
     if (!newBrowser.id.trim()) {
       toast.error('Browser ID is required');
@@ -34,22 +46,49 @@ export default function BrowsersPage() {
     }
 
     setCreating(true);
+    const payload = {
+      ...newBrowser,
+      port: newBrowser.port ? parseInt(newBrowser.port, 10) : undefined,
+      autoAssignPort: !newBrowser.port
+    };
+
     const response = await fetch('/api/browsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newBrowser)
+      body: JSON.stringify(payload)
     });
 
     const data = await response.json();
     setCreating(false);
 
     if (data.success) {
-      toast.success('Browser profile created');
+      toast.success(`Browser profile created (port ${data.browser.port})`);
       setShowCreateForm(false);
-      setNewBrowser({ id: '', name: '', description: '' });
+      setNewBrowser({ id: '', name: '', description: '', port: '' });
       loadBrowsers();
     } else {
       toast.error(data.error || 'Failed to create browser profile');
+    }
+  };
+
+  const handleUpdatePort = async (id) => {
+    const port = editPortValue ? parseInt(editPortValue, 10) : null;
+
+    const response = await fetch(`/api/browsers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ port })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      toast.success(`Port updated to ${port || 'none'}`);
+      setEditingPort(null);
+      setEditPortValue('');
+      loadBrowsers();
+    } else {
+      toast.error(data.error || 'Failed to update port');
     }
   };
 
@@ -227,22 +266,40 @@ export default function BrowsersPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-secondary mb-1">
-              Description
-            </label>
-            <input
-              type="text"
-              value={newBrowser.description}
-              onChange={(e) => setNewBrowser({ ...newBrowser, description: e.target.value })}
-              placeholder="Browser profile for downloading X.com videos"
-              className="form-input w-full"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">
+                Description
+              </label>
+              <input
+                type="text"
+                value={newBrowser.description}
+                onChange={(e) => setNewBrowser({ ...newBrowser, description: e.target.value })}
+                placeholder="Browser profile for downloading X.com videos"
+                className="form-input w-full"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">
+                CDP Port
+              </label>
+              <input
+                type="number"
+                value={newBrowser.port}
+                onChange={(e) => setNewBrowser({ ...newBrowser, port: e.target.value })}
+                placeholder={`Auto (${portRange.start}-${portRange.end})`}
+                className="form-input w-full"
+                min={1024}
+                max={65535}
+              />
+              <p className="text-xs text-tertiary mt-1">Leave empty for auto-assignment</p>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2">
             <button
-              onClick={() => { setShowCreateForm(false); setNewBrowser({ id: '', name: '', description: '' }); }}
+              onClick={() => { setShowCreateForm(false); setNewBrowser({ id: '', name: '', description: '', port: '' }); }}
               className="btn btn-secondary"
             >
               Cancel
@@ -281,7 +338,45 @@ export default function BrowsersPage() {
                     {browser.description && (
                       <p className="text-secondary text-sm">{browser.description}</p>
                     )}
-                    <p className="text-xs text-tertiary mt-1">ID: {browser.id}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="text-xs text-tertiary">ID: {browser.id}</span>
+                      {editingPort === browser.id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            value={editPortValue}
+                            onChange={(e) => setEditPortValue(e.target.value)}
+                            placeholder={`${portRange.start}`}
+                            className="form-input py-0 px-2 w-20 text-xs"
+                            min={1024}
+                            max={65535}
+                          />
+                          <button
+                            onClick={() => handleUpdatePort(browser.id)}
+                            className="text-success p-1"
+                            title="Save port"
+                          >
+                            <Save size={14} />
+                          </button>
+                          <button
+                            onClick={() => { setEditingPort(null); setEditPortValue(''); }}
+                            className="text-tertiary p-1"
+                            title="Cancel"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span
+                          className="text-xs text-tertiary flex items-center gap-1 cursor-pointer hover:text-primary"
+                          onClick={() => { setEditingPort(browser.id); setEditPortValue(browser.port || ''); }}
+                          title="Click to edit port"
+                        >
+                          Port: {browser.port || 'none'}
+                          {!browser.running && <Edit2 size={12} />}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

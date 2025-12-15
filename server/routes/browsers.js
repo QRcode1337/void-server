@@ -18,6 +18,14 @@ router.get('/', async (req, res) => {
   res.json({ success: true, browsers });
 });
 
+// Get port range info (must be before /:id to avoid matching "config" as id)
+router.get('/config/ports', async (req, res) => {
+  console.log('🌐 GET /api/browsers/config/ports');
+  const portRange = browserService.getPortRange();
+  const usedPorts = await browserService.getUsedPorts();
+  res.json({ success: true, portRange, usedPorts });
+});
+
 // Get single browser profile
 router.get('/:id', async (req, res) => {
   console.log(`🌐 GET /api/browsers/${req.params.id}`);
@@ -44,14 +52,28 @@ router.get('/:id/status', async (req, res) => {
 
 // Create new browser profile
 router.post('/', async (req, res) => {
-  const { id, name, description } = req.body;
-  console.log(`🌐 POST /api/browsers id=${id} name="${name}"`);
+  const { id, name, description, port, autoAssignPort = true } = req.body;
+  console.log(`🌐 POST /api/browsers id=${id} name="${name}" port=${port || 'auto'}`);
 
   if (!id) {
     return res.status(400).json({ success: false, error: 'Browser ID is required' });
   }
 
-  const result = await browserService.createBrowser(id, { name, description });
+  const result = await browserService.createBrowser(id, { name, description, port, autoAssignPort });
+
+  if (!result.success) {
+    return res.status(400).json(result);
+  }
+
+  res.json(result);
+});
+
+// Update browser profile
+router.put('/:id', async (req, res) => {
+  const { name, description, port } = req.body;
+  console.log(`🌐 PUT /api/browsers/${req.params.id} port=${port}`);
+
+  const result = await browserService.updateBrowser(req.params.id, { name, description, port });
 
   if (!result.success) {
     return res.status(400).json(result);
