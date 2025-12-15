@@ -71,48 +71,54 @@ function Test-WingetAvailable {
 function Install-NodeJS {
     Write-Step "Installing Node.js..."
 
+    $installed = $false
+
     if (Test-WingetAvailable) {
         Write-Step "Using winget to install Node.js..."
-        winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+        # Try different package IDs (winget IDs can vary)
+        $packageIds = @("OpenJS.NodeJS.LTS", "OpenJS.NodeJS", "nodejs.nodejs")
 
-        # Refresh PATH
-        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+        foreach ($packageId in $packageIds) {
+            Write-Step "Trying package: $packageId"
+            winget install $packageId --accept-package-agreements --accept-source-agreements 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $installed = $true
+                break
+            }
+        }
 
-        Write-Success "Node.js installed successfully"
-        Write-Warning "You may need to restart your terminal for PATH changes to take effect."
-    } else {
-        Write-Warning "winget not available. Opening Node.js download page..."
-        Start-Process "https://nodejs.org/en/download/"
-        Write-Host ""
-        Write-Host "Please download and install Node.js LTS, then run this script again." -ForegroundColor Yellow
-        exit 1
+        if ($installed) {
+            # Refresh PATH
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+            Write-Success "Node.js installed successfully"
+            Write-Warning "You may need to restart your terminal for PATH changes to take effect."
+            return
+        } else {
+            Write-Warning "winget installation failed. Falling back to browser download..."
+        }
     }
+
+    # Fallback to browser download
+    Write-Step "Opening Node.js download page..."
+    Start-Process "https://nodejs.org/en/download/"
+    Write-Host ""
+    Write-Host "Please download and install Node.js LTS, then run this script again." -ForegroundColor Yellow
+    exit 1
 }
 
 function Install-Neo4j {
     Write-Step "Installing Neo4j..."
 
-    if (Test-WingetAvailable) {
-        Write-Step "Using winget to install Neo4j..."
-        $result = winget install Neo4j.Neo4j --accept-package-agreements --accept-source-agreements 2>&1
-
-        if ($LASTEXITCODE -eq 0) {
-            Write-Success "Neo4j installed successfully"
-
-            # Refresh PATH
-            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
-
-            return $true
-        } else {
-            Write-Warning "winget installation failed. Trying Neo4j Desktop..."
-        }
-    }
-
-    # Fallback to Neo4j Desktop download
-    Write-Warning "Opening Neo4j Desktop download page..."
+    # Neo4j is not reliably available via winget, go straight to download
+    Write-Step "Opening Neo4j Desktop download page..."
     Start-Process "https://neo4j.com/download/"
     Write-Host ""
-    Write-Host "Please download and install Neo4j Desktop, then configure a local database." -ForegroundColor Yellow
+    Write-Host "Please download and install Neo4j Desktop, then:" -ForegroundColor Yellow
+    Write-Host "  1. Create a new project" -ForegroundColor Yellow
+    Write-Host "  2. Add a local database" -ForegroundColor Yellow
+    Write-Host "  3. Start the database" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "Default credentials: neo4j / neo4j (you'll be prompted to change)" -ForegroundColor Cyan
     return $false
 }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.1] - 2025-12-14
+
+### Fixes
+
+- **Windows setup.ps1** - Fixed Node.js winget installation by trying multiple package IDs
+- **Windows setup.ps1** - Simplified Neo4j install to open download page directly (not reliably in winget)
+- **setup.sh** - Removed git hooks installation (not needed for end users)
+
+---
+
 ## [0.5.0] - 2025-12-14
 
 Simplified installation by embedding core plugins directly in the repository.
