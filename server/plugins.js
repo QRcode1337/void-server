@@ -15,6 +15,13 @@ const PLUGINS_DIR = path.join(PROJECT_ROOT, 'plugins');
 const PLUGINS_CONFIG_PATH = path.join(CONFIG_DIR, 'plugins.json');
 const PLUGINS_MANIFEST_PATH = path.join(PLUGINS_DIR, 'manifest.json');
 
+// Built-in plugins that ship with void-server and cannot be uninstalled
+const BUILT_IN_PLUGINS = [
+  'void-plugin-ascii',
+  'void-plugin-verify',
+  'void-plugin-wallet'
+];
+
 // Ensure config directory exists
 if (!fs.existsSync(CONFIG_DIR)) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
@@ -209,6 +216,7 @@ const listInstalledPlugins = () => {
         name,
         installed: true,
         enabled: pluginConfig.enabled !== false, // default true
+        builtIn: BUILT_IN_PLUGINS.includes(name),
         installationType: getInstallationType(name),
         version: pluginManifest?.version || 'unknown',
         description: pluginManifest?.description || catalogEntry?.description || '',
@@ -280,38 +288,211 @@ const execGit = (args, options = {}) => {
 // ============================================================================
 
 /**
- * Install a plugin from manifest or git URL
- * @param {string} source - Plugin name from manifest or git URL
+ * Check if a URL is a zip file
+ * @param {string} url - URL to check
+ * @returns {boolean}
+ */
+const isZipUrl = (url) => {
+  return url.endsWith('.zip') || url.includes('/archive/');
+};
+
+/**
+ * Check if a URL is a git repository
+ * @param {string} url - URL to check
+ * @returns {boolean}
+ */
+const isGitUrl = (url) => {
+  return url.startsWith('git@') ||
+         url.endsWith('.git') ||
+         (url.includes('github.com') && !isZipUrl(url));
+};
+
+/**
+ * Build GitHub release zip URL from repository URL and version
+ * @param {string} repoUrl - GitHub repository URL
+ * @param {string} version - Version tag (e.g., "1.0.0")
+ * @returns {string} Release zip URL
+ */
+const buildReleaseUrl = (repoUrl, version) => {
+  // Convert git@github.com:user/repo.git to https://github.com/user/repo
+  let baseUrl = repoUrl
+    .replace('git@github.com:', 'https://github.com/')
+    .replace(/\.git$/, '');
+
+  return `${baseUrl}/archive/refs/tags/v${version}.zip`;
+};
+
+/**
+ * Download a file from URL
+ * @param {string} url - URL to download
+ * @param {string} destPath - Destination file path
+ * @returns {{success: boolean, error?: string}}
+ */
+const downloadFile = (url, destPath) => {
+  const result = spawnSync('curl', ['-L', '-o', destPath, '-s', '--fail-with-body', '--max-time', '120', url], {
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    return { success: false, error: result.stderr || `curl exited with status ${result.status}` };
+  }
+
+  // Verify file exists and has content
+  if (!fs.existsSync(destPath) || fs.statSync(destPath).size === 0) {
+    return { success: false, error: 'Downloaded file is empty or missing' };
+  }
+
+  return { success: true };
+};
+
+/**
+ * Extract a zip file
+ * @param {string} zipPath - Path to zip file
+ * @param {string} destDir - Destination directory
+ * @returns {{success: boolean, extractedDir?: string, error?: string}}
+ */
+const extractZip = (zipPath, destDir) => {
+  const result = spawnSync('unzip', ['-o', '-q', zipPath, '-d', destDir], {
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    return { success: false, error: result.stderr || 'Extraction failed' };
+  }
+
+  // Find the extracted directory (usually repo-name-version/)
+  const entries = fs.readdirSync(destDir);
+  const extractedDir = entries.find(e =>
+    fs.statSync(path.join(destDir, e)).isDirectory()
+  );
+
+  return { success: true, extractedDir };
+};
+
+/**
+ * Install plugin from zip URL
+ * @param {string} zipUrl - URL to zip file
+ * @param {string} pluginName - Target plugin name
+ * @param {string} pluginPath - Target installation path
+ * @returns {{success: boolean, error?: string}}
+ */
+const installFromZip = (zipUrl, pluginName, pluginPath) => {
+  const tempDir = path.join(PLUGINS_DIR, '.temp-install');
+  const zipFile = path.join(tempDir, 'plugin.zip');
+
+  // Create temp directory
+  if (fs.existsSync(tempDir)) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(tempDir, { recursive: true });
+
+  // Download zip
+  console.log(`📥 Downloading plugin from ${zipUrl}`);
+  const downloadResult = downloadFile(zipUrl, zipFile);
+  if (!downloadResult.success) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    return { success: false, error: `Download failed: ${downloadResult.error}` };
+  }
+
+  // Extract zip
+  console.log(`📦 Extracting plugin...`);
+  const extractResult = extractZip(zipFile, tempDir);
+  if (!extractResult.success) {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    return { success: false, error: `Extraction failed: ${extractResult.error}` };
+  }
+
+  // Move extracted directory to final location
+  const extractedPath = path.join(tempDir, extractResult.extractedDir);
+  fs.renameSync(extractedPath, pluginPath);
+
+  // Cleanup temp directory
+  fs.rmSync(tempDir, { recursive: true, force: true });
+
+  return { success: true };
+};
+
+/**
+ * Install plugin from git repository
+ * @param {string} gitUrl - Git repository URL
+ * @param {string} pluginName - Target plugin name
+ * @param {string} branch - Git branch
+ * @returns {{success: boolean, error?: string}}
+ */
+const installFromGit = (gitUrl, pluginName, branch) => {
+  const pluginPath = path.join(PLUGINS_DIR, pluginName);
+
+  // Clone repository (not as submodule for simpler management)
+  console.log(`📥 Cloning plugin from ${gitUrl}`);
+  const cloneResult = spawnSync('git', ['clone', '--depth', '1', '-b', branch, gitUrl, pluginPath], {
+    encoding: 'utf8',
+    cwd: PLUGINS_DIR
+  });
+
+  if (cloneResult.status !== 0) {
+    return { success: false, error: cloneResult.stderr || 'Git clone failed' };
+  }
+
+  // Remove .git directory to make it a plain directory (not a submodule)
+  const gitDir = path.join(pluginPath, '.git');
+  if (fs.existsSync(gitDir)) {
+    fs.rmSync(gitDir, { recursive: true, force: true });
+  }
+
+  return { success: true };
+};
+
+/**
+ * Install a plugin from manifest, git URL, or zip URL
+ * @param {string} source - Plugin name from manifest, git URL, or zip URL
  * @param {Object} options - Installation options
  * @param {string} options.branch - Git branch (default: main)
  * @param {string} options.name - Override plugin name
- * @param {boolean} options.dev - Install as symlink (dev mode)
  * @returns {{success: boolean, plugin?: string, requiresRestart?: boolean, message?: string, error?: string}}
  */
 const installPlugin = (source, options = {}) => {
   const manifest = loadManifest();
   const isUrl = source.includes('://') || source.includes('@');
 
-  let gitUrl, pluginName, branch;
+  let pluginName, installSource, version;
 
   if (isUrl) {
-    const urlValidation = validateGitUrl(source);
-    if (!urlValidation.valid) {
-      return { success: false, error: urlValidation.error };
+    // Installing from URL (git or zip)
+    if (isZipUrl(source)) {
+      // Extract plugin name from zip URL
+      // e.g., https://github.com/user/void-plugin-example/archive/refs/tags/v1.0.0.zip
+      const match = source.match(/\/(void-plugin-[a-z0-9-]+)\//i);
+      pluginName = options.name || (match ? match[1] : null);
+      if (!pluginName) {
+        return { success: false, error: 'Could not determine plugin name from URL. Use the name option.' };
+      }
+      installSource = { type: 'zip', url: source };
+    } else if (isGitUrl(source)) {
+      pluginName = options.name || extractPluginName(source);
+      installSource = { type: 'git', url: source, branch: options.branch || 'main' };
+    } else {
+      return { success: false, error: 'Invalid URL. Must be a git repository or zip file URL.' };
     }
-
-    gitUrl = source;
-    pluginName = options.name || extractPluginName(source);
-    branch = options.branch || 'main';
   } else {
     // Install from manifest
     const catalogEntry = manifest.plugins?.[source];
     if (!catalogEntry) {
       return { success: false, error: `Plugin "${source}" not found in manifest` };
     }
-    gitUrl = catalogEntry.repository;
+
     pluginName = source;
-    branch = options.branch || catalogEntry.branch || 'main';
+    version = catalogEntry.version;
+
+    // Prefer release zip if version is specified
+    if (version && catalogEntry.repository) {
+      const releaseUrl = buildReleaseUrl(catalogEntry.repository, version);
+      installSource = { type: 'zip', url: releaseUrl };
+    } else if (catalogEntry.repository) {
+      // Fallback to git clone
+      installSource = { type: 'git', url: catalogEntry.repository, branch: catalogEntry.branch || 'main' };
+    } else {
+      return { success: false, error: `Plugin "${source}" has no repository URL` };
+    }
   }
 
   // Validate plugin name
@@ -332,19 +513,20 @@ const installPlugin = (source, options = {}) => {
     fs.mkdirSync(PLUGINS_DIR, { recursive: true });
   }
 
-  // Add as git submodule
-  const submodulePath = `plugins/${pluginName}`;
-
-  const addResult = execGit(['submodule', 'add', '-b', branch, gitUrl, submodulePath]);
-  if (!addResult.success) {
-    return { success: false, error: `Failed to add submodule: ${addResult.error}` };
+  // Install based on source type
+  let installResult;
+  if (installSource.type === 'zip') {
+    installResult = installFromZip(installSource.url, pluginName, pluginPath);
+  } else {
+    installResult = installFromGit(installSource.url, pluginName, installSource.branch);
   }
 
-  const initResult = execGit(['submodule', 'update', '--init', '--recursive', submodulePath]);
-  if (!initResult.success) {
-    // Try to clean up failed installation
-    execGit(['rm', '-f', submodulePath]);
-    return { success: false, error: `Failed to initialize submodule: ${initResult.error}` };
+  if (!installResult.success) {
+    // Cleanup on failure
+    if (fs.existsSync(pluginPath)) {
+      fs.rmSync(pluginPath, { recursive: true, force: true });
+    }
+    return { success: false, error: installResult.error };
   }
 
   // Load the plugin's manifest for defaults
@@ -356,7 +538,8 @@ const installPlugin = (source, options = {}) => {
     enabled: true,
     mountPath: pluginManifest?.defaultMountPath || `/${pluginName.replace('void-plugin-', '')}`,
     installedAt: new Date().toISOString(),
-    installedFrom: isUrl ? gitUrl : 'manifest',
+    installedFrom: installSource.url,
+    installedVersion: version || pluginManifest?.version || 'unknown',
     navConfig: {
       navSection: pluginManifest?.nav?.section ?? null,
       navTitle: pluginManifest?.nav?.title || pluginName.replace('void-plugin-', '').replace(/-/g, ' '),
@@ -364,6 +547,8 @@ const installPlugin = (source, options = {}) => {
     }
   };
   saveConfig(config);
+
+  console.log(`✅ Plugin "${pluginName}" installed successfully`);
 
   return {
     success: true,
@@ -374,7 +559,7 @@ const installPlugin = (source, options = {}) => {
 };
 
 /**
- * Uninstall a plugin (remove submodule or symlink)
+ * Uninstall a plugin (remove directory or symlink)
  * @param {string} pluginName - Plugin name to uninstall
  * @returns {{success: boolean, plugin?: string, requiresRestart?: boolean, message?: string, error?: string}}
  */
@@ -383,6 +568,11 @@ const uninstallPlugin = (pluginName) => {
   const nameValidation = validatePluginName(pluginName);
   if (!nameValidation.valid) {
     return { success: false, error: nameValidation.error };
+  }
+
+  // Block uninstallation of built-in plugins
+  if (BUILT_IN_PLUGINS.includes(pluginName)) {
+    return { success: false, error: `Cannot uninstall built-in plugin "${pluginName}"` };
   }
 
   const pluginPath = path.join(PLUGINS_DIR, pluginName);
@@ -396,32 +586,6 @@ const uninstallPlugin = (pluginName) => {
   if (installationType === 'symlink') {
     // Just remove the symlink
     fs.unlinkSync(pluginPath);
-  } else if (installationType === 'submodule') {
-    // Properly remove git submodule
-    const submodulePath = `plugins/${pluginName}`;
-
-    // Deinitialize
-    const deinitResult = execGit(['submodule', 'deinit', '-f', submodulePath]);
-    if (!deinitResult.success) {
-      console.warn(`Warning: Failed to deinit submodule: ${deinitResult.error}`);
-    }
-
-    // Remove from git
-    const rmResult = execGit(['rm', '-f', submodulePath]);
-    if (!rmResult.success) {
-      console.warn(`Warning: Failed to git rm submodule: ${rmResult.error}`);
-    }
-
-    // Clean up .git/modules
-    const gitModulesPath = path.join(PROJECT_ROOT, '.git', 'modules', submodulePath);
-    if (fs.existsSync(gitModulesPath)) {
-      fs.rmSync(gitModulesPath, { recursive: true, force: true });
-    }
-
-    // Ensure directory is removed
-    if (fs.existsSync(pluginPath)) {
-      fs.rmSync(pluginPath, { recursive: true, force: true });
-    }
   } else {
     // Regular directory - just remove it
     fs.rmSync(pluginPath, { recursive: true, force: true });
@@ -431,6 +595,8 @@ const uninstallPlugin = (pluginName) => {
   const config = loadConfig();
   delete config[pluginName];
   saveConfig(config);
+
+  console.log(`🗑️ Plugin "${pluginName}" uninstalled`);
 
   return {
     success: true,

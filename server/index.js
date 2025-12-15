@@ -307,7 +307,7 @@ function loadPlugins() {
       enabled: routeOverrides[route.path]?.enabled !== false
     }));
 
-    plugin(app, { mountPath, services: { browserService } });
+    plugin(app, { mountPath, services: { browserService, express } });
 
     // Serve static assets from plugin's assets folder if it exists
     const assetsPath = path.join(pluginPath, 'assets');

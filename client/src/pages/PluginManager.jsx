@@ -369,6 +369,9 @@ const PluginManager = () => {
                           <span className="badge badge-secondary text-xs">
                             {plugin.installationType}
                           </span>
+                          {plugin.builtIn && (
+                            <span className="badge badge-primary text-xs">built-in</span>
+                          )}
                         </div>
                         <p className="text-sm text-[var(--color-text-secondary)] mt-1">
                           Mount: <code className="text-[var(--color-primary)]">{plugin.mountPath}</code>
@@ -410,14 +413,16 @@ const PluginManager = () => {
                         Configure
                       </button>
 
-                      {/* Uninstall */}
-                      <button
-                        onClick={() => setUninstallingPlugin(plugin)}
-                        className="p-2 text-[var(--color-text-secondary)] hover:text-red-500 transition-colors"
-                        title="Uninstall"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Uninstall - hidden for built-in plugins */}
+                      {!plugin.builtIn && (
+                        <button
+                          onClick={() => setUninstallingPlugin(plugin)}
+                          className="p-2 text-[var(--color-text-secondary)] hover:text-red-500 transition-colors"
+                          title="Uninstall"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

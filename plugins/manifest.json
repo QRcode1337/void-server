@@ -4,8 +4,8 @@
   "plugins": {
     "void-plugin-videodownload": {
       "description": "Download videos from X.com with automatic frame extraction for LLM analysis",
-      "repository": "git@github.com:ClawedCode/void-plugin-videodownload.git",
-      "branch": "main",
+      "repository": "https://github.com/ClawedCode/void-plugin-videodownload",
+      "version": "1.0.0",
       "category": "media",
       "icon": "download",
       "author": "ClawedCode"
