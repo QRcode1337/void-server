@@ -69,16 +69,6 @@ export default defineConfig({
     // Disable source maps in production for faster builds
     sourcemap: false,
     // Reduce chunk size warnings threshold
-    chunkSizeWarningLimit: 1000,
-    rollupOptions: {
-      output: {
-        // Manual chunk splitting for better caching
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-          'vendor-ui': ['lucide-react', 'react-hot-toast'],
-          'vendor-three': ['three', '@react-three/fiber', '@react-three/drei']
-        }
-      }
-    }
+    chunkSizeWarningLimit: 1000
   }
 })
