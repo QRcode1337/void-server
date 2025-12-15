@@ -355,19 +355,6 @@ else
   print_skip "Secrets allowlist exists"
 fi
 
-# Install git hooks
-if [[ -d ".git" ]]; then
-  if [[ -f ".git/hooks/pre-commit" ]]; then
-    print_skip "Git hooks installed"
-  else
-    print_step "Installing git hooks..."
-    ./.githooks/install-hooks.sh >/dev/null 2>&1 || print_warning "Could not install git hooks (non-fatal)"
-    print_success "Git hooks installed"
-  fi
-else
-  print_skip "Not a git repository, skipping hooks"
-fi
-
 # PM2 setup
 print_header "Starting Services with PM2"
 
