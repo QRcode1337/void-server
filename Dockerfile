@@ -43,9 +43,6 @@ COPY --from=builder /app/client/dist ./client/dist
 COPY server/ ./server/
 COPY plugins/ ./plugins/
 
-# Copy ecosystem config
-COPY ecosystem.config.js ./
-
 # Create directories for volume mounts
 RUN mkdir -p config backups logs data
 
@@ -62,5 +59,5 @@ EXPOSE 4401
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://localhost:4401/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
-# Start with PM2 runtime
-CMD ["npx", "pm2-runtime", "ecosystem.config.js", "--env", "production"]
+# Start server directly (Docker handles process management)
+CMD ["node", "server/index.js"]
