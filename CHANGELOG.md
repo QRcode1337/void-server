@@ -1,5 +1,62 @@
 # Changelog
 
+## [0.6.0] - 2025-12-14
+
+Docker containerization and GitHub Container Registry support.
+
+### New Features
+
+#### Docker Support
+- **Dockerfile** - Multi-stage production build with Node.js 20 Alpine
+  - Stage 1: Build client with all dependencies
+  - Stage 2: Minimal production image with only runtime dependencies
+  - Non-root user for security
+  - Health check endpoint
+- **docker-compose.yml** - Full stack with Neo4j
+  - void-server service on port 4401
+  - Neo4j 5 Community with APOC plugin
+  - Persistent volumes for config, backups, logs, and data
+  - Health checks with dependency ordering
+- **.dockerignore** - Optimized build context
+
+#### GitHub Actions CI/CD
+- **docker.yml workflow** - Automated Docker image builds
+  - Triggers on push to main and version tags
+  - Builds for linux/amd64 and linux/arm64
+  - Pushes to ghcr.io/clawedcode/void-server
+  - Tags: `latest`, version (`0.6.0`), major.minor (`0.6`), SHA
+
+### Changes
+
+- **ecosystem.config.js** - Production mode improvements
+  - Disables file watching in production
+  - Only runs server process (no Vite dev server)
+
+### Docker Quick Start
+
+```bash
+# Start with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+
+# Custom Neo4j password
+NEO4J_PASSWORD=mypassword docker-compose up -d
+```
+
+### Environment Variables (Docker)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NEO4J_PASSWORD` | `voidserver` | Neo4j database password |
+| `LM_STUDIO_URL` | `http://host.docker.internal:1234/v1` | LM Studio API endpoint |
+
+---
+
 ## [0.5.1] - 2025-12-14
 
 ### Fixes

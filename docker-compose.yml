@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # Void Server - Main Application
+  # ==========================================================================
+  void-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ghcr.io/clawedcode/void-server:latest
+    container_name: void-server
+    restart: unless-stopped
+    ports:
+      - "4401:4401"
+    environment:
+      - NODE_ENV=production
+      - PORT=4401
+      # Neo4j connection (uses service name as hostname)
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-voidserver}
+      - NEO4J_DATABASE=neo4j
+      # Optional: LM Studio running on host machine
+      - LM_STUDIO_URL=${LM_STUDIO_URL:-http://host.docker.internal:1234/v1}
+    volumes:
+      # Persistent data directories
+      - ./config:/app/config
+      - ./backups:/app/backups
+      - ./logs:/app/logs
+      - ./data:/app/data
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    networks:
+      - void-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4401/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # ==========================================================================
+  # Neo4j - Graph Database for Memory System
+  # ==========================================================================
+  neo4j:
+    image: neo4j:5-community
+    container_name: void-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474"  # HTTP (Neo4j Browser)
+      - "7687:7687"  # Bolt protocol
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-voidserver}
+      - NEO4J_PLUGINS=["apoc"]
+      # Performance tuning
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_dbms_memory_pagecache_size=512m
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - void-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+networks:
+  void-network:
+    driver: bridge
+
+volumes:
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local

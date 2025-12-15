@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+client/node_modules/
+plugins/*/node_modules/
+
+# Git
+.git/
+.gitignore
+.gitmodules
+.githooks/
+
+# Development
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Runtime data (mounted as volumes)
+logs/
+backups/
+data/
+
+# Config (mounted as volume, user-specific)
+config/*.json
+
+# Build artifacts (rebuilt in container)
+client/dist/
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Scripts (not needed in container)
+setup.sh
+setup.ps1
+update.sh
+update.ps1
+run.sh
+run.ps1
+
+# Test/CI files
+.github/
+*.test.js
+*.spec.js
+coverage/
+
+# Playwright
+.playwright-mcp/

@@ -1,10 +1,13 @@
+const isProduction = process.env.NODE_ENV === 'production';
+
 module.exports = {
   apps: [
     {
       name: 'void-server',
       script: './server/index.js',
       cwd: './',
-      watch: ['server', 'plugins'],
+      // Disable watch in production
+      watch: isProduction ? false : ['server', 'plugins'],
       ignore_watch: ['node_modules', 'logs', '*.log', '.git'],
       watch_delay: 1000,
       env: {
@@ -26,16 +29,13 @@ module.exports = {
       wait_ready: true,
       listen_timeout: 3000
     },
-    {
+    // Client dev server - only runs in development
+    ...(isProduction ? [] : [{
       name: 'void-client',
       script: 'npm',
       args: 'run dev',
       cwd: './client',
-      // Vite has its own HMR, no need for PM2 watch
       env: {
-        NODE_ENV: 'development'
-      },
-      env_production: {
         NODE_ENV: 'development'
       },
       error_file: '../logs/client-error.log',
@@ -45,6 +45,6 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
       min_uptime: '10s'
-    }
+    }])
   ]
 };
