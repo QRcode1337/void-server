@@ -186,6 +186,12 @@ function loadConfig() {
     };
   }
 
+  // Allow environment variable override for LM Studio endpoint (useful for Docker)
+  if (process.env.LM_STUDIO_URL && config.providers.lmstudio) {
+    config.providers.lmstudio.endpoint = process.env.LM_STUDIO_URL;
+    console.log(`🔧 LM Studio endpoint overridden by LM_STUDIO_URL: ${process.env.LM_STUDIO_URL}`);
+  }
+
   return config;
 }
 
