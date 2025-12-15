@@ -102,7 +102,8 @@ async function saveExtractedMemories(memories, metadata = {}) {
 
     if (result) {
       savedMemories.push(result);
-      console.log(`💾 Saved extracted memory: ${memory.content.substring(0, 50)}...`);
+      const hasEmbedding = result.embedding ? '(with embedding)' : '(no embedding)';
+      console.log(`💾 Saved extracted memory ${hasEmbedding}: ${memory.content.substring(0, 50)}...`);
     }
   }
 

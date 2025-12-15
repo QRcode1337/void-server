@@ -243,7 +243,17 @@ async function getRelevantMemories(context) {
     ? providedKeywords
     : extractKeywords(message);
 
-  // 1. Get memories related to this user (highest relevance: 10)
+  // 1. Semantic search using embeddings (highest relevance: 12)
+  if (message) {
+    const semanticMemories = await searchBySemantic(message, 5).catch(() => []);
+    allMemories.push(...semanticMemories.map(m => ({
+      ...m,
+      relevanceScore: 12 * (m.similarity || 0.5), // Scale by similarity
+      matchSource: 'semantic'
+    })));
+  }
+
+  // 2. Get memories related to this user (relevance: 10)
   if (userHandle) {
     const userMemories = await getMemoriesAboutUser(userHandle, 3);
     allMemories.push(...userMemories.map(m => ({
@@ -253,7 +263,7 @@ async function getRelevantMemories(context) {
     })));
   }
 
-  // 2. Get memories matching keywords (relevance: 8)
+  // 3. Get memories matching keywords (relevance: 8)
   if (keywords.length > 0) {
     const keywordMemories = await getMemoriesByKeywords(keywords, 5);
     allMemories.push(...keywordMemories.map(m => ({
@@ -263,7 +273,7 @@ async function getRelevantMemories(context) {
     })));
   }
 
-  // 3. Get memories in same category (relevance: 6)
+  // 4. Get memories in same category (relevance: 6)
   if (category) {
     const categoryMemories = await getMemoriesByCategory(category, 3);
     allMemories.push(...categoryMemories.map(m => ({
@@ -273,7 +283,7 @@ async function getRelevantMemories(context) {
     })));
   }
 
-  // 4. Get recent significant memories (relevance: 5)
+  // 5. Get recent significant memories (relevance: 5)
   const recentMemories = await getRecentMemories(3);
   allMemories.push(...recentMemories.map(m => ({
     ...m,
