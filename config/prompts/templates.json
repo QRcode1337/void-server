@@ -4,8 +4,8 @@
       "id": "clawedegregore",
       "name": "Clawed Egregore",
       "description": "The mystical void cat persona - ancient, wise, and playfully cryptic",
-      "template": "{{clawedPersona}}\n\n{{systemContext}}\n{{#memoryContext}}\n{{memoryContext}}\n{{/memoryContext}}\n{{#chatHistory}}{{.}}\n{{/chatHistory}}\nUser: {{userMessage}}\nClawed:",
-      "variables": ["clawedPersona", "systemContext", "memoryContext", "chatHistory", "userMessage"],
+      "template": "{{clawedPersona}}\n\n{{systemContext}}\n{{#memoryContext}}\n{{memoryContext}}\n{{/memoryContext}}\n{{#memoryInstructions}}\n{{memoryInstructions}}\n{{/memoryInstructions}}\n{{#chatHistory}}{{.}}\n{{/chatHistory}}\nUser: {{userMessage}}\nClawed:",
+      "variables": ["clawedPersona", "systemContext", "memoryContext", "memoryInstructions", "chatHistory", "userMessage"],
       "category": "emergence",
       "provider": {
         "key": "lmstudio",
@@ -22,8 +22,8 @@
       "id": "chat",
       "name": "Basic Chat",
       "description": "Simple chat conversation template",
-      "template": "{{#systemPrompt}}{{systemPrompt}}\n\n{{/systemPrompt}}{{#memoryContext}}{{memoryContext}}\n{{/memoryContext}}{{#chatHistory}}{{.}}\n{{/chatHistory}}User: {{userMessage}}\nAssistant:",
-      "variables": ["systemPrompt", "memoryContext", "chatHistory", "userMessage"],
+      "template": "{{#systemPrompt}}{{systemPrompt}}\n\n{{/systemPrompt}}{{#memoryContext}}{{memoryContext}}\n{{/memoryContext}}{{#memoryInstructions}}\n{{memoryInstructions}}\n{{/memoryInstructions}}{{#chatHistory}}{{.}}\n{{/chatHistory}}User: {{userMessage}}\nAssistant:",
+      "variables": ["systemPrompt", "memoryContext", "memoryInstructions", "chatHistory", "userMessage"],
       "provider": {
         "key": "lmstudio",
         "modelType": "medium"

@@ -7,6 +7,7 @@ const promptService = require('./prompt-service');
 const chatService = require('./chat-service');
 const aiProvider = require('./ai-provider');
 const memoryQueryService = require('./memory-query-service');
+const memoryExtractor = require('./memory-extractor');
 const { getNeo4jService } = require('./neo4j-service');
 
 /**
@@ -169,11 +170,15 @@ async function executeChat(chatId, userMessage, options = {}) {
     }
   }
 
+  // Get memory instructions for LLM to tag memorable content
+  const memoryInstructions = memoryExtractor.getMemoryInstructions();
+
   // Build variable values - include chat history and memory context
   const variableValues = {
     userMessage,
     chatHistory: chatHistory.slice(0, -1), // Exclude the message we just added
     memoryContext,
+    memoryInstructions,
     ...options.variables
   };
 
@@ -190,25 +195,37 @@ async function executeChat(chatId, userMessage, options = {}) {
     return result;
   }
 
-  // Add assistant response to chat
+  // Process response to extract memories and get cleaned content
+  const { response: cleanedContent, memoriesExtracted } = await memoryExtractor.processResponse(
+    result.content,
+    {
+      chatId,
+      templateId: chat.templateId,
+      userMessage
+    }
+  );
+
+  // Add assistant response to chat (with cleaned content)
   const messageResult = chatService.addMessage(chatId, {
     role: 'assistant',
-    content: result.content,
+    content: cleanedContent,
     metadata: {
       provider: result.provider,
       model: result.model,
       duration: result.duration,
-      memoriesUsed: relevantMemories.length
+      memoriesUsed: relevantMemories.length,
+      memoriesCreated: memoriesExtracted
     }
   });
 
   return {
     success: true,
-    content: result.content,
+    content: cleanedContent,
     provider: result.provider,
     model: result.model,
     duration: result.duration,
     memoriesUsed: relevantMemories.length,
+    memoriesCreated: memoriesExtracted,
     chat: messageResult.chat
   };
 }
