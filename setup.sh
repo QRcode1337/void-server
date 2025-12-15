@@ -40,23 +40,207 @@ print_success() {
   echo -e "${GREEN}✔${NC} $1"
 }
 
+prompt_yes_no() {
+  local prompt="$1"
+  local default="${2:-n}"
+  local response
+
+  if [[ "$default" == "y" ]]; then
+    prompt="$prompt [Y/n]: "
+  else
+    prompt="$prompt [y/N]: "
+  fi
+
+  read -r -p "$prompt" response
+  response="${response:-$default}"
+
+  [[ "$response" =~ ^[Yy]$ ]]
+}
+
+# Detect OS
+detect_os() {
+  case "$(uname -s)" in
+    Darwin*)
+      OS="macos"
+      ;;
+    Linux*)
+      if [[ -f /etc/debian_version ]]; then
+        OS="debian"
+      elif [[ -f /etc/redhat-release ]]; then
+        OS="redhat"
+      elif [[ -f /etc/arch-release ]]; then
+        OS="arch"
+      else
+        OS="linux"
+      fi
+      ;;
+    *)
+      OS="unknown"
+      ;;
+  esac
+  echo "$OS"
+}
+
+# Install Node.js
+install_node() {
+  local os="$1"
+  print_step "Installing Node.js..."
+
+  case "$os" in
+    macos)
+      if command -v brew &>/dev/null; then
+        brew install node
+      else
+        print_warning "Homebrew not found. Installing Homebrew first..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        brew install node
+      fi
+      ;;
+    debian)
+      print_step "Adding NodeSource repository..."
+      curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+      sudo apt-get install -y nodejs
+      ;;
+    redhat)
+      print_step "Adding NodeSource repository..."
+      curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+      sudo dnf install -y nodejs || sudo yum install -y nodejs
+      ;;
+    arch)
+      sudo pacman -S --noconfirm nodejs npm
+      ;;
+    *)
+      print_error "Unsupported OS for automatic Node.js installation."
+      print_warning "Please install Node.js 18+ manually from: https://nodejs.org/"
+      exit 1
+      ;;
+  esac
+
+  print_success "Node.js installed successfully"
+}
+
+# Install Neo4j
+install_neo4j() {
+  local os="$1"
+  print_step "Installing Neo4j..."
+
+  case "$os" in
+    macos)
+      if command -v brew &>/dev/null; then
+        brew install neo4j
+        print_success "Neo4j installed. Start with: neo4j start"
+      else
+        print_warning "Homebrew not found. Please install Neo4j Desktop from:"
+        echo -e "         ${CYAN}https://neo4j.com/download/${NC}"
+        return 1
+      fi
+      ;;
+    debian)
+      print_step "Adding Neo4j repository..."
+      curl -fsSL https://debian.neo4j.com/neotechnology.gpg.key | sudo gpg --dearmor -o /usr/share/keyrings/neo4j.gpg
+      echo "deb [signed-by=/usr/share/keyrings/neo4j.gpg] https://debian.neo4j.com stable latest" | sudo tee /etc/apt/sources.list.d/neo4j.list
+      sudo apt-get update
+      sudo apt-get install -y neo4j
+      print_success "Neo4j installed. Start with: sudo systemctl start neo4j"
+      ;;
+    redhat)
+      print_step "Adding Neo4j repository..."
+      sudo rpm --import https://debian.neo4j.com/neotechnology.gpg.key
+      cat <<EOF | sudo tee /etc/yum.repos.d/neo4j.repo
+[neo4j]
+name=Neo4j RPM Repository
+baseurl=https://yum.neo4j.com/stable/5
+enabled=1
+gpgcheck=1
+gpgkey=https://debian.neo4j.com/neotechnology.gpg.key
+EOF
+      sudo dnf install -y neo4j || sudo yum install -y neo4j
+      print_success "Neo4j installed. Start with: sudo systemctl start neo4j"
+      ;;
+    arch)
+      print_warning "Neo4j is available in AUR. Install with your AUR helper:"
+      echo -e "         ${CYAN}yay -S neo4j-community${NC}"
+      return 1
+      ;;
+    *)
+      print_warning "Please install Neo4j manually from:"
+      echo -e "         ${CYAN}https://neo4j.com/download/${NC}"
+      return 1
+      ;;
+  esac
+}
+
+# Start Neo4j service
+start_neo4j() {
+  local os="$1"
+  print_step "Starting Neo4j..."
+
+  case "$os" in
+    macos)
+      neo4j start 2>/dev/null || brew services start neo4j 2>/dev/null || true
+      ;;
+    debian|redhat)
+      sudo systemctl start neo4j 2>/dev/null || true
+      sudo systemctl enable neo4j 2>/dev/null || true
+      ;;
+    *)
+      print_warning "Please start Neo4j manually"
+      ;;
+  esac
+}
+
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 print_header "Void Server Setup"
 
+# Detect OS
+OS=$(detect_os)
+print_step "Detected OS: $OS"
+
 # Check prerequisites
 print_step "Checking prerequisites..."
 
-if ! command -v node &>/dev/null; then
-  print_error "Node.js is not installed. Please install Node.js 18+ and try again."
+# Check for git first (required for everything)
+if ! command -v git &>/dev/null; then
+  print_error "git is not installed."
+  case "$OS" in
+    macos)
+      echo -e "         Install with: ${CYAN}xcode-select --install${NC}"
+      ;;
+    debian)
+      echo -e "         Install with: ${CYAN}sudo apt-get install git${NC}"
+      ;;
+    redhat)
+      echo -e "         Install with: ${CYAN}sudo dnf install git${NC}"
+      ;;
+    arch)
+      echo -e "         Install with: ${CYAN}sudo pacman -S git${NC}"
+      ;;
+  esac
   exit 1
+fi
+
+# Check for Node.js
+if ! command -v node &>/dev/null; then
+  print_warning "Node.js is not installed."
+  echo ""
+  if prompt_yes_no "Would you like to install Node.js automatically?" "y"; then
+    install_node "$OS"
+  else
+    print_error "Node.js is required. Please install Node.js 18+ and try again."
+    echo -e "         Download from: ${CYAN}https://nodejs.org/${NC}"
+    exit 1
+  fi
 fi
 
 NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
 if [[ $NODE_VERSION -lt 18 ]]; then
   print_warning "Node.js version $NODE_VERSION detected. Version 18+ recommended."
+  if prompt_yes_no "Would you like to upgrade Node.js?" "y"; then
+    install_node "$OS"
+  fi
 fi
 
 if ! command -v npm &>/dev/null; then
@@ -64,10 +248,7 @@ if ! command -v npm &>/dev/null; then
   exit 1
 fi
 
-if ! command -v git &>/dev/null; then
-  print_error "git is not installed. Please install git and try again."
-  exit 1
-fi
+print_success "Node.js $(node -v), npm $(npm -v)"
 
 # Check for Neo4j (optional but recommended for memory features)
 NEO4J_INSTALLED=false
@@ -82,21 +263,23 @@ elif [[ -d "/Applications/Neo4j Desktop.app" ]] || [[ -d "$HOME/Library/Applicat
   print_success "Neo4j Desktop detected"
 else
   print_warning "Neo4j not detected. Memory features require Neo4j."
-  echo -e "         Install from: ${CYAN}https://neo4j.com/download/${NC}"
-  echo -e "         Or via Homebrew: ${CYAN}brew install neo4j${NC}"
-fi
-
-print_success "Prerequisites satisfied (Node $(node -v), npm $(npm -v))"
-
-# Initialize git submodules (plugins)
-if [[ -d ".git" ]]; then
-  if [[ -f ".gitmodules" ]]; then
-    print_step "Initializing git submodules (plugins)..."
-    git submodule init
-    git submodule update --recursive
-    print_success "Git submodules initialized"
+  echo ""
+  if prompt_yes_no "Would you like to install Neo4j automatically?" "y"; then
+    if install_neo4j "$OS"; then
+      NEO4J_INSTALLED=true
+      if prompt_yes_no "Would you like to start Neo4j now?" "y"; then
+        start_neo4j "$OS"
+        print_success "Neo4j started"
+        echo ""
+        print_warning "Default Neo4j credentials: neo4j / neo4j"
+        print_warning "You'll be prompted to change the password on first login."
+        echo -e "         Neo4j Browser: ${CYAN}http://localhost:7474${NC}"
+        echo ""
+      fi
+    fi
   else
-    print_skip "No git submodules configured"
+    print_warning "Skipping Neo4j installation. Memory features will be disabled."
+    echo -e "         Install later from: ${CYAN}https://neo4j.com/download/${NC}"
   fi
 fi
 
@@ -219,6 +402,9 @@ echo -e "${GREEN}Void Server is running!${NC}"
 echo ""
 echo "  API:     http://localhost:4401"
 echo "  Client:  http://localhost:4480 (Vite dev server with HMR)"
+if [[ "$NEO4J_INSTALLED" == true ]]; then
+  echo "  Neo4j:   http://localhost:7474"
+fi
 echo ""
 echo -e "${CYAN}Commands:${NC}"
 echo "  npm run logs      View logs"

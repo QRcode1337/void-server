@@ -25,6 +25,17 @@ Simplified installation by embedding core plugins directly in the repository.
 - **update.ps1** - PowerShell update script for Windows users
 - **run.ps1** - PowerShell run script for Windows users
 
+#### Auto-Install Dependencies
+- **Node.js auto-install** - Setup scripts prompt to install Node.js if missing
+  - macOS: via Homebrew
+  - Linux: via NodeSource (Debian/Ubuntu, RHEL/Fedora, Arch)
+  - Windows: via winget or browser download
+- **Neo4j auto-install** - Setup scripts prompt to install Neo4j if missing
+  - macOS: via Homebrew
+  - Linux: via official Neo4j repositories
+  - Windows: via winget or Neo4j Desktop download
+- **OS detection** - Bash script detects macOS, Debian, RHEL, and Arch Linux
+
 ### Migration Notes
 
 For existing installations with submodule issues:

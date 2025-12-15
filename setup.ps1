@@ -43,25 +43,154 @@ function Write-Error {
     Write-Host $Message
 }
 
+function Prompt-YesNo {
+    param(
+        [string]$Prompt,
+        [string]$Default = "n"
+    )
+
+    if ($Default -eq "y") {
+        $options = "[Y/n]"
+    } else {
+        $options = "[y/N]"
+    }
+
+    $response = Read-Host "$Prompt $options"
+    if ([string]::IsNullOrWhiteSpace($response)) {
+        $response = $Default
+    }
+
+    return $response -match "^[Yy]$"
+}
+
+function Test-WingetAvailable {
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    return $null -ne $winget
+}
+
+function Install-NodeJS {
+    Write-Step "Installing Node.js..."
+
+    if (Test-WingetAvailable) {
+        Write-Step "Using winget to install Node.js..."
+        winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements
+
+        # Refresh PATH
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+        Write-Success "Node.js installed successfully"
+        Write-Warning "You may need to restart your terminal for PATH changes to take effect."
+    } else {
+        Write-Warning "winget not available. Opening Node.js download page..."
+        Start-Process "https://nodejs.org/en/download/"
+        Write-Host ""
+        Write-Host "Please download and install Node.js LTS, then run this script again." -ForegroundColor Yellow
+        exit 1
+    }
+}
+
+function Install-Neo4j {
+    Write-Step "Installing Neo4j..."
+
+    if (Test-WingetAvailable) {
+        Write-Step "Using winget to install Neo4j..."
+        $result = winget install Neo4j.Neo4j --accept-package-agreements --accept-source-agreements 2>&1
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Success "Neo4j installed successfully"
+
+            # Refresh PATH
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+
+            return $true
+        } else {
+            Write-Warning "winget installation failed. Trying Neo4j Desktop..."
+        }
+    }
+
+    # Fallback to Neo4j Desktop download
+    Write-Warning "Opening Neo4j Desktop download page..."
+    Start-Process "https://neo4j.com/download/"
+    Write-Host ""
+    Write-Host "Please download and install Neo4j Desktop, then configure a local database." -ForegroundColor Yellow
+    return $false
+}
+
+function Start-Neo4jService {
+    Write-Step "Starting Neo4j..."
+
+    # Try Windows service
+    $service = Get-Service -Name "neo4j" -ErrorAction SilentlyContinue
+    if ($service) {
+        Start-Service -Name "neo4j" -ErrorAction SilentlyContinue
+        Write-Success "Neo4j service started"
+        return
+    }
+
+    # Try neo4j console command
+    $neo4j = Get-Command neo4j -ErrorAction SilentlyContinue
+    if ($neo4j) {
+        Start-Process -FilePath "neo4j" -ArgumentList "console" -WindowStyle Minimized
+        Write-Success "Neo4j started in background"
+        return
+    }
+
+    Write-Warning "Please start Neo4j manually using Neo4j Desktop or the neo4j command"
+}
+
 # Get script directory and change to it
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ScriptDir
 
 Write-Header "Void Server Setup"
 
+Write-Step "Detected OS: Windows"
+
 # Check prerequisites
 Write-Step "Checking prerequisites..."
+
+# Check git
+$git = Get-Command git -ErrorAction SilentlyContinue
+if (-not $git) {
+    Write-Error "git is not installed."
+    Write-Host "         Install from: " -NoNewline
+    Write-Host "https://git-scm.com/download/win" -ForegroundColor Cyan
+    Write-Host "         Or with winget: " -NoNewline
+    Write-Host "winget install Git.Git" -ForegroundColor Cyan
+    exit 1
+}
 
 # Check Node.js
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) {
-    Write-Error "Node.js is not installed. Please install Node.js 18+ and try again."
-    exit 1
+    Write-Warning "Node.js is not installed."
+    Write-Host ""
+
+    if (Prompt-YesNo "Would you like to install Node.js automatically?" "y") {
+        Install-NodeJS
+
+        # Re-check after install
+        $node = Get-Command node -ErrorAction SilentlyContinue
+        if (-not $node) {
+            Write-Error "Node.js installation may require a terminal restart."
+            Write-Host "Please restart your terminal and run this script again." -ForegroundColor Yellow
+            exit 1
+        }
+    } else {
+        Write-Error "Node.js is required. Please install Node.js 18+ and try again."
+        Write-Host "         Download from: " -NoNewline
+        Write-Host "https://nodejs.org/" -ForegroundColor Cyan
+        exit 1
+    }
 }
 
 $nodeVersion = (node -v) -replace 'v', '' -split '\.' | Select-Object -First 1
 if ([int]$nodeVersion -lt 18) {
     Write-Warning "Node.js version $nodeVersion detected. Version 18+ recommended."
+
+    if (Prompt-YesNo "Would you like to upgrade Node.js?" "y") {
+        Install-NodeJS
+    }
 }
 
 # Check npm
@@ -71,17 +200,15 @@ if (-not $npm) {
     exit 1
 }
 
-# Check git
-$git = Get-Command git -ErrorAction SilentlyContinue
-if (-not $git) {
-    Write-Error "git is not installed. Please install git and try again."
-    exit 1
-}
+$nodeVer = node -v
+$npmVer = npm -v
+Write-Success "Node.js $nodeVer, npm $npmVer"
 
 # Check for Neo4j (optional)
 $neo4jInstalled = $false
 $neo4j = Get-Command neo4j -ErrorAction SilentlyContinue
 $cypherShell = Get-Command cypher-shell -ErrorAction SilentlyContinue
+$neo4jService = Get-Service -Name "neo4j" -ErrorAction SilentlyContinue
 
 if ($neo4j) {
     $neo4jInstalled = $true
@@ -89,18 +216,36 @@ if ($neo4j) {
 } elseif ($cypherShell) {
     $neo4jInstalled = $true
     Write-Success "Neo4j found (via cypher-shell)"
+} elseif ($neo4jService) {
+    $neo4jInstalled = $true
+    Write-Success "Neo4j service detected"
 } elseif (Test-Path "$env:PROGRAMFILES\Neo4j*") {
     $neo4jInstalled = $true
     Write-Success "Neo4j installation detected"
 } else {
     Write-Warning "Neo4j not detected. Memory features require Neo4j."
-    Write-Host "         Install from: " -NoNewline
-    Write-Host "https://neo4j.com/download/" -ForegroundColor Cyan
-}
+    Write-Host ""
 
-$nodeVer = node -v
-$npmVer = npm -v
-Write-Success "Prerequisites satisfied (Node $nodeVer, npm $npmVer)"
+    if (Prompt-YesNo "Would you like to install Neo4j automatically?" "y") {
+        if (Install-Neo4j) {
+            $neo4jInstalled = $true
+
+            if (Prompt-YesNo "Would you like to start Neo4j now?" "y") {
+                Start-Neo4jService
+                Write-Host ""
+                Write-Warning "Default Neo4j credentials: neo4j / neo4j"
+                Write-Warning "You'll be prompted to change the password on first login."
+                Write-Host "         Neo4j Browser: " -NoNewline
+                Write-Host "http://localhost:7474" -ForegroundColor Cyan
+                Write-Host ""
+            }
+        }
+    } else {
+        Write-Warning "Skipping Neo4j installation. Memory features will be disabled."
+        Write-Host "         Install later from: " -NoNewline
+        Write-Host "https://neo4j.com/download/" -ForegroundColor Cyan
+    }
+}
 
 # Install server dependencies
 $serverModulesExists = Test-Path "node_modules"
@@ -132,7 +277,7 @@ if ($clientModulesExists -and $clientModulesTime -gt $clientPackageTime) {
 
 # Install plugin dependencies
 $pluginCount = 0
-Get-ChildItem -Path "plugins" -Directory | ForEach-Object {
+Get-ChildItem -Path "plugins" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
     $pluginDir = $_.FullName
     $pluginName = $_.Name
     $pluginPackage = Join-Path $pluginDir "package.json"
@@ -218,6 +363,9 @@ Write-Host "Void Server is running!" -ForegroundColor Green
 Write-Host ""
 Write-Host "  API:     http://localhost:4401"
 Write-Host "  Client:  http://localhost:4480 (Vite dev server with HMR)"
+if ($neo4jInstalled) {
+    Write-Host "  Neo4j:   http://localhost:7474"
+}
 Write-Host ""
 Write-Host "Commands:" -ForegroundColor Cyan
 Write-Host "  npm run logs      View logs"
