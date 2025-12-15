@@ -1848,6 +1848,7 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordIsPlaceholder, setPasswordIsPlaceholder] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -1864,8 +1865,16 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
         password: data.config.hasPassword ? '••••••••' : '',
         database: data.config.database || ''
       });
+      setPasswordIsPlaceholder(data.config.hasPassword);
     }
     setLoading(false);
+  };
+
+  const handlePasswordFocus = () => {
+    if (passwordIsPlaceholder) {
+      setConfig({ ...config, password: '' });
+      setPasswordIsPlaceholder(false);
+    }
   };
 
   const handleSave = async () => {
@@ -1962,18 +1971,25 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
               </label>
               <div className="relative">
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword && !passwordIsPlaceholder ? 'text' : 'password'}
                   value={config.password}
                   onChange={(e) => setConfig({ ...config, password: e.target.value })}
+                  onFocus={handlePasswordFocus}
                   className="form-input w-full pr-10"
                   placeholder="Enter password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-text-tertiary hover:text-text-secondary transition-colors"
+                  disabled={passwordIsPlaceholder}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 transition-colors ${
+                    passwordIsPlaceholder
+                      ? 'text-text-tertiary/50 cursor-not-allowed'
+                      : 'text-text-tertiary hover:text-text-secondary cursor-pointer'
+                  }`}
+                  title={passwordIsPlaceholder ? 'Click password field to enter new password' : (showPassword ? 'Hide password' : 'Show password')}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword && !passwordIsPlaceholder ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
