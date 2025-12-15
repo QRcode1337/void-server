@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.6.3] - 2025-12-15
+
+ASCII generator enhancements and UI polish.
+
+### Improvements
+
+#### ASCII Generator
+- **Expanded character support** - Added full range of special characters: `@#$%^&*()+=[]{}|\'"<>~\`;,`
+- **Simplified header input** - Merged Header Text and Cat Emoji into a single text field
+- **Cleaner UI** - Removed Supported Characters button grid for a streamlined interface
+
+#### Navigation
+- **Centered settings icon** - Settings button now centers in the footer when nav drawer is collapsed
+
+### Fixes
+
+#### Memory Manager
+- **New Memory button** - Fixed button being permanently disabled (was checking wrong status property)
+- **Modal readability** - Changed modal background to solid color for better readability
+
+---
+
 ## [0.6.2] - 2025-12-15
 
 Startup script improvements with auto-browser launch.

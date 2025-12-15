@@ -209,7 +209,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus }) {
         <button
           onClick={handleNew}
           className="btn btn-primary flex items-center gap-2"
-          disabled={!neo4jStatus.available}
+          disabled={!neo4jStatus.connected}
         >
           <Plus size={18} />
           New Memory
@@ -424,7 +424,8 @@ function MemoriesTab({ neo4jStatus, fetchStatus }) {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-surface border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            className="border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            style={{ backgroundColor: 'var(--color-surface-solid)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b border-border flex items-center justify-between">
