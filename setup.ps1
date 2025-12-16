@@ -86,8 +86,9 @@ function Test-DockerAvailable {
 function Start-DockerSetup {
     Write-Header "Starting with Docker Compose"
 
-    Write-Step "Starting Void Server and Neo4j containers..."
-    docker compose up -d
+    Write-Step "Pulling latest images and starting containers..."
+    docker compose pull
+    docker compose up -d --build
 
     Write-Host ""
     Write-Success "Void Server is running with Docker!"

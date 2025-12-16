@@ -36,11 +36,33 @@ print_error() {
   echo -e "${RED}✖${NC} $1"
 }
 
+# Check if Docker is running void-server containers
+is_docker_running() {
+  if command -v docker &>/dev/null; then
+    if docker compose ps --format json 2>/dev/null | grep -q "void"; then
+      return 0
+    fi
+    if docker ps --filter "name=void-server" --format "{{.Names}}" 2>/dev/null | grep -q "void"; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 print_header "Void Server Update"
+
+# Detect installation type
+IS_DOCKER=false
+if is_docker_running; then
+  IS_DOCKER=true
+  print_success "Detected Docker installation"
+else
+  print_success "Detected native installation"
+fi
 
 # Auto-stash uncommitted changes
 STASHED=false
@@ -63,40 +85,57 @@ fi
 
 # Stop services
 print_step "Stopping services..."
-npx pm2 stop ecosystem.config.js 2>/dev/null || true
+if [[ "$IS_DOCKER" == true ]]; then
+  docker compose stop 2>/dev/null || true
+else
+  npx pm2 stop ecosystem.config.js 2>/dev/null || true
+fi
 
 # Pull latest code
 print_step "Pulling latest code..."
 git pull --rebase
 
-# Update server dependencies
-print_step "Updating server dependencies..."
-npm install
+# Update dependencies and restart based on installation type
+if [[ "$IS_DOCKER" == true ]]; then
+  # Docker: pull new images and rebuild
+  print_step "Pulling latest Docker images..."
+  docker compose pull
 
-# Update client dependencies
-print_step "Updating client dependencies..."
-cd client
-npm install
-cd "$SCRIPT_DIR"
+  print_step "Rebuilding and restarting containers..."
+  docker compose up -d --build
 
-# Update plugin dependencies
-for plugin_dir in plugins/*/; do
-  if [[ -f "${plugin_dir}package.json" ]]; then
-    plugin_name=$(basename "$plugin_dir")
-    print_step "Updating $plugin_name dependencies..."
-    cd "$plugin_dir"
-    npm install
-    cd "$SCRIPT_DIR"
-  fi
-done
+  # Show status
+  echo ""
+  docker compose ps
+else
+  # Native: update npm dependencies
+  print_step "Updating server dependencies..."
+  npm install
 
-# Restart services
-print_step "Restarting services..."
-npx pm2 restart ecosystem.config.js
+  print_step "Updating client dependencies..."
+  cd client
+  npm install
+  cd "$SCRIPT_DIR"
 
-# Show status
-echo ""
-npx pm2 status
+  # Update plugin dependencies
+  for plugin_dir in plugins/*/; do
+    if [[ -f "${plugin_dir}package.json" ]]; then
+      plugin_name=$(basename "$plugin_dir")
+      print_step "Updating $plugin_name dependencies..."
+      cd "$plugin_dir"
+      npm install
+      cd "$SCRIPT_DIR"
+    fi
+  done
+
+  # Restart services
+  print_step "Restarting services..."
+  npx pm2 restart ecosystem.config.js
+
+  # Show status
+  echo ""
+  npx pm2 status
+fi
 
 # Restore stashed changes
 if [[ "$STASHED" == true ]]; then
@@ -108,6 +147,11 @@ print_header "Update Complete!"
 
 echo -e "${GREEN}Void Server has been updated and restarted.${NC}"
 echo ""
-echo "  API:     http://localhost:4401"
-echo "  Client:  http://localhost:4480"
+if [[ "$IS_DOCKER" == true ]]; then
+  echo "  App:     http://localhost:4420"
+  echo "  Neo4j:   http://localhost:4421"
+else
+  echo "  API:     http://localhost:4401"
+  echo "  Client:  http://localhost:4480"
+fi
 echo ""

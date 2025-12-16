@@ -72,8 +72,9 @@ check_docker() {
 run_docker_setup() {
   print_header "Starting with Docker Compose"
 
-  print_step "Starting Void Server and Neo4j containers..."
-  docker compose up -d
+  print_step "Pulling latest images and starting containers..."
+  docker compose pull
+  docker compose up -d --build
 
   echo ""
   print_success "Void Server is running with Docker!"
