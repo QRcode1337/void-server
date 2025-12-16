@@ -142,6 +142,9 @@ async function executeChat(chatId, userMessage, options = {}) {
     return { success: false, error: `Template "${chat.templateId}" not found` };
   }
 
+  // Get turn number BEFORE adding the message (will be +1 after addMessage)
+  const turnNumber = chatService.getCurrentTurnNumber(chatId) + 1;
+
   // Add user message to chat
   chatService.addMessage(chatId, {
     role: 'user',
@@ -191,6 +194,22 @@ async function executeChat(chatId, userMessage, options = {}) {
     return buildResult;
   }
 
+  // Resolve provider for logging
+  const { key: resolvedProviderKey } = resolveProvider(template, { providerOverride });
+
+  // Log turn request
+  chatService.logTurnRequest(chatId, turnNumber, {
+    timestamp: new Date().toISOString(),
+    userMessage,
+    compiledPrompt: buildResult.prompt,
+    templateId: chat.templateId,
+    provider: resolvedProviderKey,
+    modelType: options.modelType || 'medium',
+    chatHistoryLength: chatHistory.length - 1,
+    memoryContextLength: memoryContext.length,
+    memoriesRetrieved: relevantMemories.length
+  });
+
   // Execute the prompt
   const result = await executePrompt(chat.templateId, variableValues, {
     ...options,
@@ -198,6 +217,14 @@ async function executeChat(chatId, userMessage, options = {}) {
   });
 
   if (!result.success) {
+    // Log failed response
+    chatService.logTurnResponse(chatId, turnNumber, {
+      timestamp: new Date().toISOString(),
+      success: false,
+      error: result.error,
+      provider: result.provider,
+      duration: result.duration
+    });
     return result;
   }
 
@@ -236,6 +263,32 @@ async function executeChat(chatId, userMessage, options = {}) {
       userMessage
     }
   );
+
+  // Log turn response
+  chatService.logTurnResponse(chatId, turnNumber, {
+    timestamp: new Date().toISOString(),
+    success: true,
+    rawContent: result.content,
+    cleanedContent,
+    provider: result.provider,
+    model: result.model,
+    duration: result.duration,
+    usage: result.usage
+  });
+
+  // Log turn memory info
+  chatService.logTurnMemory(chatId, turnNumber, {
+    timestamp: new Date().toISOString(),
+    retrieved: relevantMemories.map(m => ({
+      id: m.id,
+      content: m.content,
+      category: m.category,
+      importance: m.importance,
+      score: m.score
+    })),
+    created: memoriesExtracted,
+    memoryContextUsed: memoryContext || null
+  });
 
   // Add assistant response to chat (with cleaned content)
   const messageResult = chatService.addMessage(chatId, {

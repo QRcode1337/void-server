@@ -27,10 +27,84 @@ function generateChatId() {
 }
 
 /**
- * Get chat file path
+ * Get chat folder path (new structure)
+ */
+function getChatDir(chatId) {
+  return path.join(CHATS_DIR, chatId);
+}
+
+/**
+ * Get chat.json file path within chat folder
  */
 function getChatPath(chatId) {
-  return path.join(CHATS_DIR, `${chatId}.json`);
+  return path.join(getChatDir(chatId), 'chat.json');
+}
+
+/**
+ * Get turns directory for a chat
+ */
+function getTurnsDir(chatId) {
+  return path.join(getChatDir(chatId), 'turns');
+}
+
+/**
+ * Get turn directory path (padded number)
+ */
+function getTurnDir(chatId, turnNumber) {
+  const padded = String(turnNumber).padStart(4, '0');
+  return path.join(getTurnsDir(chatId), padded);
+}
+
+/**
+ * Ensure chat folder structure exists
+ */
+function ensureChatDir(chatId) {
+  const chatDir = getChatDir(chatId);
+  if (!fs.existsSync(chatDir)) {
+    fs.mkdirSync(chatDir, { recursive: true });
+  }
+  const turnsDir = getTurnsDir(chatId);
+  if (!fs.existsSync(turnsDir)) {
+    fs.mkdirSync(turnsDir, { recursive: true });
+  }
+}
+
+/**
+ * Check if chat exists (supports both old and new formats)
+ */
+function chatExists(chatId) {
+  // New format: folder with chat.json
+  if (fs.existsSync(getChatPath(chatId))) {
+    return true;
+  }
+  // Old format: single JSON file
+  const legacyPath = path.join(CHATS_DIR, `${chatId}.json`);
+  return fs.existsSync(legacyPath);
+}
+
+/**
+ * Migrate a single chat from old format to new format
+ */
+function migrateChatToFolder(chatId) {
+  const legacyPath = path.join(CHATS_DIR, `${chatId}.json`);
+  if (!fs.existsSync(legacyPath)) {
+    return false;
+  }
+
+  // Read old format
+  const data = JSON.parse(fs.readFileSync(legacyPath, 'utf8'));
+
+  // Create new folder structure
+  ensureChatDir(chatId);
+
+  // Write to new location
+  fs.writeFileSync(getChatPath(chatId), JSON.stringify(data, null, 2));
+
+  // Remove old file
+  fs.unlinkSync(legacyPath);
+
+  console.log(`📦 Migrated chat ${chatId} to folder format`);
+  return true;
 }
 
 // ============================================================================
@@ -43,12 +117,25 @@ function getChatPath(chatId) {
 function listChats() {
   ensureChatsDir();
 
-  const files = fs.readdirSync(CHATS_DIR).filter(f => f.endsWith('.json'));
+  const entries = fs.readdirSync(CHATS_DIR, { withFileTypes: true });
   const chats = [];
 
-  for (const file of files) {
-    const chatPath = path.join(CHATS_DIR, file);
-    const data = JSON.parse(fs.readFileSync(chatPath, 'utf8'));
+  for (const entry of entries) {
+    let data;
+
+    if (entry.isDirectory()) {
+      // New format: folder with chat.json
+      const chatJsonPath = path.join(CHATS_DIR, entry.name, 'chat.json');
+      if (!fs.existsSync(chatJsonPath)) continue;
+      data = JSON.parse(fs.readFileSync(chatJsonPath, 'utf8'));
+    } else if (entry.name.endsWith('.json') && entry.name !== '.gitkeep') {
+      // Old format: single JSON file - migrate it
+      const chatId = entry.name.replace('.json', '');
+      migrateChatToFolder(chatId);
+      data = JSON.parse(fs.readFileSync(getChatPath(chatId), 'utf8'));
+    } else {
+      continue;
+    }
 
     chats.push({
       id: data.id,
@@ -72,6 +159,12 @@ function listChats() {
  */
 function getChat(chatId) {
   ensureChatsDir();
+
+  // Check for old format and migrate if needed
+  const legacyPath = path.join(CHATS_DIR, `${chatId}.json`);
+  if (fs.existsSync(legacyPath) && !fs.existsSync(getChatPath(chatId))) {
+    migrateChatToFolder(chatId);
+  }
 
   const chatPath = getChatPath(chatId);
   if (!fs.existsSync(chatPath)) {
@@ -99,6 +192,9 @@ function createChat(templateId, title = null, providerOverride = null) {
     providerOverride,
     messages: []
   };
+
+  // Create folder structure
+  ensureChatDir(id);
 
   const chatPath = getChatPath(id);
   fs.writeFileSync(chatPath, JSON.stringify(chat, null, 2));
@@ -137,13 +233,26 @@ function updateChat(chatId, updates) {
  * Delete a chat session
  */
 function deleteChat(chatId) {
+  // Check for old format first
+  const legacyPath = path.join(CHATS_DIR, `${chatId}.json`);
+  if (fs.existsSync(legacyPath)) {
+    const chat = JSON.parse(fs.readFileSync(legacyPath, 'utf8'));
+    fs.unlinkSync(legacyPath);
+    console.log(`🗑️ Deleted chat: ${chat.title}`);
+    return { success: true, message: `Deleted chat "${chat.title}"` };
+  }
+
+  // New format: folder
   const chatPath = getChatPath(chatId);
   if (!fs.existsSync(chatPath)) {
     return { success: false, error: `Chat "${chatId}" not found` };
   }
 
   const chat = JSON.parse(fs.readFileSync(chatPath, 'utf8'));
-  fs.unlinkSync(chatPath);
+  const chatDir = getChatDir(chatId);
+
+  // Remove folder recursively
+  fs.rmSync(chatDir, { recursive: true, force: true });
 
   console.log(`🗑️ Deleted chat: ${chat.title}`);
   return { success: true, message: `Deleted chat "${chat.title}"` };
@@ -280,6 +389,122 @@ function exportChat(chatId, format = 'json') {
   return { success: true, format: 'json', content: JSON.stringify(chat, null, 2) };
 }
 
+// ============================================================================
+// Turn Logging (Debug Info)
+// ============================================================================
+
+/**
+ * Get the current turn number for a chat
+ */
+function getCurrentTurnNumber(chatId) {
+  const chat = getChat(chatId);
+  if (!chat) return 0;
+
+  // Each user+assistant pair is one turn
+  const userMessages = chat.messages.filter(m => m.role === 'user');
+  return userMessages.length;
+}
+
+/**
+ * Log turn request (what was sent to the AI)
+ */
+function logTurnRequest(chatId, turnNumber, data) {
+  ensureChatDir(chatId);
+  const turnDir = getTurnDir(chatId, turnNumber);
+
+  if (!fs.existsSync(turnDir)) {
+    fs.mkdirSync(turnDir, { recursive: true });
+  }
+
+  const requestPath = path.join(turnDir, 'request.json');
+  fs.writeFileSync(requestPath, JSON.stringify(data, null, 2));
+}
+
+/**
+ * Log turn response (what the AI returned)
+ */
+function logTurnResponse(chatId, turnNumber, data) {
+  ensureChatDir(chatId);
+  const turnDir = getTurnDir(chatId, turnNumber);
+
+  if (!fs.existsSync(turnDir)) {
+    fs.mkdirSync(turnDir, { recursive: true });
+  }
+
+  const responsePath = path.join(turnDir, 'response.json');
+  fs.writeFileSync(responsePath, JSON.stringify(data, null, 2));
+}
+
+/**
+ * Log turn memory info (memories used and created)
+ */
+function logTurnMemory(chatId, turnNumber, data) {
+  ensureChatDir(chatId);
+  const turnDir = getTurnDir(chatId, turnNumber);
+
+  if (!fs.existsSync(turnDir)) {
+    fs.mkdirSync(turnDir, { recursive: true });
+  }
+
+  const memoryPath = path.join(turnDir, 'memory.json');
+  fs.writeFileSync(memoryPath, JSON.stringify(data, null, 2));
+}
+
+/**
+ * Log a complete turn (convenience function)
+ */
+function logTurn(chatId, turnNumber, { request, response, memory }) {
+  if (request) logTurnRequest(chatId, turnNumber, request);
+  if (response) logTurnResponse(chatId, turnNumber, response);
+  if (memory) logTurnMemory(chatId, turnNumber, memory);
+}
+
+/**
+ * Get turn logs for a specific turn
+ */
+function getTurnLogs(chatId, turnNumber) {
+  const turnDir = getTurnDir(chatId, turnNumber);
+
+  if (!fs.existsSync(turnDir)) {
+    return null;
+  }
+
+  const logs = {};
+
+  const requestPath = path.join(turnDir, 'request.json');
+  if (fs.existsSync(requestPath)) {
+    logs.request = JSON.parse(fs.readFileSync(requestPath, 'utf8'));
+  }
+
+  const responsePath = path.join(turnDir, 'response.json');
+  if (fs.existsSync(responsePath)) {
+    logs.response = JSON.parse(fs.readFileSync(responsePath, 'utf8'));
+  }
+
+  const memoryPath = path.join(turnDir, 'memory.json');
+  if (fs.existsSync(memoryPath)) {
+    logs.memory = JSON.parse(fs.readFileSync(memoryPath, 'utf8'));
+  }
+
+  return logs;
+}
+
+/**
+ * List all turn numbers for a chat
+ */
+function listTurns(chatId) {
+  const turnsDir = getTurnsDir(chatId);
+
+  if (!fs.existsSync(turnsDir)) {
+    return [];
+  }
+
+  return fs.readdirSync(turnsDir)
+    .filter(f => fs.statSync(path.join(turnsDir, f)).isDirectory())
+    .map(f => parseInt(f, 10))
+    .sort((a, b) => a - b);
+}
+
 /**
  * Migrate chats from legacy location (config/prompts/chats) to new location (data/chats)
  */
@@ -342,5 +567,13 @@ module.exports = {
   getMessages,
   clearMessages,
   getChatHistory,
-  exportChat
+  exportChat,
+  // Turn logging
+  getCurrentTurnNumber,
+  logTurnRequest,
+  logTurnResponse,
+  logTurnMemory,
+  logTurn,
+  getTurnLogs,
+  listTurns
 };
