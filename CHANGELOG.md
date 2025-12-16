@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.3] - 2025-12-15
+
+Chat improvements for debugging and extended thinking models.
+
+### New Features
+
+- **Provider/Model in Chat Header** - Shows the provider and model used in the chat header
+  - Displays badge like `lmstudio: openai/gpt-oss-20b` for debugging
+  - Also shows in message footer: `lmstudio (openai/gpt-oss-20b) • 21.4s`
+- **Collapsible Thinking Blocks** - Extended thinking models (with `<think>` tags) now render properly
+  - `<think>` content hidden in collapsible "Thinking..." section
+  - Click to expand and view the model's reasoning process
+- **Purr Tag Support** - Handles `<purr>` wrapper tags in LLM responses
+  - Extracts content from `<purr>...</purr>` for clean display
+
+---
+
 ## [0.7.2] - 2025-12-15
 
 Added server restart functionality for plugin changes.

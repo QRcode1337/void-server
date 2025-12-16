@@ -8,6 +8,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Loader2,
   RefreshCw,
   Download,
@@ -18,6 +19,59 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+/**
+ * Parse message content for special tags like <think> and <purr>
+ * Returns { thinkContent, displayContent }
+ */
+function parseMessageContent(content) {
+  if (!content) return { thinkContent: null, displayContent: '' };
+
+  let thinkContent = null;
+  let displayContent = content;
+
+  // Extract <think>...</think> content
+  const thinkMatch = content.match(/<think>([\s\S]*?)<\/think>/);
+  if (thinkMatch) {
+    thinkContent = thinkMatch[1].trim();
+    displayContent = content.replace(/<think>[\s\S]*?<\/think>\s*/, '');
+  }
+
+  // Extract content from <purr>...</purr> wrapper if present
+  const purrMatch = displayContent.match(/<purr>([\s\S]*?)<\/purr>/);
+  if (purrMatch) {
+    displayContent = purrMatch[1].trim();
+  }
+
+  return { thinkContent, displayContent: displayContent.trim() };
+}
+
+/**
+ * Collapsible thinking block component
+ */
+function ThinkingBlock({ content }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="mb-2">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+      >
+        <ChevronDown
+          size={14}
+          className={`transition-transform ${isOpen ? '' : '-rotate-90'}`}
+        />
+        <span>Thinking...</span>
+      </button>
+      {isOpen && (
+        <div className="mt-2 p-2 text-xs text-text-tertiary bg-background/50 rounded border border-border/50 whitespace-pre-wrap">
+          {content}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ChatPage() {
   const { id: chatId } = useParams();
@@ -394,13 +448,24 @@ function ChatPage() {
             <>
               {/* Chat header */}
               <div className="p-3 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <h2 className="font-medium text-text-primary truncate">
                     {activeChat.title}
                   </h2>
-                  <span className="text-xs text-text-tertiary">
+                  <span className="text-xs text-text-tertiary flex-shrink-0">
                     ({activeChat.templateId})
                   </span>
+                  {(() => {
+                    const lastAssistant = [...activeChat.messages].reverse().find(m => m.role === 'assistant');
+                    if (lastAssistant?.provider) {
+                      return (
+                        <span className="text-xs px-2 py-0.5 bg-border/50 rounded text-text-secondary flex-shrink-0">
+                          {lastAssistant.provider}{lastAssistant.model ? `: ${lastAssistant.model}` : ''}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -489,27 +554,34 @@ function ChatPage() {
                     <p>Start a conversation...</p>
                   </div>
                 ) : (
-                  activeChat.messages.map((msg, index) => (
-                    <div
-                      key={index}
-                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
+                  activeChat.messages.map((msg, index) => {
+                    const { thinkContent, displayContent } = msg.role === 'assistant'
+                      ? parseMessageContent(msg.content)
+                      : { thinkContent: null, displayContent: msg.content };
+
+                    return (
                       <div
-                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                          msg.role === 'user'
-                            ? 'bg-primary text-background'
-                            : 'bg-border/50 text-text-primary'
-                        }`}
+                        key={index}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
-                        {msg.duration && (
-                          <p className="text-xs opacity-60 mt-1">
-                            {msg.provider} • {(msg.duration / 1000).toFixed(1)}s
-                          </p>
-                        )}
+                        <div
+                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                            msg.role === 'user'
+                              ? 'bg-primary text-background'
+                              : 'bg-border/50 text-text-primary'
+                          }`}
+                        >
+                          {thinkContent && <ThinkingBlock content={thinkContent} />}
+                          <p className="whitespace-pre-wrap">{displayContent}</p>
+                          {msg.duration && (
+                            <p className="text-xs opacity-60 mt-1">
+                              {msg.provider}{msg.model ? ` (${msg.model})` : ''} • {(msg.duration / 1000).toFixed(1)}s
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
                 {isLoading && (
                   <div className="flex justify-start">
