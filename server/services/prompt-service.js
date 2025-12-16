@@ -8,20 +8,13 @@ const path = require('path');
 
 const CONFIG_DIR = path.resolve(__dirname, '../../data/prompts');
 const LEGACY_CONFIG_DIR = path.resolve(__dirname, '../../config/prompts');
+const TEMPLATE_DIR = path.resolve(__dirname, '../../data_template/prompts');
 const TEMPLATES_PATH = path.join(CONFIG_DIR, 'templates.json');
 const VARIABLES_PATH = path.join(CONFIG_DIR, 'variables.json');
 const LEGACY_TEMPLATES_PATH = path.join(LEGACY_CONFIG_DIR, 'templates.json');
 const LEGACY_VARIABLES_PATH = path.join(LEGACY_CONFIG_DIR, 'variables.json');
-
-// Default templates
-const DEFAULT_TEMPLATES = {
-  templates: {}
-};
-
-// Default variables
-const DEFAULT_VARIABLES = {
-  variables: {}
-};
+const TEMPLATE_TEMPLATES_PATH = path.join(TEMPLATE_DIR, 'templates.json');
+const TEMPLATE_VARIABLES_PATH = path.join(TEMPLATE_DIR, 'variables.json');
 
 let templatesData = null;
 let variablesData = null;
@@ -71,11 +64,15 @@ function loadTemplates() {
   migrateFromLegacy();
 
   if (!fs.existsSync(TEMPLATES_PATH)) {
-    fs.writeFileSync(TEMPLATES_PATH, JSON.stringify(DEFAULT_TEMPLATES, null, 2));
-    templatesData = { ...DEFAULT_TEMPLATES };
-  } else {
-    templatesData = JSON.parse(fs.readFileSync(TEMPLATES_PATH, 'utf8'));
+    // Copy from data_template if available, otherwise create empty
+    if (fs.existsSync(TEMPLATE_TEMPLATES_PATH)) {
+      fs.copyFileSync(TEMPLATE_TEMPLATES_PATH, TEMPLATES_PATH);
+      console.log('📋 Initialized templates from data_template');
+    } else {
+      fs.writeFileSync(TEMPLATES_PATH, JSON.stringify({ templates: {} }, null, 2));
+    }
   }
+  templatesData = JSON.parse(fs.readFileSync(TEMPLATES_PATH, 'utf8'));
 
   return templatesData;
 }
@@ -95,11 +92,15 @@ function loadVariables() {
   ensureConfigDir();
 
   if (!fs.existsSync(VARIABLES_PATH)) {
-    fs.writeFileSync(VARIABLES_PATH, JSON.stringify(DEFAULT_VARIABLES, null, 2));
-    variablesData = { ...DEFAULT_VARIABLES };
-  } else {
-    variablesData = JSON.parse(fs.readFileSync(VARIABLES_PATH, 'utf8'));
+    // Copy from data_template if available, otherwise create empty
+    if (fs.existsSync(TEMPLATE_VARIABLES_PATH)) {
+      fs.copyFileSync(TEMPLATE_VARIABLES_PATH, VARIABLES_PATH);
+      console.log('📋 Initialized variables from data_template');
+    } else {
+      fs.writeFileSync(VARIABLES_PATH, JSON.stringify({ variables: {} }, null, 2));
+    }
   }
+  variablesData = JSON.parse(fs.readFileSync(VARIABLES_PATH, 'utf8'));
 
   return variablesData;
 }

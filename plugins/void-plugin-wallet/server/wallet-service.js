@@ -13,9 +13,11 @@ const http = require('../../../server/lib/http-client');
 // Main app data directory - centralized for Docker volume mounting
 const DATA_DIR = path.join(__dirname, '../../../data/wallets');
 const LEGACY_DATA_DIR = path.join(__dirname, '..', 'data');
+const TEMPLATE_DIR = path.join(__dirname, '../../../data_template/wallets');
 const WALLETS_PATH = path.join(DATA_DIR, 'wallets.json');
 const KNOWN_TOKENS_PATH = path.join(DATA_DIR, 'known-tokens.json');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
+const TEMPLATE_KNOWN_TOKENS_PATH = path.join(TEMPLATE_DIR, 'known-tokens.json');
 
 // Solana RPC connection - initialized by configure()
 let connection = null;
@@ -278,7 +280,16 @@ function saveWallets(data) {
  */
 function loadKnownTokens() {
   if (!fs.existsSync(KNOWN_TOKENS_PATH)) {
-    return { tokens: {} };
+    // Copy from data_template if available, otherwise return empty
+    if (fs.existsSync(TEMPLATE_KNOWN_TOKENS_PATH)) {
+      if (!fs.existsSync(DATA_DIR)) {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      }
+      fs.copyFileSync(TEMPLATE_KNOWN_TOKENS_PATH, KNOWN_TOKENS_PATH);
+      console.log('🪙 Initialized known tokens from data_template');
+    } else {
+      return { tokens: {} };
+    }
   }
   return JSON.parse(fs.readFileSync(KNOWN_TOKENS_PATH, 'utf8'));
 }

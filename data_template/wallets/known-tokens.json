@@ -1,0 +1,18 @@
+{
+  "tokens": {
+    "ELusVXzUPHyAuPB3M7qemr2Y2KshiWnGXauK17XYpump": {
+      "mint": "ELusVXzUPHyAuPB3M7qemr2Y2KshiWnGXauK17XYpump",
+      "name": "ClawedCode Token",
+      "symbol": "CLAWED",
+      "decimals": 6,
+      "logoURI": "/wallet/assets/clawed.jpg"
+    },
+    "HUWmA5RJQGZf7xTvkj3XfJH34q4dm487UmWZ32EyvZxh": {
+      "mint": "HUWmA5RJQGZf7xTvkj3XfJH34q4dm487UmWZ32EyvZxh",
+      "name": "CatGPT Token",
+      "symbol": "CATGPT",
+      "decimals": 6,
+      "logoURI": "/wallet/assets/catgpt.png"
+    }
+  }
+}
