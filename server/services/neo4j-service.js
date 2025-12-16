@@ -9,8 +9,10 @@ const neo4j = require('neo4j-driver');
 const fs = require('fs');
 const path = require('path');
 
-const CONFIG_DIR = path.resolve(__dirname, '../../config');
+const CONFIG_DIR = path.resolve(__dirname, '../../data');
+const LEGACY_CONFIG_DIR = path.resolve(__dirname, '../../config');
 const NEO4J_CONFIG_PATH = path.join(CONFIG_DIR, 'neo4j.json');
+const LEGACY_NEO4J_CONFIG_PATH = path.join(LEGACY_CONFIG_DIR, 'neo4j.json');
 
 const DEFAULT_CONFIG = {
   uri: 'bolt://localhost:7687',
@@ -25,6 +27,13 @@ const DEFAULT_CONFIG = {
 function loadConfig() {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+
+  // Migrate from legacy location if needed
+  if (fs.existsSync(LEGACY_NEO4J_CONFIG_PATH) && !fs.existsSync(NEO4J_CONFIG_PATH)) {
+    fs.copyFileSync(LEGACY_NEO4J_CONFIG_PATH, NEO4J_CONFIG_PATH);
+    fs.unlinkSync(LEGACY_NEO4J_CONFIG_PATH);
+    console.log('📦 Migrated neo4j.json from config/ to data/');
   }
 
   if (!fs.existsSync(NEO4J_CONFIG_PATH)) {

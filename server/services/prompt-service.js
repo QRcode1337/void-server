@@ -6,9 +6,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONFIG_DIR = path.resolve(__dirname, '../../config/prompts');
+const CONFIG_DIR = path.resolve(__dirname, '../../data/prompts');
+const LEGACY_CONFIG_DIR = path.resolve(__dirname, '../../config/prompts');
 const TEMPLATES_PATH = path.join(CONFIG_DIR, 'templates.json');
 const VARIABLES_PATH = path.join(CONFIG_DIR, 'variables.json');
+const LEGACY_TEMPLATES_PATH = path.join(LEGACY_CONFIG_DIR, 'templates.json');
+const LEGACY_VARIABLES_PATH = path.join(LEGACY_CONFIG_DIR, 'variables.json');
 
 // Default templates
 const DEFAULT_TEMPLATES = {
@@ -33,10 +36,39 @@ function ensureConfigDir() {
 }
 
 /**
+ * Migrate prompts from legacy location (config/prompts) to new location (data/prompts)
+ */
+function migrateFromLegacy() {
+  ensureConfigDir();
+  let migrated = 0;
+
+  // Migrate templates.json
+  if (fs.existsSync(LEGACY_TEMPLATES_PATH) && !fs.existsSync(TEMPLATES_PATH)) {
+    fs.copyFileSync(LEGACY_TEMPLATES_PATH, TEMPLATES_PATH);
+    fs.unlinkSync(LEGACY_TEMPLATES_PATH);
+    migrated++;
+  }
+
+  // Migrate variables.json
+  if (fs.existsSync(LEGACY_VARIABLES_PATH) && !fs.existsSync(VARIABLES_PATH)) {
+    fs.copyFileSync(LEGACY_VARIABLES_PATH, VARIABLES_PATH);
+    fs.unlinkSync(LEGACY_VARIABLES_PATH);
+    migrated++;
+  }
+
+  if (migrated > 0) {
+    console.log(`📦 Migrated ${migrated} prompt file(s) from config/prompts to data/prompts`);
+  }
+
+  return migrated;
+}
+
+/**
  * Load templates from disk
  */
 function loadTemplates() {
   ensureConfigDir();
+  migrateFromLegacy();
 
   if (!fs.existsSync(TEMPLATES_PATH)) {
     fs.writeFileSync(TEMPLATES_PATH, JSON.stringify(DEFAULT_TEMPLATES, null, 2));

@@ -32,17 +32,23 @@ plugins/*
 !plugins/void-plugin-verify/
 !plugins/void-plugin-wallet/
 
-# Config - track structure but not instance-specific settings
+# Legacy config directory (v0.7.x and earlier)
+# All user data now in data/ directory as of v0.8.0
 config/*.json
 config/browsers/
+config/memories/
+config/prompts/chats/
+config/prompts/*.json
 !config/.gitkeep
+!config/prompts/.gitkeep
 
-# Prompts - track templates/variables, ignore chat history
-!config/prompts/
-config/prompts/chats/*
-!config/prompts/chats/.gitkeep
+# User data directory (v0.8.0+)
+# All user configuration and data in single mountable directory
+# Plugins should write user data here (e.g., data/my-plugin/)
+data/*
+!data/.gitkeep
+
+# Legacy backups directory (migrated to data/backups in v0.8.0)
+backups/*
 
 .playwright-mcp
-
-# TODO: global share for memories, versioned on IPFS and written with $CLAWED
-backups/*

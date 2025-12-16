@@ -6,11 +6,13 @@
  */
 
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const { getNeo4jService } = require('./neo4j-service');
 const { getEmbeddingService } = require('./embedding-service');
 
-const CONFIG_DIR = path.resolve(__dirname, '../../config/memories');
+const CONFIG_DIR = path.resolve(__dirname, '../../data/memories');
+const LEGACY_CONFIG_DIR = path.resolve(__dirname, '../../config/memories');
 const MEMORIES_FILE = path.join(CONFIG_DIR, 'memories.json');
 const BACKUP_FILE = path.join(CONFIG_DIR, 'backups/memories.backup.json');
 
@@ -153,11 +155,46 @@ async function generateMemoryId() {
 }
 
 /**
+ * Migrate memories from legacy location (config/memories) to new location (data/memories)
+ */
+function migrateFromLegacy() {
+  if (!fsSync.existsSync(LEGACY_CONFIG_DIR)) return 0;
+
+  let migrated = 0;
+  const entries = fsSync.readdirSync(LEGACY_CONFIG_DIR);
+
+  for (const entry of entries) {
+    const legacyPath = path.join(LEGACY_CONFIG_DIR, entry);
+    const newPath = path.join(CONFIG_DIR, entry);
+
+    // Skip if already exists
+    if (fsSync.existsSync(newPath)) continue;
+
+    const stat = fsSync.statSync(legacyPath);
+    if (stat.isDirectory()) {
+      fsSync.cpSync(legacyPath, newPath, { recursive: true });
+      fsSync.rmSync(legacyPath, { recursive: true });
+    } else {
+      fsSync.copyFileSync(legacyPath, newPath);
+      fsSync.unlinkSync(legacyPath);
+    }
+    migrated++;
+  }
+
+  if (migrated > 0) {
+    console.log(`📦 Migrated ${migrated} memory item(s) from config/memories to data/memories`);
+  }
+
+  return migrated;
+}
+
+/**
  * Ensure config directory exists
  */
 async function ensureConfigDir() {
   await fs.mkdir(CONFIG_DIR, { recursive: true });
   await fs.mkdir(path.dirname(BACKUP_FILE), { recursive: true });
+  migrateFromLegacy();
 }
 
 /**

@@ -7,7 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const CHATS_DIR = path.resolve(__dirname, '../../config/prompts/chats');
+const CHATS_DIR = path.resolve(__dirname, '../../data/chats');
+const LEGACY_CHATS_DIR = path.resolve(__dirname, '../../config/prompts/chats');
 
 /**
  * Ensure chats directory exists
@@ -280,10 +281,52 @@ function exportChat(chatId, format = 'json') {
 }
 
 /**
+ * Migrate chats from legacy location (config/prompts/chats) to new location (data/chats)
+ */
+function migrateFromLegacy() {
+  if (!fs.existsSync(LEGACY_CHATS_DIR)) {
+    return 0;
+  }
+
+  const legacyFiles = fs.readdirSync(LEGACY_CHATS_DIR).filter(f => f.endsWith('.json'));
+  if (legacyFiles.length === 0) {
+    return 0;
+  }
+
+  let migrated = 0;
+  for (const file of legacyFiles) {
+    const legacyPath = path.join(LEGACY_CHATS_DIR, file);
+    const newPath = path.join(CHATS_DIR, file);
+
+    // Skip if already exists in new location
+    if (fs.existsSync(newPath)) {
+      continue;
+    }
+
+    // Copy to new location
+    const data = fs.readFileSync(legacyPath, 'utf8');
+    fs.writeFileSync(newPath, data);
+    migrated++;
+
+    // Remove from legacy location
+    fs.unlinkSync(legacyPath);
+  }
+
+  return migrated;
+}
+
+/**
  * Initialize chat service
  */
 function initialize() {
   ensureChatsDir();
+
+  // Migrate from legacy location if needed
+  const migrated = migrateFromLegacy();
+  if (migrated > 0) {
+    console.log(`📦 Migrated ${migrated} chat(s) from config/prompts/chats to data/chats`);
+  }
+
   const chats = listChats();
   console.log(`💬 Chat service initialized (${chats.length} chats)`);
 }

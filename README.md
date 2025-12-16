@@ -130,11 +130,11 @@ Docker volumes preserve your data across restarts:
 
 | Host Path | Container Path | Purpose |
 |-----------|----------------|---------|
-| `./config` | `/app/config` | App configuration |
-| `./backups` | `/app/backups` | Database backups |
+| `./data` | `/app/data` | All user data (v0.8.0+) |
 | `./logs` | `/app/logs` | Application logs |
-| `./data` | `/app/data` | General data |
 | `neo4j_data` | Neo4j volume | Graph database |
+
+All user configuration and data is stored in `./data/` for simple backup and migration. See [docs/DATA.md](docs/DATA.md) for details.
 
 ### Remote Access
 
@@ -153,6 +153,17 @@ See [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md) for detailed setup instructio
 - **Real-time Logs** - WebSocket-powered server log viewer in the browser
 - **Dynamic Navigation** - Automatically builds nav from installed plugins
 - **Security Hooks** - Pre-commit scanning for secrets
+
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Data Directory](docs/DATA.md) | User data storage, plugin data conventions, migration |
+| [Chat System](docs/CHAT.md) | AI chat configuration and usage |
+| [Memories](docs/MEMORIES.md) | Neo4j memory system and knowledge graph |
+| [Theme System](docs/THEME.md) | CSS variables, Tailwind classes, styling |
+| [Remote Access](docs/REMOTE-ACCESS.md) | Tailscale setup for mobile/remote access |
+| [HTTP Client](docs/HTTP-CLIENT.md) | Server-side HTTP request utilities |
 
 ## Ports
 
@@ -227,7 +238,7 @@ Plugins should include a `manifest.json`:
 }
 ```
 
-See [plugins/README.md](plugins/README.md) for full manifest documentation.
+See [plugins/README.md](plugins/README.md) for full manifest documentation and [docs/DATA.md](docs/DATA.md) for plugin data storage guidelines.
 
 ### Development Mode (Symlinks)
 
@@ -259,8 +270,7 @@ Environment variables (`.env` file supported):
 | `NEO4J_DATABASE` | `neo4j` | Neo4j database name |
 | `LM_STUDIO_URL` | `http://localhost:1234/v1` | LM Studio API endpoint |
 
-Plugin configurations are stored in `config/plugins.json`.
-AI provider settings are stored in `config/ai-providers.json`.
+All user data and configuration is stored in `./data/`. See [docs/DATA.md](docs/DATA.md) for the full directory structure.
 
 ## Project Structure
 
@@ -274,7 +284,8 @@ void-server/
 │   ├── manifest.json      # Available plugins catalog
 │   └── void-plugin-*/     # Installed plugins
 ├── scripts/               # CLI utilities
-├── config/                # Runtime configuration
+├── data/                  # User data & configuration (v0.8.0+)
+├── docs/                  # Documentation
 └── setup.sh               # One-command setup
 ```
 

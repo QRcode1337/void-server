@@ -185,6 +185,12 @@ async function executeChat(chatId, userMessage, options = {}) {
   // Determine provider - chat provider override takes precedence
   const providerOverride = options.providerOverride || chat.providerOverride;
 
+  // Build the prompt to capture it for debug mode
+  const buildResult = promptService.buildPrompt(chat.templateId, variableValues);
+  if (!buildResult.success) {
+    return buildResult;
+  }
+
   // Execute the prompt
   const result = await executePrompt(chat.templateId, variableValues, {
     ...options,
@@ -194,6 +200,32 @@ async function executeChat(chatId, userMessage, options = {}) {
   if (!result.success) {
     return result;
   }
+
+  // Build debug info if requested
+  const debugInfo = options.debug ? {
+    compiledPrompt: buildResult.prompt,
+    memoryContext: memoryContext || null,
+    memoriesRetrieved: relevantMemories.map(m => ({
+      content: m.content,
+      category: m.category,
+      importance: m.importance,
+      score: m.score
+    })),
+    chatHistoryUsed: chatHistory.slice(0, -1),
+    templateId: chat.templateId,
+    variableValues: Object.keys(variableValues).reduce((acc, key) => {
+      // Truncate long values for debug display
+      const val = variableValues[key];
+      if (typeof val === 'string' && val.length > 200) {
+        acc[key] = val.slice(0, 200) + '... (truncated)';
+      } else if (Array.isArray(val)) {
+        acc[key] = `[${val.length} items]`;
+      } else {
+        acc[key] = val;
+      }
+      return acc;
+    }, {})
+  } : null;
 
   // Process response to extract memories and get cleaned content
   const { response: cleanedContent, memoriesExtracted } = await memoryExtractor.processResponse(
@@ -214,7 +246,8 @@ async function executeChat(chatId, userMessage, options = {}) {
       model: result.model,
       duration: result.duration,
       memoriesUsed: relevantMemories.length,
-      memoriesCreated: memoriesExtracted
+      memoriesCreated: memoriesExtracted,
+      ...(debugInfo && { debug: debugInfo })
     }
   });
 
@@ -226,7 +259,8 @@ async function executeChat(chatId, userMessage, options = {}) {
     duration: result.duration,
     memoriesUsed: relevantMemories.length,
     memoriesCreated: memoriesExtracted,
-    chat: messageResult.chat
+    chat: messageResult.chat,
+    ...(debugInfo && { debug: debugInfo })
   };
 }
 

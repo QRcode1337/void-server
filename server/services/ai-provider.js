@@ -6,8 +6,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const CONFIG_DIR = path.resolve(__dirname, '../../config');
+const CONFIG_DIR = path.resolve(__dirname, '../../data');
+const LEGACY_CONFIG_DIR = path.resolve(__dirname, '../../config');
 const AI_PROVIDERS_CONFIG_PATH = path.join(CONFIG_DIR, 'ai-providers.json');
+const LEGACY_AI_PROVIDERS_CONFIG_PATH = path.join(LEGACY_CONFIG_DIR, 'ai-providers.json');
 
 // Default configuration - all providers disabled by default
 // Users must configure a provider in Settings before using Chat
@@ -145,6 +147,13 @@ let config = null;
 function loadConfig() {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+
+  // Migrate from legacy location if needed
+  if (fs.existsSync(LEGACY_AI_PROVIDERS_CONFIG_PATH) && !fs.existsSync(AI_PROVIDERS_CONFIG_PATH)) {
+    fs.copyFileSync(LEGACY_AI_PROVIDERS_CONFIG_PATH, AI_PROVIDERS_CONFIG_PATH);
+    fs.unlinkSync(LEGACY_AI_PROVIDERS_CONFIG_PATH);
+    console.log('📦 Migrated ai-providers.json from config/ to data/');
   }
 
   if (!fs.existsSync(AI_PROVIDERS_CONFIG_PATH)) {

@@ -16,7 +16,9 @@ import {
   ExternalLink,
   Brain,
   Database,
-  Info
+  Info,
+  Bug,
+  Code
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -67,6 +69,93 @@ function ThinkingBlock({ content }) {
       {isOpen && (
         <div className="mt-2 p-2 text-xs text-text-tertiary bg-background/50 rounded border border-border/50 whitespace-pre-wrap">
           {content}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Collapsible debug panel component
+ */
+function DebugPanel({ debug }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!debug) return null;
+
+  return (
+    <div className="mt-2 border-t border-border/30 pt-2">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+      >
+        <Bug size={12} />
+        <ChevronDown
+          size={14}
+          className={`transition-transform ${isOpen ? '' : '-rotate-90'}`}
+        />
+        <span>Debug Info</span>
+      </button>
+      {isOpen && (
+        <div className="mt-2 space-y-3 text-xs">
+          {/* Compiled Prompt */}
+          <div>
+            <div className="flex items-center gap-1 text-text-secondary mb-1">
+              <Code size={12} />
+              <span className="font-medium">Compiled Prompt</span>
+            </div>
+            <pre className="p-2 bg-background/80 rounded border border-border/50 whitespace-pre-wrap text-text-tertiary max-h-64 overflow-y-auto">
+              {debug.compiledPrompt}
+            </pre>
+          </div>
+
+          {/* Memory Context */}
+          {debug.memoryContext && (
+            <div>
+              <div className="flex items-center gap-1 text-text-secondary mb-1">
+                <Brain size={12} />
+                <span className="font-medium">Memory Context</span>
+              </div>
+              <pre className="p-2 bg-background/80 rounded border border-border/50 whitespace-pre-wrap text-text-tertiary max-h-32 overflow-y-auto">
+                {debug.memoryContext}
+              </pre>
+            </div>
+          )}
+
+          {/* Memories Retrieved */}
+          {debug.memoriesRetrieved?.length > 0 && (
+            <div>
+              <div className="text-text-secondary mb-1 font-medium">
+                Memories Retrieved ({debug.memoriesRetrieved.length})
+              </div>
+              <div className="space-y-1">
+                {debug.memoriesRetrieved.map((m, i) => (
+                  <div key={i} className="p-2 bg-background/80 rounded border border-border/50 text-text-tertiary">
+                    <div className="flex justify-between text-[10px] mb-1">
+                      <span className="text-text-secondary">{m.category}</span>
+                      <span>score: {m.score?.toFixed(2)}</span>
+                    </div>
+                    <div className="truncate">{m.content}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Variable Values */}
+          {debug.variableValues && (
+            <div>
+              <div className="text-text-secondary mb-1 font-medium">Variables Used</div>
+              <div className="p-2 bg-background/80 rounded border border-border/50 text-text-tertiary">
+                {Object.entries(debug.variableValues).map(([key, val]) => (
+                  <div key={key} className="flex gap-2">
+                    <span className="text-text-secondary">{key}:</span>
+                    <span className="truncate">{String(val)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -218,7 +307,8 @@ function ChatPage() {
       body: JSON.stringify({
         content: message,
         providerOverride: providerOverride || undefined,
-        modelType: modelTypeOverride || undefined
+        modelType: modelTypeOverride || undefined,
+        debug: true
       })
     });
 
@@ -578,6 +668,7 @@ function ChatPage() {
                               {msg.provider}{msg.model ? ` (${msg.model})` : ''} • {(msg.duration / 1000).toFixed(1)}s
                             </p>
                           )}
+                          {msg.debug && <DebugPanel debug={msg.debug} />}
                         </div>
                       </div>
                     );

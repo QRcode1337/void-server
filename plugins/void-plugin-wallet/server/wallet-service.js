@@ -10,7 +10,9 @@ const bs58 = bs58Pkg.default || bs58Pkg; // v6+ exposes .default in CJS
 const { encrypt, decrypt } = require('./encryption');
 const http = require('../../../server/lib/http-client');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+// Main app data directory - centralized for Docker volume mounting
+const DATA_DIR = path.join(__dirname, '../../../data/wallets');
+const LEGACY_DATA_DIR = path.join(__dirname, '..', 'data');
 const WALLETS_PATH = path.join(DATA_DIR, 'wallets.json');
 const KNOWN_TOKENS_PATH = path.join(DATA_DIR, 'known-tokens.json');
 const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
@@ -19,6 +21,38 @@ const SETTINGS_PATH = path.join(DATA_DIR, 'settings.json');
 let connection = null;
 let rpcUrl = null;
 let jupiterApiKey = null;
+
+/**
+ * Migrate wallet data from legacy plugin location to main data directory
+ */
+function migrateFromLegacy() {
+  if (!fs.existsSync(LEGACY_DATA_DIR)) return;
+
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+
+  const filesToMigrate = ['wallets.json', 'known-tokens.json', 'settings.json'];
+  let migrated = 0;
+
+  for (const file of filesToMigrate) {
+    const legacyPath = path.join(LEGACY_DATA_DIR, file);
+    const newPath = path.join(DATA_DIR, file);
+
+    if (fs.existsSync(legacyPath) && !fs.existsSync(newPath)) {
+      fs.copyFileSync(legacyPath, newPath);
+      fs.unlinkSync(legacyPath);
+      migrated++;
+    }
+  }
+
+  if (migrated > 0) {
+    console.log(`📦 Migrated ${migrated} wallet file(s) to data/wallets/`);
+  }
+}
+
+// Run migration on module load
+migrateFromLegacy();
 
 // Jupiter API base URLs
 const JUPITER_API_BASE = 'https://api.jup.ag';

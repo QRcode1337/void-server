@@ -5,6 +5,7 @@
  */
 
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
 const { promisify } = require('util');
@@ -17,7 +18,9 @@ class BackupService extends EventEmitter {
   constructor() {
     super();
 
-    this.configDir = path.join(__dirname, '../../config');
+    this.configDir = path.join(__dirname, '../../data');
+    this.legacyConfigDir = path.join(__dirname, '../../config');
+    this.legacyBackupsDir = path.join(__dirname, '../../backups');
     this.configFile = path.join(this.configDir, 'backup.json');
     this.historyFile = path.join(this.configDir, 'backup-history.json');
 
@@ -29,10 +32,37 @@ class BackupService extends EventEmitter {
     this.initialized = false;
   }
 
+  migrateFromLegacy() {
+    // Migrate backup.json
+    const legacyConfigFile = path.join(this.legacyConfigDir, 'backup.json');
+    if (fsSync.existsSync(legacyConfigFile) && !fsSync.existsSync(this.configFile)) {
+      fsSync.copyFileSync(legacyConfigFile, this.configFile);
+      fsSync.unlinkSync(legacyConfigFile);
+      console.log('📦 Migrated backup.json from config/ to data/');
+    }
+
+    // Migrate backup-history.json
+    const legacyHistoryFile = path.join(this.legacyConfigDir, 'backup-history.json');
+    if (fsSync.existsSync(legacyHistoryFile) && !fsSync.existsSync(this.historyFile)) {
+      fsSync.copyFileSync(legacyHistoryFile, this.historyFile);
+      fsSync.unlinkSync(legacyHistoryFile);
+      console.log('📦 Migrated backup-history.json from config/ to data/');
+    }
+
+    // Migrate backups folder
+    const newBackupsDir = path.join(this.configDir, 'backups');
+    if (fsSync.existsSync(this.legacyBackupsDir) && !fsSync.existsSync(newBackupsDir)) {
+      fsSync.cpSync(this.legacyBackupsDir, newBackupsDir, { recursive: true });
+      fsSync.rmSync(this.legacyBackupsDir, { recursive: true });
+      console.log('📦 Migrated backups/ to data/backups/');
+    }
+  }
+
   async initialize() {
     if (this.initialized) return;
 
     await fs.mkdir(this.configDir, { recursive: true });
+    this.migrateFromLegacy();
     this.config = await this.loadConfig();
 
     this.initialized = true;
@@ -44,7 +74,7 @@ class BackupService extends EventEmitter {
       enabled: false,
       schedule: 'daily',
       time: '02:00',
-      backupPath: path.join(__dirname, '../../backups/neo4j'),
+      backupPath: path.join(__dirname, '../../data/backups/neo4j'),
       retention: {
         keepDays: 7,
         archiveDays: 30

@@ -1,4 +1,5 @@
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
 
 /**
@@ -7,14 +8,16 @@ const path = require('path');
  * Manages persistent browser profiles with authentication states.
  * Each profile stores cookies/sessions for reuse by plugins.
  *
- * Browser profiles are stored in config/browsers/ which is:
+ * Browser profiles are stored in data/browsers/ which is:
  * - Mounted as a volume in Docker (persistent across container restarts)
  * - Accessible from host for native browser authentication
  */
 
-// Use config directory (mounted in Docker) for persistence
-const DATA_DIR = path.join(__dirname, '../../config/browsers');
+// Use data directory for persistence
+const DATA_DIR = path.join(__dirname, '../../data/browsers');
+const LEGACY_DATA_DIR = path.join(__dirname, '../../config/browsers');
 const CONFIG_FILE = path.join(DATA_DIR, 'browsers.json');
+const LEGACY_CONFIG_FILE = path.join(LEGACY_DATA_DIR, 'browsers.json');
 
 // Default port range for CDP debugging (supports many browser profiles)
 const DEFAULT_PORT_START = 9111;
@@ -53,7 +56,47 @@ async function ensureDataDir() {
   await fs.mkdir(DATA_DIR, { recursive: true });
 }
 
+/**
+ * Migrate browser data from legacy location (config/browsers) to new location (data/browsers)
+ */
+async function migrateFromLegacy() {
+  if (!fsSync.existsSync(LEGACY_DATA_DIR)) return 0;
+
+  await ensureDataDir();
+
+  let migrated = 0;
+  const entries = fsSync.readdirSync(LEGACY_DATA_DIR);
+
+  for (const entry of entries) {
+    const legacyPath = path.join(LEGACY_DATA_DIR, entry);
+    const newPath = path.join(DATA_DIR, entry);
+
+    // Skip if already exists
+    if (fsSync.existsSync(newPath)) continue;
+
+    const stat = fsSync.statSync(legacyPath);
+    if (stat.isDirectory()) {
+      // Recursively copy directory (browser profile data)
+      fsSync.cpSync(legacyPath, newPath, { recursive: true });
+      fsSync.rmSync(legacyPath, { recursive: true });
+    } else {
+      // Copy file
+      fsSync.copyFileSync(legacyPath, newPath);
+      fsSync.unlinkSync(legacyPath);
+    }
+    migrated++;
+  }
+
+  return migrated;
+}
+
 async function loadConfig() {
+  // Migrate from legacy location if needed
+  const migrated = await migrateFromLegacy();
+  if (migrated > 0) {
+    console.log(`📦 Migrated ${migrated} browser item(s) from config/browsers to data/browsers`);
+  }
+
   try {
     const data = await fs.readFile(CONFIG_FILE, 'utf8');
     return JSON.parse(data);

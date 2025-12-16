@@ -1,8 +1,8 @@
 # Changelog
 
-## [0.7.3] - 2025-12-15
+## [0.8.0] - 2025-12-15
 
-Chat improvements for debugging and extended thinking models.
+Major data storage overhaul consolidating all user data into `./data` directory, plus chat debugging enhancements.
 
 ### New Features
 
@@ -14,6 +14,29 @@ Chat improvements for debugging and extended thinking models.
   - Click to expand and view the model's reasoning process
 - **Purr Tag Support** - Handles `<purr>` wrapper tags in LLM responses
   - Extracts content from `<purr>...</purr>` for clean display
+- **Debug Info (Always On)** - Every assistant message includes debug information
+  - Shows fully compiled prompt sent to the LLM
+  - Displays memory context and retrieved memories with scores
+  - Lists template variables used in prompt building
+  - Expandable "Debug Info" panel on each assistant message
+
+### Breaking Changes
+
+- **Consolidated Data Directory** - All user data moved to `./data/` folder
+  - `config/prompts/chats/` → `data/chats/`
+  - `config/browsers/` → `data/browsers/`
+  - `config/prompts/templates.json` → `data/prompts/templates.json`
+  - `config/prompts/variables.json` → `data/prompts/variables.json`
+  - `config/ai-providers.json` → `data/ai-providers.json`
+  - `config/neo4j.json` → `data/neo4j.json`
+  - `config/memories/` → `data/memories/`
+  - `config/backup.json` → `data/backup.json`
+  - `config/backup-history.json` → `data/backup-history.json`
+  - `./backups/` → `data/backups/`
+  - Wallets moved from plugin-specific folder to `data/wallets/`
+  - **Automatic migration on server startup** - existing data will be moved
+  - Manual migration: `node scripts/migrate-data.js`
+  - Simplifies Docker volume mounting (single `./data` mount)
 
 ---
 

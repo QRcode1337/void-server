@@ -92,7 +92,7 @@ router.delete('/:id', (req, res) => {
  * Send a message and get a response
  */
 router.post('/:id/message', async (req, res) => {
-  const { content, providerOverride, modelType, maxHistory } = req.body;
+  const { content, providerOverride, modelType, maxHistory, debug } = req.body;
 
   if (!content) {
     return res.status(400).json({ success: false, error: 'Message content required' });
@@ -101,7 +101,8 @@ router.post('/:id/message', async (req, res) => {
   const result = await promptExecutor.executeChat(req.params.id, content, {
     providerOverride,
     modelType,
-    maxHistory
+    maxHistory,
+    debug: debug === true
   });
 
   if (!result.success) {
