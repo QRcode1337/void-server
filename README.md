@@ -272,6 +272,90 @@ Environment variables (`.env` file supported):
 
 All user data and configuration is stored in `./data/`. See [docs/DATA.md](docs/DATA.md) for the full directory structure.
 
+## Architecture
+
+```
+    ┌──────────┐          ┌──────────┐
+    │  Phone   │          │ Computer │
+    │  Browser │          │ Browser  │
+    └────┬─────┘          └────┬─────┘
+         │                     │
+         │    Tailscale VPN    │
+         │   (100.x.y.z:4420)  │
+         └──────────┬──────────┘
+                    │
+                    │  or localhost:4420
+                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Docker Compose Stack                            │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                         void-server (:4420)                          │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────┐   │    │
+│  │  │   Express   │  │   React     │  │   Plugins   │  │  WebSocket│   │    │
+│  │  │   API       │  │   Client    │  │   System    │  │  Logs     │   │    │
+│  │  └──────┬──────┘  └─────────────┘  └─────────────┘  └───────────┘   │    │
+│  │         │                                                            │    │
+│  │         ├────── Chat Service ──────┬────── Memory Service ─────┐    │    │
+│  │         │                          │                           │    │    │
+│  │         ▼                          ▼                           ▼    │    │
+│  │  ┌─────────────┐            ┌─────────────┐            ┌──────────┐│    │
+│  │  │    IPFS     │            │  Embeddings │            │  Graph   ││    │
+│  │  │   Service   │            │   (LLM)     │            │  Queries ││    │
+│  │  └──────┬──────┘            └──────┬──────┘            └────┬─────┘│    │
+│  └─────────┼──────────────────────────┼────────────────────────┼──────┘    │
+│            │                          │                        │           │
+│            ▼                          │                        ▼           │
+│  ┌─────────────────┐                  │              ┌─────────────────┐   │
+│  │   ipfs (:4423)  │                  │              │ neo4j (:4421)   │   │
+│  │  ┌───────────┐  │                  │              │  ┌───────────┐  │   │
+│  │  │   Kubo    │  │                  │              │  │   Graph   │  │   │
+│  │  │   Node    │  │                  │              │  │  Database │  │   │
+│  │  ├───────────┤  │                  │              │  ├───────────┤  │   │
+│  │  │  Gateway  │  │                  │              │  │  Browser  │  │   │
+│  │  │  (:4424)  │  │                  │              │  │  Bolt     │  │   │
+│  │  └───────────┘  │                  │              │  │  (:4422)  │  │   │
+│  │                 │                  │              │  └───────────┘  │   │
+│  │  ipfs_data vol  │                  │              │  neo4j_data vol │   │
+│  └─────────────────┘                  │              └─────────────────┘   │
+│                                       │                                     │
+└───────────────────────────────────────┼─────────────────────────────────────┘
+                                        │
+                          host.docker.internal
+                                        │
+                                        ▼
+                          ┌─────────────────────────┐
+                          │   LM Studio (:1234)     │
+                          │  ┌───────────────────┐  │
+                          │  │   Chat Model      │  │
+                          │  │   (Qwen, Llama)   │  │
+                          │  ├───────────────────┤  │
+                          │  │  Embedding Model  │  │
+                          │  │  (nomic-embed)    │  │
+                          │  └───────────────────┘  │
+                          │                         │
+                          │   Runs on Host Machine  │
+                          └─────────────────────────┘
+```
+
+### Port Reference
+
+| Service | Docker | Native | Purpose |
+|---------|--------|--------|---------|
+| Void Server | 4420 | 4401 | Main application |
+| Neo4j Browser | 4421 | 7474 | Database admin UI |
+| Neo4j Bolt | 4422 | 7687 | Database connection |
+| IPFS API | 4423 | 5001 | IPFS node API |
+| IPFS Gateway | 4424 | 8080 | Content gateway |
+| Vite (dev) | — | 4480 | HMR dev server |
+| LM Studio | 1234 | 1234 | AI inference |
+
+### Data Flow
+
+1. **Chat** → User message → Prompt template + Memory context → LM Studio → Response
+2. **Memory** → Extract entities → Generate embeddings → Store in Neo4j graph
+3. **IPFS** → Pin content locally → Announce to DHT → Optionally replicate to Pinata
+
 ## Project Structure
 
 ```
