@@ -8,8 +8,10 @@ const path = require('path');
 
 const CONFIG_DIR = path.resolve(__dirname, '../../data');
 const LEGACY_CONFIG_DIR = path.resolve(__dirname, '../../config');
+const TEMPLATE_DIR = path.resolve(__dirname, '../../data_template');
 const AI_PROVIDERS_CONFIG_PATH = path.join(CONFIG_DIR, 'ai-providers.json');
 const LEGACY_AI_PROVIDERS_CONFIG_PATH = path.join(LEGACY_CONFIG_DIR, 'ai-providers.json');
+const TEMPLATE_AI_PROVIDERS_CONFIG_PATH = path.join(TEMPLATE_DIR, 'ai-providers.json');
 
 // Default configuration - all providers disabled by default
 // Users must configure a provider in Settings before using Chat
@@ -157,10 +159,17 @@ function loadConfig() {
   }
 
   if (!fs.existsSync(AI_PROVIDERS_CONFIG_PATH)) {
-    // Create default config
-    fs.writeFileSync(AI_PROVIDERS_CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
-    config = { ...DEFAULT_CONFIG };
-  } else {
+    // Copy from data_template if available, otherwise use defaults
+    if (fs.existsSync(TEMPLATE_AI_PROVIDERS_CONFIG_PATH)) {
+      fs.copyFileSync(TEMPLATE_AI_PROVIDERS_CONFIG_PATH, AI_PROVIDERS_CONFIG_PATH);
+      console.log('🤖 Initialized ai-providers.json from data_template');
+    } else {
+      fs.writeFileSync(AI_PROVIDERS_CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
+    }
+  }
+
+  // Load and merge with defaults
+  if (fs.existsSync(AI_PROVIDERS_CONFIG_PATH)) {
     const saved = JSON.parse(fs.readFileSync(AI_PROVIDERS_CONFIG_PATH, 'utf8'));
     const savedProviders = saved.providers || {};
     const mergedProviders = {};

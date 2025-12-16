@@ -11,8 +11,10 @@ const path = require('path');
 
 const CONFIG_DIR = path.resolve(__dirname, '../../data');
 const LEGACY_CONFIG_DIR = path.resolve(__dirname, '../../config');
+const TEMPLATE_DIR = path.resolve(__dirname, '../../data_template');
 const NEO4J_CONFIG_PATH = path.join(CONFIG_DIR, 'neo4j.json');
 const LEGACY_NEO4J_CONFIG_PATH = path.join(LEGACY_CONFIG_DIR, 'neo4j.json');
+const TEMPLATE_NEO4J_CONFIG_PATH = path.join(TEMPLATE_DIR, 'neo4j.json');
 
 const DEFAULT_CONFIG = {
   uri: 'bolt://localhost:7687',
@@ -37,8 +39,13 @@ function loadConfig() {
   }
 
   if (!fs.existsSync(NEO4J_CONFIG_PATH)) {
-    fs.writeFileSync(NEO4J_CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
-    return { ...DEFAULT_CONFIG };
+    // Copy from data_template if available, otherwise use defaults
+    if (fs.existsSync(TEMPLATE_NEO4J_CONFIG_PATH)) {
+      fs.copyFileSync(TEMPLATE_NEO4J_CONFIG_PATH, NEO4J_CONFIG_PATH);
+      console.log('🔧 Initialized neo4j.json from data_template');
+    } else {
+      fs.writeFileSync(NEO4J_CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
+    }
   }
 
   const saved = JSON.parse(fs.readFileSync(NEO4J_CONFIG_PATH, 'utf8'));
