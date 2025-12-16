@@ -1,6 +1,6 @@
 {
   "name": "void-server",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Void Server",
   "main": "server/index.js",
   "scripts": {

@@ -25,6 +25,9 @@ services:
       - NEO4J_DATABASE=neo4j
       # Optional: LM Studio running on host machine
       - LM_STUDIO_URL=${LM_STUDIO_URL:-http://host.docker.internal:1234/v1}
+      # IPFS connection (uses service name as hostname)
+      - IPFS_API_URL=http://ipfs:5001
+      - IPFS_GATEWAY_URL=http://ipfs:8080
     volumes:
       # Persistent data directories
       - ./config:/app/config
@@ -72,6 +75,29 @@ services:
       retries: 5
       start_period: 30s
 
+  # ==========================================================================
+  # IPFS Kubo - Decentralized Storage
+  # ==========================================================================
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: void-ipfs
+    restart: unless-stopped
+    ports:
+      - "4423:5001"  # API port
+      - "4424:8080"  # Gateway port
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs_data:/data/ipfs
+    networks:
+      - void-network
+    healthcheck:
+      test: ["CMD-SHELL", "ipfs id || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 networks:
   void-network:
     driver: bridge
@@ -80,4 +106,6 @@ volumes:
   neo4j_data:
     driver: local
   neo4j_logs:
+    driver: local
+  ipfs_data:
     driver: local

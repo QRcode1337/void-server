@@ -34,6 +34,9 @@ const browserService = require('./services/browser-service');
 // Version management
 const versionRoutes = require('./routes/version');
 
+// IPFS management
+const ipfsRoutes = require('./routes/ipfs');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -182,6 +185,9 @@ app.use('/api/browsers', browsersRoutes);
 
 // Version API
 app.use('/api/version', versionRoutes);
+
+// IPFS API
+app.use('/api/ipfs', ipfsRoutes);
 
 // Initialize Provider system
 aiProvider.initialize();

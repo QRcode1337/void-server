@@ -17,7 +17,8 @@ import {
     Brain,
     Globe,
     ArrowUpCircle,
-    RefreshCw
+    RefreshCw,
+    HardDrive
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -210,6 +211,13 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
             title: 'Browsers',
             icon: Globe,
             path: '/browsers',
+            single: true
+        });
+
+        contentItems.push({
+            title: 'IPFS',
+            icon: HardDrive,
+            path: '/ipfs',
             single: true
         });
 

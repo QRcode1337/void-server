@@ -1,5 +1,79 @@
 # Changelog
 
+## [0.9.0] - 2025-12-15
+
+IPFS integration for decentralized content pinning and management.
+
+### New Features
+
+- **IPFS Management Page** - Pin and manage decentralized content
+  - Daemon status indicator with connection details
+  - Metrics dashboard showing pins by type (images, documents, media, code, archives)
+  - File upload with drag-and-drop support
+  - Pin content from URL
+  - Directory pinning support
+  - Pinned content table with filtering, gateway links, and unpin actions
+  - Auto-detection of file types for categorization
+- **Pinata Integration** - Optional cloud pinning for public content availability
+  - Toggle to enable/disable Pinata in settings
+  - JWT token configuration with secure input
+  - Publish locally-pinned content to Pinata with one click
+  - Visual indicators showing local vs. public pin status
+  - Direct links to public gateway for Pinata-published content
+
+### Docker
+
+- **IPFS Kubo Service** - Added to docker-compose stack
+  - API port: 4423 (maps to internal 5001)
+  - Gateway port: 4424 (maps to internal 8080)
+  - Persistent storage volume: `ipfs_data`
+  - Environment variables: `IPFS_API_URL`, `IPFS_GATEWAY_URL`
+
+### API Changes
+
+#### New Endpoints
+- `GET /api/ipfs/status` - Get daemon status, metrics, and configuration
+- `GET /api/ipfs/pins` - List all pinned content with metadata
+- `POST /api/ipfs/pin/file` - Pin uploaded file (multipart)
+- `POST /api/ipfs/pin/url` - Pin content from URL
+- `POST /api/ipfs/pin/directory` - Pin directory recursively
+- `DELETE /api/ipfs/pin/:cid` - Unpin content by CID
+- `GET /api/ipfs/config` - Get IPFS configuration
+- `POST /api/ipfs/config` - Update IPFS configuration
+- `GET /api/ipfs/daemon/check` - Quick daemon connectivity check
+- `GET /api/ipfs/pinata/status` - Check Pinata connectivity and auth
+- `POST /api/ipfs/pinata/pin/:cid` - Pin existing CID to Pinata
+- `DELETE /api/ipfs/pinata/pin/:cid` - Unpin from Pinata
+- `GET /api/ipfs/pinata/pins` - List all Pinata pins
+
+### New Files
+
+```
+server/services/ipfs-service.js  # IPFS service with HTTP API support
+server/routes/ipfs.js            # IPFS API routes
+client/src/pages/IPFSPage.jsx    # IPFS management UI
+data_template/ipfs.json          # Default IPFS configuration
+```
+
+### Configuration
+
+Default IPFS configuration (`data/ipfs.json`):
+```json
+{
+  "enabled": true,
+  "gateway": "http://localhost:8080/ipfs",
+  "apiUrl": "http://localhost:5001",
+  "publicGateway": "https://gateway.pinata.cloud/ipfs",
+  "pinata": {
+    "enabled": false,
+    "jwt": "",
+    "gateway": "https://gateway.pinata.cloud/ipfs"
+  }
+}
+```
+
+---
+
 ## [0.8.0] - 2025-12-15
 
 Major data storage overhaul consolidating all user data into `./data` directory, plus chat debugging enhancements and automatic update checking.
