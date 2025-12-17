@@ -10,11 +10,14 @@ import {
 import { useWebSocket } from '../contexts/WebSocketContext';
 
 const ServerLogsViewer = ({ sidebarOpen }) => {
-    const { connectionStatus, logs, clearLogs } = useWebSocket();
-    const [isExpanded, setIsExpanded] = useState(false);
+    const { connectionStatus, logs, clearLogs, logsExpanded, setLogsExpanded } = useWebSocket();
     const [isFullHeight, setIsFullHeight] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const logContainerRef = useRef(null);
+
+    // Use shared logsExpanded state from context
+    const isExpanded = logsExpanded;
+    const setIsExpanded = setLogsExpanded;
 
     useEffect(() => {
         const handleResize = () => {

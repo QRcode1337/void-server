@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.4] - 2025-12-16
+
+Patch release improving Docker update UX.
+
+### Fixes
+
+- **Docker update instructions modal** - Shows a modal with copyable command instead of error toast
+  - Clean UI with terminal icon and explanation
+  - One-click copy button for the Docker update command
+  - Displayed when trying to update from within Docker container
+- **Auto-expand server logs on update** - Logs panel expands automatically when starting an update
+  - Shared log expansion state via WebSocket context
+  - Users can immediately see update progress in logs
+
+---
+
 ## [0.9.3] - 2025-12-16
 
 Patch release with core template/variable protection and navigation improvements.

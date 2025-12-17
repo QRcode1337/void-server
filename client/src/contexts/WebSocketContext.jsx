@@ -16,6 +16,7 @@ export const WebSocketProvider = ({ children }) => {
     const [connectionStatus, setConnectionStatus] = useState('connecting');
     const [logs, setLogs] = useState([]);
     const [appInfo, setAppInfo] = useState({ version: null, name: null });
+    const [logsExpanded, setLogsExpanded] = useState(false);
 
     useEffect(() => {
         const socketInstance = io();
@@ -82,6 +83,8 @@ export const WebSocketProvider = ({ children }) => {
             logs,
             clearLogs,
             appInfo,
+            logsExpanded,
+            setLogsExpanded,
             on,
             off,
             emit

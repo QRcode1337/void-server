@@ -18,7 +18,11 @@ import {
     Globe,
     ArrowUpCircle,
     RefreshCw,
-    HardDrive
+    HardDrive,
+    Copy,
+    X,
+    Terminal,
+    Check
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -42,11 +46,13 @@ const getIcon = (iconName) => {
 function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { appInfo } = useWebSocket();
+    const { appInfo, setLogsExpanded } = useWebSocket();
     const [expandedSections, setExpandedSections] = useState({});
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [updateInfo, setUpdateInfo] = useState(null);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [dockerModal, setDockerModal] = useState({ show: false, command: '' });
+    const [copied, setCopied] = useState(false);
 
     // Check for updates periodically
     useEffect(() => {
@@ -102,15 +108,34 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
     const handleUpdate = async () => {
         if (isUpdating) return;
         setIsUpdating(true);
+        setLogsExpanded(true); // Expand logs to show update progress
         toast.loading('Updating...', { id: 'update-progress' });
         try {
-            await fetch('/api/version/update', { method: 'POST' });
+            const res = await fetch('/api/version/update', { method: 'POST' });
+            const data = await res.json();
+
+            if (!data.success) {
+                // Check if it's a Docker error
+                if (data.error && data.error.includes('Docker installation detected')) {
+                    toast.dismiss('update-progress');
+                    // Extract command from error message
+                    const commandMatch = data.error.match(/Update from host: (.+)$/);
+                    const command = commandMatch ? commandMatch[1] : 'docker compose down && git pull && docker compose up -d --build';
+                    setDockerModal({ show: true, command });
+                    setIsUpdating(false);
+                    return;
+                }
+                toast.error(data.error || 'Update failed', { id: 'update-progress' });
+                setIsUpdating(false);
+                return;
+            }
+
             toast.success('Update started. Reloading when ready...', { id: 'update-progress' });
             // Poll for server to come back
             const poll = setInterval(async () => {
                 try {
-                    const res = await fetch('/api/health');
-                    if (res.ok) {
+                    const healthRes = await fetch('/api/health');
+                    if (healthRes.ok) {
                         clearInterval(poll);
                         window.location.reload();
                     }
@@ -120,6 +145,14 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
             toast.error('Update failed', { id: 'update-progress' });
             setIsUpdating(false);
         }
+    };
+
+    // Copy Docker command to clipboard
+    const copyDockerCommand = async () => {
+        await navigator.clipboard.writeText(dockerModal.command);
+        setCopied(true);
+        toast.success('Command copied to clipboard');
+        setTimeout(() => setCopied(false), 2000);
     };
 
     // Build navigation sections dynamically from plugins
@@ -480,6 +513,89 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
                         top: '56px', // Start below mobile header
                     }}
                 />
+            )}
+
+            {/* Docker Update Modal */}
+            {dockerModal.show && (
+                <div
+                    className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4"
+                    onClick={() => setDockerModal({ show: false, command: '' })}
+                >
+                    <div
+                        className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg w-full max-w-lg shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
+                                    <Terminal size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-[var(--color-text-primary)]">
+                                        Docker Update Required
+                                    </h2>
+                                    <p className="text-xs text-[var(--color-text-secondary)]">
+                                        Run this command on your host machine
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setDockerModal({ show: false, command: '' })}
+                                className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-4 space-y-4">
+                            <p className="text-sm text-[var(--color-text-secondary)]">
+                                Since you&apos;re running in Docker, the update must be performed from the host machine.
+                                Copy and run the following command in your terminal:
+                            </p>
+
+                            {/* Command Box */}
+                            <div className="relative">
+                                <pre className="bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg p-4 pr-12 font-mono text-sm text-[var(--color-text-primary)] overflow-x-auto whitespace-pre-wrap break-all">
+                                    {dockerModal.command}
+                                </pre>
+                                <button
+                                    onClick={copyDockerCommand}
+                                    className={`absolute top-2 right-2 p-2 rounded transition-colors ${
+                                        copied
+                                            ? 'bg-green-500/20 text-green-500'
+                                            : 'bg-[var(--color-surface)] hover:bg-[var(--color-border)] text-[var(--color-text-secondary)]'
+                                    }`}
+                                    title="Copy to clipboard"
+                                >
+                                    {copied ? <Check size={16} /> : <Copy size={16} />}
+                                </button>
+                            </div>
+
+                            <p className="text-xs text-[var(--color-text-tertiary)]">
+                                This will stop the container, pull the latest code, and rebuild with the new version.
+                            </p>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t border-[var(--color-border)] flex justify-end gap-3">
+                            <button
+                                onClick={() => setDockerModal({ show: false, command: '' })}
+                                className="btn btn-secondary text-sm"
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={copyDockerCommand}
+                                className="btn btn-primary text-sm flex items-center gap-2"
+                            >
+                                {copied ? <Check size={14} /> : <Copy size={14} />}
+                                {copied ? 'Copied!' : 'Copy Command'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
         </>
