@@ -17,7 +17,8 @@ import {
   Cpu,
   Sliders,
   ExternalLink,
-  Palette
+  Palette,
+  ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '../contexts/ThemeContext';
@@ -35,7 +36,10 @@ const SettingsPage = () => {
   const [testResults, setTestResults] = useState({});
   const [testing, setTesting] = useState({});
   const [saving, setSaving] = useState({});
-  
+  const [availableModels, setAvailableModels] = useState({});
+  const [loadingModels, setLoadingModels] = useState({});
+  const [openModelDropdown, setOpenModelDropdown] = useState(null); // e.g., "lmstudio-light"
+
   // Navigation state initialized from URL param
   const [activeTab, setActiveTab] = useState(tab === 'providers' ? 'providers' : 'general');
   const [editingProviderKey, setEditingProviderKey] = useState(null);
@@ -49,6 +53,25 @@ const SettingsPage = () => {
   useEffect(() => {
     fetchProviders();
   }, []);
+
+  // Fetch models when editing modal opens for API providers
+  useEffect(() => {
+    if (editingProviderKey && editedConfigs[editingProviderKey]?.enabled) {
+      const config = editedConfigs[editingProviderKey];
+      // Fetch models for API-type providers (LM Studio, OpenAI, etc.)
+      if (config.type === 'api' && !availableModels[editingProviderKey]) {
+        fetchModelsForProvider(editingProviderKey);
+      }
+    }
+  }, [editingProviderKey]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!openModelDropdown) return;
+    const handleClickOutside = () => setOpenModelDropdown(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [openModelDropdown]);
 
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
@@ -67,6 +90,28 @@ const SettingsPage = () => {
       console.error('Failed to fetch providers:', error);
       toast.error('Failed to load settings');
       setLoading(false);
+    }
+  };
+
+  const fetchModelsForProvider = async (providerKey) => {
+    if (loadingModels[providerKey]) return;
+
+    setLoadingModels(prev => ({ ...prev, [providerKey]: true }));
+
+    try {
+      const res = await fetch(`/api/ai-providers/${providerKey}/models`);
+      const data = await res.json();
+
+      if (data.success && data.models) {
+        setAvailableModels(prev => ({
+          ...prev,
+          [providerKey]: data.models.map(m => m.id || m.name)
+        }));
+      }
+    } catch (error) {
+      console.error(`Failed to fetch models for ${providerKey}:`, error);
+    } finally {
+      setLoadingModels(prev => ({ ...prev, [providerKey]: false }));
     }
   };
 
@@ -465,22 +510,90 @@ const SettingsPage = () => {
                 <div className="bg-[var(--color-background)] p-3 rounded-lg border border-[var(--color-border)] space-y-2">
                    <div className="flex items-center justify-between">
                      <span className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">Models</span>
-                     <span className="text-[10px] text-[var(--color-text-secondary)] opacity-60">ID or Name</span>
+                     {provider.enabled && provider.type === 'api' && (
+                       <button
+                         onClick={() => fetchModelsForProvider(provider.key)}
+                         disabled={loadingModels[provider.key]}
+                         className="text-[10px] text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 flex items-center gap-1"
+                         title="Refresh available models"
+                       >
+                         <RefreshCw className={`w-3 h-3 ${loadingModels[provider.key] ? 'animate-spin' : ''}`} />
+                         {availableModels[provider.key] ? `${availableModels[provider.key].length} available` : 'Load models'}
+                       </button>
+                     )}
                    </div>
-                   {['light', 'medium', 'deep'].map(modelType => (
-                      <div key={modelType} className="flex items-center gap-2">
-                        <label className="w-12 text-[10px] text-[var(--color-text-secondary)] uppercase text-right shrink-0">
-                          {modelType}
-                        </label>
-                        <input
-                          type="text"
-                          value={provider.models?.[modelType] || ''}
-                          onChange={(e) => handleModelChange(provider.key, modelType, e.target.value)}
-                          placeholder="model-id"
-                          className="flex-1 min-w-0 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-xs px-2 py-1 rounded focus:outline-none focus:border-[var(--color-primary)] font-mono"
-                        />
-                      </div>
-                   ))}
+                   {['light', 'medium', 'deep'].map(modelType => {
+                      const modelValue = provider.models?.[modelType] || '';
+                      const models = availableModels[provider.key] || [];
+                      const isValid = !models.length || models.includes(modelValue);
+                      const showWarning = provider.enabled && models.length > 0 && modelValue && !isValid;
+                      const dropdownId = `${provider.key}-${modelType}`;
+                      const isDropdownOpen = openModelDropdown === dropdownId;
+
+                      return (
+                        <div key={modelType} className="flex items-center gap-2">
+                          <label className="w-12 text-[10px] text-[var(--color-text-secondary)] uppercase text-right shrink-0">
+                            {modelType}
+                          </label>
+                          <div className="flex-1 min-w-0 relative">
+                            <div className="flex">
+                              <input
+                                type="text"
+                                value={modelValue}
+                                onChange={(e) => handleModelChange(provider.key, modelType, e.target.value)}
+                                placeholder="model-id"
+                                className={`flex-1 min-w-0 bg-[var(--color-surface)] border text-[var(--color-text-primary)] text-xs px-2 py-1 rounded-l focus:outline-none font-mono ${
+                                  showWarning
+                                    ? 'border-yellow-500 focus:border-yellow-500'
+                                    : 'border-[var(--color-border)] focus:border-[var(--color-primary)]'
+                                } ${models.length > 0 ? 'border-r-0' : 'rounded-r'}`}
+                              />
+                              {models.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenModelDropdown(isDropdownOpen ? null : dropdownId);
+                                  }}
+                                  className={`px-1.5 bg-[var(--color-surface)] border border-l-0 rounded-r transition-colors ${
+                                    showWarning
+                                      ? 'border-yellow-500'
+                                      : 'border-[var(--color-border)] hover:bg-[var(--color-background)]'
+                                  }`}
+                                >
+                                  <ChevronDown className={`w-3 h-3 text-[var(--color-text-secondary)] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                              )}
+                            </div>
+                            {isDropdownOpen && models.length > 0 && (
+                              <div
+                                className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto bg-[var(--color-surface)] border border-[var(--color-border)] rounded shadow-lg"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {models.map(m => (
+                                  <button
+                                    key={m}
+                                    type="button"
+                                    onClick={() => {
+                                      handleModelChange(provider.key, modelType, m);
+                                      setOpenModelDropdown(null);
+                                    }}
+                                    className={`w-full text-left px-2 py-1.5 text-xs font-mono truncate hover:bg-[var(--color-primary)]/10 ${
+                                      m === modelValue ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'text-[var(--color-text-primary)]'
+                                    }`}
+                                  >
+                                    {m}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {showWarning && (
+                            <AlertCircle className="w-3 h-3 text-yellow-500 shrink-0" title="Model not found in provider" />
+                          )}
+                        </div>
+                      );
+                   })}
                 </div>
               </div>
 
@@ -540,17 +653,22 @@ const SettingsPage = () => {
 
             {/* Modal Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6 bg-[var(--color-background)]/50">
-               <ProviderConfigContent 
+               <ProviderConfigContent
                  providerKey={editingProviderKey}
                  config={editedConfigs[editingProviderKey]}
                  showApiKey={showApiKeys[editingProviderKey]}
                  testResult={testResults[editingProviderKey]}
                  isTesting={testing[editingProviderKey]}
+                 availableModels={availableModels[editingProviderKey] || []}
+                 loadingModels={loadingModels[editingProviderKey]}
+                 openModelDropdown={openModelDropdown}
+                 setOpenModelDropdown={setOpenModelDropdown}
                  onConfigChange={(field, value) => handleConfigChange(editingProviderKey, field, value)}
                  onToggleEnabled={(newValue) => handleToggleProvider(editingProviderKey, editedConfigs[editingProviderKey], newValue)}
                  onModelChange={(modelType, value) => handleModelChange(editingProviderKey, modelType, value)}
                  onSettingChange={(setting, value) => handleSettingChange(editingProviderKey, setting, value)}
                  onToggleApiKey={() => toggleApiKeyVisibility(editingProviderKey)}
+                 onRefreshModels={() => fetchModelsForProvider(editingProviderKey)}
                />
             </div>
 
@@ -604,11 +722,16 @@ const ProviderConfigContent = ({
   showApiKey,
   testResult,
   isTesting,
+  availableModels = [],
+  loadingModels,
+  openModelDropdown,
+  setOpenModelDropdown,
   onConfigChange,
   onToggleEnabled,
   onModelChange,
   onSettingChange,
-  onToggleApiKey
+  onToggleApiKey,
+  onRefreshModels
 }) => {
   const isApiProvider = config.type === 'api';
   const isCliProvider = config.type === 'cli';
@@ -719,6 +842,117 @@ const ProviderConfigContent = ({
                 </div>
               </div>
             </>
+          )}
+        </div>
+      </section>
+
+      {/* Models Configuration */}
+      <section>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
+          <Bot className="w-4 h-4 text-[var(--color-primary)]" />
+          Models
+          {isApiProvider && config.enabled && (
+            <button
+              onClick={onRefreshModels}
+              disabled={loadingModels}
+              className="ml-auto text-xs text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 flex items-center gap-1"
+              title="Refresh available models from provider"
+            >
+              <RefreshCw className={`w-3 h-3 ${loadingModels ? 'animate-spin' : ''}`} />
+              {loadingModels ? 'Loading...' : availableModels.length > 0 ? `${availableModels.length} available` : 'Load models'}
+            </button>
+          )}
+        </h3>
+        <div className="p-4 bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+          <div className="grid grid-cols-1 gap-3">
+            {['light', 'medium', 'deep'].map(modelType => {
+              const modelValue = config.models?.[modelType] || '';
+              const isValid = !availableModels.length || availableModels.includes(modelValue);
+              const showWarning = config.enabled && availableModels.length > 0 && modelValue && !isValid;
+              const dropdownId = `modal-${providerKey}-${modelType}`;
+              const isDropdownOpen = openModelDropdown === dropdownId;
+
+              return (
+                <div key={modelType}>
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1 capitalize">
+                    {modelType} Model
+                  </label>
+                  <div className="relative flex items-center gap-2">
+                    <div className="flex-1 flex">
+                      <input
+                        type="text"
+                        value={modelValue}
+                        onChange={(e) => onModelChange(modelType, e.target.value)}
+                        placeholder="model-id"
+                        className={`flex-1 min-w-0 px-3 py-2 bg-[var(--color-background)] border text-[var(--color-text-primary)] text-sm focus:outline-none font-mono ${
+                          showWarning
+                            ? 'border-yellow-500 focus:border-yellow-500'
+                            : 'border-[var(--color-border)] focus:border-[var(--color-primary)]'
+                        } ${availableModels.length > 0 ? 'rounded-l border-r-0' : 'rounded'}`}
+                      />
+                      {availableModels.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenModelDropdown(isDropdownOpen ? null : dropdownId);
+                          }}
+                          className={`px-2 bg-[var(--color-background)] border rounded-r transition-colors ${
+                            showWarning
+                              ? 'border-yellow-500'
+                              : 'border-[var(--color-border)] hover:bg-[var(--color-surface)]'
+                          }`}
+                        >
+                          <ChevronDown className={`w-4 h-4 text-[var(--color-text-secondary)] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                      )}
+                    </div>
+                    {showWarning && (
+                      <div className="flex items-center gap-1 text-yellow-500 shrink-0" title="Model not found in provider">
+                        <AlertCircle className="w-4 h-4" />
+                      </div>
+                    )}
+                    {config.enabled && availableModels.length > 0 && modelValue && isValid && (
+                      <div className="flex items-center gap-1 text-green-500 shrink-0" title="Model available">
+                        <Check className="w-4 h-4" />
+                      </div>
+                    )}
+                    {isDropdownOpen && availableModels.length > 0 && (
+                      <div
+                        className="absolute left-0 right-12 top-full z-50 mt-1 max-h-48 overflow-y-auto bg-[var(--color-surface)] border border-[var(--color-border)] rounded shadow-lg"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {availableModels.map(m => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              onModelChange(modelType, m);
+                              setOpenModelDropdown(null);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm font-mono truncate hover:bg-[var(--color-primary)]/10 ${
+                              m === modelValue ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'text-[var(--color-text-primary)]'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {showWarning && (
+                    <p className="text-xs text-yellow-500 mt-1">
+                      Model not found. Check if it&apos;s loaded in LM Studio.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {isApiProvider && config.enabled && availableModels.length === 0 && !loadingModels && (
+            <p className="text-xs text-[var(--color-text-secondary)] mt-3">
+              Click &quot;Load models&quot; to see available models from the provider.
+            </p>
           )}
         </div>
       </section>

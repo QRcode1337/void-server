@@ -57,18 +57,27 @@ function migrateFromLegacy() {
 }
 
 /**
+ * Check if a config file is empty or has no meaningful content
+ */
+function isEmptyConfig(filePath, key) {
+  if (!fs.existsSync(filePath)) return true;
+  const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return !content[key] || Object.keys(content[key]).length === 0;
+}
+
+/**
  * Load templates from disk
  */
 function loadTemplates() {
   ensureConfigDir();
   migrateFromLegacy();
 
-  if (!fs.existsSync(TEMPLATES_PATH)) {
-    // Copy from data_template if available, otherwise create empty
+  // Copy from data_template if file doesn't exist OR is empty
+  if (isEmptyConfig(TEMPLATES_PATH, 'templates')) {
     if (fs.existsSync(TEMPLATE_TEMPLATES_PATH)) {
       fs.copyFileSync(TEMPLATE_TEMPLATES_PATH, TEMPLATES_PATH);
       console.log('📋 Initialized templates from data_template');
-    } else {
+    } else if (!fs.existsSync(TEMPLATES_PATH)) {
       fs.writeFileSync(TEMPLATES_PATH, JSON.stringify({ templates: {} }, null, 2));
     }
   }
@@ -91,12 +100,12 @@ function saveTemplates() {
 function loadVariables() {
   ensureConfigDir();
 
-  if (!fs.existsSync(VARIABLES_PATH)) {
-    // Copy from data_template if available, otherwise create empty
+  // Copy from data_template if file doesn't exist OR is empty
+  if (isEmptyConfig(VARIABLES_PATH, 'variables')) {
     if (fs.existsSync(TEMPLATE_VARIABLES_PATH)) {
       fs.copyFileSync(TEMPLATE_VARIABLES_PATH, VARIABLES_PATH);
       console.log('📋 Initialized variables from data_template');
-    } else {
+    } else if (!fs.existsSync(VARIABLES_PATH)) {
       fs.writeFileSync(VARIABLES_PATH, JSON.stringify({ variables: {} }, null, 2));
     }
   }

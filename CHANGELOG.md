@@ -1,8 +1,8 @@
 # Changelog
 
-## [0.9.0] - 2025-12-15
+## [0.9.0] - 2025-12-16
 
-IPFS integration for decentralized content pinning and management.
+IPFS integration for decentralized content pinning and management, plus infrastructure improvements.
 
 ### New Features
 
@@ -25,6 +25,12 @@ IPFS integration for decentralized content pinning and management.
   - Shows peer count and connection status
   - Guidance banner for improving accessibility (port forwarding or Pinata)
   - Color-coded status indicators (green=public, yellow=NAT, gray=unknown)
+- **LM Studio Model Detection** - Intelligent model validation on Settings page
+  - Auto-fetch available models from LM Studio API when provider is enabled
+  - Model validation with visual indicators (green check = available, yellow warning = not found)
+  - Autocomplete dropdown with suggestions from available models
+  - Shows list of available models in provider configuration modal
+  - Helpful error messages when configured model is not loaded
 
 ### Docker
 
@@ -76,6 +82,22 @@ Default IPFS configuration (`data/ipfs.json`):
   }
 }
 ```
+
+### Infrastructure
+
+- **Setup/Update Scripts** - Improved Docker and native installation handling
+  - `setup.sh`/`setup.ps1` now pull latest images before starting containers
+  - `update.sh`/`update.ps1` auto-detect Docker vs native installation
+  - Shows correct ports based on installation type (4420 for Docker, 4401/4480 for native)
+  - Docker updates now properly rebuild containers with latest code
+
+### Documentation
+
+- **Architecture Diagram** - Added ASCII diagram to README showing:
+  - Docker Compose stack (void-server, Neo4j, IPFS Kubo)
+  - User access via Tailscale VPN or localhost
+  - LM Studio integration via host.docker.internal
+  - Port reference table and data flow summary
 
 ---
 

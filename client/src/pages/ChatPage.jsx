@@ -537,30 +537,54 @@ function ChatPage() {
           {activeChat ? (
             <>
               {/* Chat header */}
-              <div className="p-3 border-b border-border flex items-center justify-between">
+              <div className="p-3 border-b border-border flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <h2 className="font-medium text-text-primary truncate">
                     {activeChat.title}
                   </h2>
-                  <span className="text-xs text-text-tertiary flex-shrink-0">
-                    ({activeChat.templateId})
-                  </span>
-                  {(() => {
-                    const lastAssistant = [...activeChat.messages].reverse().find(m => m.role === 'assistant');
-                    if (lastAssistant?.provider) {
-                      return (
-                        <span className="text-xs px-2 py-0.5 bg-border/50 rounded text-text-secondary flex-shrink-0">
-                          {lastAssistant.provider}{lastAssistant.model ? `: ${lastAssistant.model}` : ''}
-                        </span>
-                      );
-                    }
-                    return null;
-                  })()}
                 </div>
-                <div className="flex items-center gap-2">
+
+                {/* Inline controls - visible on desktop */}
+                <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                  <select
+                    value={selectedTemplate}
+                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    className="form-input text-xs py-1 px-2 bg-background border-border min-w-0"
+                    title="Template"
+                  >
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={providerOverride}
+                    onChange={(e) => setProviderOverride(e.target.value)}
+                    className="form-input text-xs py-1 px-2 bg-background border-border min-w-0"
+                    title="Provider"
+                  >
+                    {providers.map(p => (
+                      <option key={p.key} value={p.key}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={modelTypeOverride}
+                    onChange={(e) => setModelTypeOverride(e.target.value)}
+                    className="form-input text-xs py-1 px-2 bg-background border-border min-w-0"
+                    title="Model"
+                  >
+                    <option value="light">Light (fast)</option>
+                    <option value="medium">Medium (balanced)</option>
+                    <option value="deep">Deep (powerful)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {/* Settings button - only on mobile */}
                   <button
                     onClick={() => setShowSettings(!showSettings)}
-                    className={`p-2 rounded hover:bg-border/50 ${
+                    className={`md:hidden p-2 rounded hover:bg-border/50 ${
                       showSettings ? 'text-primary' : 'text-text-secondary'
                     }`}
                   >
@@ -583,9 +607,9 @@ function ChatPage() {
                 </div>
               </div>
 
-              {/* Settings panel */}
+              {/* Settings panel - mobile only */}
               {showSettings && (
-                <div className="p-3 border-b border-border bg-background/50">
+                <div className="md:hidden p-3 border-b border-border bg-background/50">
                   <div className="flex flex-wrap gap-4">
                     <div>
                       <label className="block text-xs text-text-secondary mb-1">
@@ -610,10 +634,9 @@ function ChatPage() {
                         onChange={(e) => setProviderOverride(e.target.value)}
                         className="form-input text-sm"
                       >
-                        <option value="">Template default</option>
                         {providers.map(p => (
                           <option key={p.key} value={p.key}>
-                            {p.name} {p.active ? '(active)' : ''}
+                            {p.name}
                           </option>
                         ))}
                       </select>
@@ -627,7 +650,6 @@ function ChatPage() {
                         onChange={(e) => setModelTypeOverride(e.target.value)}
                         className="form-input text-sm"
                       >
-                        <option value="">Template default</option>
                         <option value="light">Light (fast)</option>
                         <option value="medium">Medium (balanced)</option>
                         <option value="deep">Deep (powerful)</option>
