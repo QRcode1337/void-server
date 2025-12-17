@@ -16,6 +16,7 @@ Patch release with Docker browser setup automation and bug fixes.
 - Fixed server crash when Docker socket not accessible (now returns graceful error)
 - Added `BROWSER_MODE` env var to override Docker detection (`native` or `docker`)
 - Fixed browser profiles info text showing old `config/browsers/` path instead of `data/browsers/`
+- Added ffmpeg to Docker image for video processing (fixes "ffmpeg not installed" error)
 
 ### Configuration
 
@@ -64,10 +65,6 @@ New environment variables in docker-compose.yml:
 - Added browser automation tests for file downloads (`tests/e2e/features/browsers/browser-automation.feature`)
 - Added `scripts/test-browser-download.js` for standalone download automation testing
 - Added `@requires-docker` tag support in test hooks
-
-### Bug Fixes
-
-- Added ffmpeg to Docker image for video processing (fixes "ffmpeg not installed" error)
 
 ---
 
