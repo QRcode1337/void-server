@@ -32,6 +32,23 @@ When('I try to DELETE {string}', async function (endpoint) {
   this.testData.lastStatus = response.status();
 });
 
+When('I DELETE {string}', async function (endpoint) {
+  const response = await this.request.delete(`${this.config.appUrl}${endpoint}`);
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});
+
+When('I POST to {string} with:', async function (endpoint, dataTable) {
+  const data = dataTable.rowsHash();
+  const response = await this.request.post(`${this.config.appUrl}${endpoint}`, { data });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+  // Store for cleanup if id provided
+  if (data.id) {
+    this.testData.createdProfileId = data.id;
+  }
+});
+
 When('I request the health endpoint', async function () {
   const response = await this.request.get(`${this.config.appUrl}/health`);
   this.testData.lastResponse = await response.json();
@@ -126,4 +143,13 @@ Then('the response should contain update information', async function () {
 
 Then('the response should indicate failure', async function () {
   expect(this.testData.lastStatus).toBeGreaterThanOrEqual(400);
+});
+
+Then('the response should have {string} array', async function (key) {
+  expect(Array.isArray(this.testData.lastResponse[key])).toBe(true);
+});
+
+Then('the response should have {string} object', async function (key) {
+  expect(typeof this.testData.lastResponse[key]).toBe('object');
+  expect(this.testData.lastResponse[key]).not.toBeNull();
 });

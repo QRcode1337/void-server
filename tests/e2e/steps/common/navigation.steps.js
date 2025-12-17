@@ -110,3 +110,9 @@ Then('I should see a success toast', async function () {
     this.page.locator('[class*="react-hot-toast"], [role="status"]')
   ).toBeVisible({ timeout: 5000 });
 });
+
+Then('I should see the {string} button', async function (buttonText) {
+  await expect(
+    this.page.getByRole('button', { name: buttonText })
+  ).toBeVisible({ timeout: 5000 });
+});

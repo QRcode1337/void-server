@@ -50,6 +50,18 @@ router.get('/:id/status', async (req, res) => {
   res.json(result);
 });
 
+// Get noVNC URL for Docker browser
+router.get('/:id/novnc', async (req, res) => {
+  console.log(`🌐 GET /api/browsers/${req.params.id}/novnc`);
+  const result = await browserService.getNoVNCUrl(req.params.id);
+
+  if (!result.success) {
+    return res.status(400).json(result);
+  }
+
+  res.json(result);
+});
+
 // Create new browser profile
 router.post('/', async (req, res) => {
   const { id, name, description, port, autoAssignPort = true } = req.body;

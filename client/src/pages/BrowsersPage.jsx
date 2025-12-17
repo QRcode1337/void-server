@@ -8,7 +8,6 @@ import {
   RefreshCw,
   CheckCircle,
   XCircle,
-  AlertTriangle,
   ExternalLink,
   Edit2,
   Save,
@@ -134,16 +133,23 @@ export default function BrowsersPage() {
     const data = await response.json();
 
     if (data.success) {
-      toast.success('Browser launched. Log in, then close the window.', {
-        id: `launch-${id}`,
-        duration: 10000,
-      });
+      // If noVNC URL returned (Docker mode), open in new tab
+      if (data.novncUrl) {
+        setIsDockerEnv(true);
+        window.open(data.novncUrl, '_blank');
+        toast.success('Browser opened in new tab. Log in, then close the tab.', {
+          id: `launch-${id}`,
+          duration: 10000,
+        });
+      } else {
+        toast.success('Browser launched. Log in, then close the window.', {
+          id: `launch-${id}`,
+          duration: 10000,
+        });
+      }
       // Poll for status
       pollBrowserStatus(id);
     } else {
-      if (data.isDocker) {
-        setIsDockerEnv(true);
-      }
       toast.error(data.error || 'Failed to launch browser', { id: `launch-${id}` });
     }
 
@@ -247,27 +253,16 @@ export default function BrowsersPage() {
         </div>
       </div>
 
-      {/* Docker Warning */}
+      {/* Docker Info */}
       {isDockerEnv && (
-        <div className="card border-warning bg-warning/10">
+        <div className="card border-info bg-info/10">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <Globe className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-text-primary">Running in Docker</h3>
+              <h3 className="font-semibold text-text-primary">Docker Browser Mode</h3>
               <p className="text-secondary text-sm mt-1">
-                Browser GUI cannot be launched inside Docker containers. To authenticate browsers:
+                Browser opens in a web-based viewer (new tab). Auto-closes after 15 minutes idle.
               </p>
-              <ol className="list-decimal list-inside text-sm text-secondary mt-2 space-y-1">
-                <li>
-                  Run void-server natively:{' '}
-                  <code className="bg-surface px-1 rounded">./run.sh native</code>
-                </li>
-                <li>Create and authenticate browser profiles</li>
-                <li>
-                  Switch back to Docker - profiles persist in{' '}
-                  <code className="bg-surface px-1 rounded">config/browsers/</code>
-                </li>
-              </ol>
             </div>
           </div>
         </div>
@@ -479,7 +474,6 @@ export default function BrowsersPage() {
                             onClick={() => handleLaunch(browser.id, 'https://x.com/login')}
                             className="btn btn-primary btn-sm flex items-center gap-1"
                             title="Launch for X.com authentication"
-                            disabled={isDockerEnv}
                           >
                             <Play size={16} />
                             Launch (X.com)
@@ -488,7 +482,6 @@ export default function BrowsersPage() {
                             onClick={() => handleLaunch(browser.id)}
                             className="btn btn-secondary btn-sm flex items-center gap-1"
                             title="Launch with blank page"
-                            disabled={isDockerEnv}
                           >
                             <ExternalLink size={16} />
                           </button>

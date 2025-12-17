@@ -35,12 +35,19 @@ services:
       # Watchtower API for triggering updates from UI
       - WATCHTOWER_URL=http://watchtower:8080
       - WATCHTOWER_TOKEN=${WATCHTOWER_TOKEN:-void-update-token}
+      # Browser sidecar configuration
+      - BROWSER_CONTAINER_IMAGE=${BROWSER_CONTAINER_IMAGE:-kasmweb/chromium:1.15.0}
+      - BROWSER_NOVNC_PORT=${BROWSER_NOVNC_PORT:-6901}
+      - BROWSER_IDLE_TIMEOUT=${BROWSER_IDLE_TIMEOUT:-900000}
+      - BROWSER_DATA_PATH=${PWD}/data/browsers
     volumes:
       # Persistent data directories
       - ./config:/app/config
       - ./backups:/app/backups
       - ./logs:/app/logs
       - ./data:/app/data
+      # Docker socket for browser sidecar management
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       neo4j:
         condition: service_healthy

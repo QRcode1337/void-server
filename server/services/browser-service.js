@@ -296,11 +296,19 @@ async function getBrowserStatus(id) {
     return { success: false, error: 'Browser profile not found' };
   }
 
+  // In Docker, check container status
+  let running = activeBrowsers.has(id);
+  if (isDocker()) {
+    const dockerBrowserService = require('./docker-browser-service');
+    const containerStatus = await dockerBrowserService.getBrowserContainerStatus(id);
+    running = containerStatus.running;
+  }
+
   return {
     success: true,
     id,
     name: browser.name,
-    running: activeBrowsers.has(id),
+    running,
     authenticated: await checkAuthentication(id)
   };
 }
@@ -311,13 +319,10 @@ async function getBrowserStatus(id) {
 async function launchBrowser(id, options = {}) {
   const { url = 'about:blank' } = options;
 
-  // Prevent GUI browser launch inside Docker
+  // In Docker, use sidecar container with noVNC
   if (isDocker()) {
-    return {
-      success: false,
-      error: 'Cannot launch browser GUI inside Docker. Run void-server natively to authenticate browsers, then use Docker for deployment.',
-      isDocker: true
-    };
+    const dockerBrowserService = require('./docker-browser-service');
+    return dockerBrowserService.startBrowserContainer(id, { url });
   }
 
   const chromium = await getPlaywright();
@@ -380,6 +385,12 @@ async function launchBrowser(id, options = {}) {
  * Close a running browser
  */
 async function closeBrowser(id) {
+  // In Docker, close the sidecar container
+  if (isDocker()) {
+    const dockerBrowserService = require('./docker-browser-service');
+    return dockerBrowserService.stopBrowserContainer(id);
+  }
+
   const instance = activeBrowsers.get(id);
 
   if (!instance) {
@@ -488,6 +499,28 @@ function getPortRange() {
   return { start: DEFAULT_PORT_START, end: DEFAULT_PORT_END };
 }
 
+/**
+ * Get noVNC URL for Docker browser (proxy to docker-browser-service)
+ */
+async function getNoVNCUrl(id) {
+  if (!isDocker()) {
+    return { success: false, error: 'NoVNC only available in Docker mode' };
+  }
+  const dockerBrowserService = require('./docker-browser-service');
+  return dockerBrowserService.getNoVNCUrl(id);
+}
+
+/**
+ * Get Docker browser container status (proxy to docker-browser-service)
+ */
+async function getBrowserContainerStatus(id) {
+  if (!isDocker()) {
+    return { running: false };
+  }
+  const dockerBrowserService = require('./docker-browser-service');
+  return dockerBrowserService.getBrowserContainerStatus(id);
+}
+
 module.exports = {
   listBrowsers,
   getBrowser,
@@ -503,5 +536,7 @@ module.exports = {
   getUsedPorts,
   getPortRange,
   isDocker,
+  getNoVNCUrl,
+  getBrowserContainerStatus,
   DATA_DIR
 };

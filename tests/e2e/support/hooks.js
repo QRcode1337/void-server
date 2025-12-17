@@ -104,3 +104,12 @@ Before({ tags: '@requires-ipfs' }, async function () {
     return 'skipped';
   }
 });
+
+Before({ tags: '@requires-docker' }, async function () {
+  // Check if server is running in Docker by calling environment endpoint
+  const response = await this.request.get(`${this.config.appUrl}/api/version/environment`);
+  const env = await response.json();
+  if (!env.isDocker) {
+    return 'skipped';
+  }
+});

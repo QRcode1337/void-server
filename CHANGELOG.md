@@ -1,5 +1,48 @@
 # Changelog
 
+## [0.11.0] - 2025-12-17
+
+Docker browser authentication support using NoVNC sidecar containers.
+
+### New Features
+
+- **Docker Browser Support** - Launch and authenticate browsers from within Docker
+  - NoVNC-based web viewer opens in a new browser tab
+  - Uses kasmweb/chromium container for cross-platform compatibility
+  - Browser profiles persist in shared `./data/browsers/` volume
+  - Auto-timeout after 15 minutes of idle time
+  - Docker socket mounted for container lifecycle management
+
+### API Changes
+
+- `POST /api/browsers/:id/launch` - Now returns `novncUrl` when running in Docker
+- `GET /api/browsers/:id/novnc` - New endpoint to get NoVNC URL for running browser
+
+### Configuration
+
+New environment variables in docker-compose.yml:
+- `BROWSER_CONTAINER_IMAGE` - Browser sidecar image (default: `kasmweb/chromium:1.15.0`)
+- `BROWSER_NOVNC_PORT` - Starting port for NoVNC (default: `6901`)
+- `BROWSER_IDLE_TIMEOUT` - Auto-stop timeout in ms (default: `900000` / 15 min)
+- `BROWSER_DATA_PATH` - Host path for browser profile data
+
+### New Files
+
+- `server/services/docker-browser-service.js` - Docker container lifecycle management
+
+### Dependencies
+
+- Added `dockerode` for Docker API access
+
+### Tests
+
+- Added browser profile e2e tests (`tests/e2e/features/browsers/browsers.feature`)
+- Added browser automation tests for file downloads (`tests/e2e/features/browsers/browser-automation.feature`)
+- Added `scripts/test-browser-download.js` for standalone download automation testing
+- Added `@requires-docker` tag support in test hooks
+
+---
+
 ## [0.10.3] - 2025-12-17
 
 Patch release with Docker improvements, documentation updates, and comprehensive test infrastructure.
