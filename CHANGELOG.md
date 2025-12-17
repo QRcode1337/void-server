@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.5] - 2025-12-16
+
+Patch release with IPFS dashboard status and plugin/PM2 fixes.
+
+### New Features
+
+- **IPFS status on dashboard** - Added IPFS daemon status to the home dashboard
+  - Shows online/offline status with peer count
+  - Three-column service status grid: Neo4j, LM Studio, IPFS
+
+### Fixes
+
+- **Plugin rebuild required message** - Shows clear instructions when plugin client isn't in bundle
+  - Happens when plugins are installed after Docker image was built
+  - Shows "Client Rebuild Required" with copyable Docker command
+  - Explains the issue and provides solution for both Docker and dev environments
+- **PM2 logs page not working** - Fixed `spawn pm2 ENOENT` error on Logs page
+  - Changed `pm2` to `npx pm2` for both process list and log streaming
+  - Ensures PM2 commands work in environments without global PM2 install
+
+---
+
 ## [0.9.4] - 2025-12-16
 
 Patch release improving Docker update UX.

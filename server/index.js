@@ -507,7 +507,7 @@ app.get('/api/pm2/processes', async (req, res) => {
   const { exec } = require('child_process');
   const execAsync = promisify(exec);
 
-  const { stdout } = await execAsync('pm2 jlist');
+  const { stdout } = await execAsync('npx pm2 jlist');
   // PM2 sometimes outputs extra text before the JSON (e.g., ">>> In-memory PM2...")
   const jsonStart = stdout.indexOf('[');
   const jsonString = jsonStart >= 0 ? stdout.slice(jsonStart) : '[]';
@@ -588,7 +588,7 @@ app.get('/api/pm2/logs', (req, res) => {
       ? ['logs', '--lines', '0', '--raw']
       : ['logs', processName, '--lines', '0', '--raw'];
 
-    pm2Process = spawn('pm2', pm2Args);
+    pm2Process = spawn('npx', ['pm2', ...pm2Args]);
     activeLogStreams.set(streamId, { process: pm2Process, processName });
 
     pm2Process.stdout.on('data', (data) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Terminal, Database, Cpu, MessageCircle, ExternalLink, Check, X, Loader } from 'lucide-react';
+import { Terminal, Database, Cpu, HardDrive, MessageCircle, ExternalLink, Check, X, Loader } from 'lucide-react';
 
 const ASCII_CAT = `
     /\\_____/\\
@@ -40,6 +40,7 @@ const StatusBadge = ({ status, label }) => {
 const Dashboard = () => {
     const [neo4jStatus, setNeo4jStatus] = useState({ status: 'loading', label: 'Checking...' });
     const [lmStudioStatus, setLmStudioStatus] = useState({ status: 'loading', label: 'Checking...' });
+    const [ipfsStatus, setIpfsStatus] = useState({ status: 'loading', label: 'Checking...' });
 
     useEffect(() => {
         const checkNeo4j = async () => {
@@ -62,8 +63,20 @@ const Dashboard = () => {
             }
         };
 
+        const checkIpfs = async () => {
+            const res = await fetch('/api/ipfs/daemon/check');
+            const data = await res.json();
+            if (data.online) {
+                const peerCount = data.peers || 0;
+                setIpfsStatus({ status: 'connected', label: peerCount > 0 ? `${peerCount} peers` : 'Online' });
+            } else {
+                setIpfsStatus({ status: 'disconnected', label: 'Offline' });
+            }
+        };
+
         checkNeo4j();
         checkLmStudio();
+        checkIpfs();
     }, []);
 
     const isReady = neo4jStatus.status === 'connected' && lmStudioStatus.status === 'connected';
@@ -89,13 +102,13 @@ const Dashboard = () => {
                     <Terminal className="w-4 h-4" />
                     Service Status
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="flex items-center justify-between p-3 rounded-lg bg-surface-secondary">
                         <div className="flex items-center gap-3">
                             <Database className="w-5 h-5 text-primary" />
                             <div>
                                 <p className="text-sm font-medium text-text-primary">Neo4j Memory</p>
-                                <p className="text-xs text-text-secondary">Graph database for memories</p>
+                                <p className="text-xs text-text-secondary">Graph database</p>
                             </div>
                         </div>
                         <StatusBadge status={neo4jStatus.status} label={neo4jStatus.label} />
@@ -105,10 +118,20 @@ const Dashboard = () => {
                             <Cpu className="w-5 h-5 text-primary" />
                             <div>
                                 <p className="text-sm font-medium text-text-primary">LM Studio</p>
-                                <p className="text-xs text-text-secondary">Local AI for chat & embeddings</p>
+                                <p className="text-xs text-text-secondary">Local AI</p>
                             </div>
                         </div>
                         <StatusBadge status={lmStudioStatus.status} label={lmStudioStatus.label} />
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-surface-secondary">
+                        <div className="flex items-center gap-3">
+                            <HardDrive className="w-5 h-5 text-primary" />
+                            <div>
+                                <p className="text-sm font-medium text-text-primary">IPFS</p>
+                                <p className="text-xs text-text-secondary">Distributed storage</p>
+                            </div>
+                        </div>
+                        <StatusBadge status={ipfsStatus.status} label={ipfsStatus.label} />
                     </div>
                 </div>
             </div>
