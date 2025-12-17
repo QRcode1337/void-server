@@ -34,7 +34,7 @@ jobs:
         run: npm ci && cd client && npm ci
 
       - name: Lint client
-        run: npm run lint --prefix client || true
+        run: npm run lint --prefix client
 
   build:
     runs-on: ubuntu-latest

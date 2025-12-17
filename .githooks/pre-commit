@@ -125,35 +125,83 @@ scan_file() {
   done < "$PATTERNS_FILE"
 }
 
+# Lint staged client files
+lint_client() {
+  # Check if any client files are staged
+  local client_files
+  client_files=$(git diff --cached --name-only --diff-filter=ACMR | grep "^client/src/" || true)
+
+  if [[ -z "$client_files" ]]; then
+    return 0
+  fi
+
+  echo ""
+  echo "Linting client files..."
+
+  # Check if client node_modules exists
+  if [[ ! -d "$PROJECT_ROOT/client/node_modules" ]]; then
+    echo -e "${YELLOW}Skipping lint: client dependencies not installed${NC}"
+    return 0
+  fi
+
+  # Run lint
+  cd "$PROJECT_ROOT/client"
+  if npm run lint --silent 2>/dev/null; then
+    echo -e "${GREEN}Lint passed!${NC}"
+    cd "$PROJECT_ROOT"
+    return 0
+  else
+    echo ""
+    echo -e "${RED}================================${NC}"
+    echo -e "${RED}       LINT ERRORS FOUND        ${NC}"
+    echo -e "${RED}================================${NC}"
+    echo ""
+    npm run lint 2>&1 | head -50
+    echo ""
+    echo -e "${YELLOW}Run 'cd client && npm run lint' for full output${NC}"
+    echo ""
+    echo -e "${RED}Commit blocked.${NC}"
+    cd "$PROJECT_ROOT"
+    exit 1
+  fi
+}
+
 # Main
 main() {
+  # Run secrets scan
   echo "Scanning for secrets..."
 
   # Check if patterns file exists
   if [[ ! -f "$PATTERNS_FILE" ]]; then
     echo -e "${YELLOW}Warning: Secret patterns file not found${NC}"
     echo "Expected: $PATTERNS_FILE"
-    exit 0
+  else
+    # Load allowlist
+    load_allowlist
+
+    # Get list of staged files
+    local staged_files
+    staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+
+    if [[ -n "$staged_files" ]]; then
+      # Scan each file
+      while IFS= read -r file; do
+        scan_file "$file"
+      done <<< "$staged_files"
+
+      # Report findings
+      report_secrets
+    fi
   fi
 
-  # Load allowlist
-  load_allowlist
+  # Run lint check
+  lint_client
 
-  # Get list of staged files
-  local staged_files
-  staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+  exit 0
+}
 
-  if [[ -z "$staged_files" ]]; then
-    echo "No files staged for commit."
-    exit 0
-  fi
-
-  # Scan each file
-  while IFS= read -r file; do
-    scan_file "$file"
-  done <<< "$staged_files"
-
-  # Report findings
+# Report secret findings
+report_secrets() {
   if [[ $SECRETS_FOUND -gt 0 ]]; then
     echo ""
     echo -e "${RED}================================${NC}"
@@ -178,7 +226,6 @@ main() {
   fi
 
   echo -e "${GREEN}No secrets detected.${NC}"
-  exit 0
 }
 
 main "$@"
