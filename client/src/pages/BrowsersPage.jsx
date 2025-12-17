@@ -1,5 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Globe, Plus, Trash2, Play, X, RefreshCw, CheckCircle, XCircle, AlertTriangle, ExternalLink, Edit2, Save } from 'lucide-react';
+import {
+  Globe,
+  Plus,
+  Trash2,
+  Play,
+  X,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  ExternalLink,
+  Edit2,
+  Save,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function BrowsersPage() {
@@ -49,13 +62,13 @@ export default function BrowsersPage() {
     const payload = {
       ...newBrowser,
       port: newBrowser.port ? parseInt(newBrowser.port, 10) : undefined,
-      autoAssignPort: !newBrowser.port
+      autoAssignPort: !newBrowser.port,
     };
 
     const response = await fetch('/api/browsers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
@@ -71,12 +84,12 @@ export default function BrowsersPage() {
     }
   };
 
-  const startEditing = (browser) => {
+  const startEditing = browser => {
     setEditingBrowser(browser.id);
     setEditForm({
       name: browser.name || '',
       description: browser.description || '',
-      port: browser.port || ''
+      port: browser.port || '',
     });
   };
 
@@ -85,17 +98,17 @@ export default function BrowsersPage() {
     setEditForm({ name: '', description: '', port: '' });
   };
 
-  const handleUpdate = async (id) => {
+  const handleUpdate = async id => {
     const updates = {
       name: editForm.name || undefined,
       description: editForm.description,
-      port: editForm.port ? parseInt(editForm.port, 10) : null
+      port: editForm.port ? parseInt(editForm.port, 10) : null,
     };
 
     const response = await fetch(`/api/browsers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
+      body: JSON.stringify(updates),
     });
 
     const data = await response.json();
@@ -115,13 +128,16 @@ export default function BrowsersPage() {
     const response = await fetch(`/api/browsers/${id}/launch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url }),
     });
 
     const data = await response.json();
 
     if (data.success) {
-      toast.success('Browser launched. Log in, then close the window.', { id: `launch-${id}`, duration: 10000 });
+      toast.success('Browser launched. Log in, then close the window.', {
+        id: `launch-${id}`,
+        duration: 10000,
+      });
       // Poll for status
       pollBrowserStatus(id);
     } else {
@@ -134,7 +150,7 @@ export default function BrowsersPage() {
     loadBrowsers();
   };
 
-  const pollBrowserStatus = (id) => {
+  const pollBrowserStatus = id => {
     const interval = setInterval(async () => {
       const response = await fetch(`/api/browsers/${id}/status`);
       const data = await response.json();
@@ -151,7 +167,7 @@ export default function BrowsersPage() {
     setTimeout(() => clearInterval(interval), 300000);
   };
 
-  const handleClose = async (id) => {
+  const handleClose = async id => {
     const response = await fetch(`/api/browsers/${id}/close`, { method: 'POST' });
     const data = await response.json();
 
@@ -164,7 +180,7 @@ export default function BrowsersPage() {
     loadBrowsers();
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     const response = await fetch(`/api/browsers/${id}`, { method: 'DELETE' });
     const data = await response.json();
 
@@ -177,7 +193,7 @@ export default function BrowsersPage() {
     loadBrowsers();
   };
 
-  const renderStatusBadge = (browser) => {
+  const renderStatusBadge = browser => {
     if (browser.running) {
       return (
         <span className="flex items-center gap-1 text-sm text-warning">
@@ -212,7 +228,9 @@ export default function BrowsersPage() {
           <Globe className="w-8 h-8 text-primary" />
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Browser Profiles</h1>
-            <p className="text-secondary text-sm">Manage authenticated browser sessions for plugins</p>
+            <p className="text-secondary text-sm">
+              Manage authenticated browser sessions for plugins
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -240,9 +258,15 @@ export default function BrowsersPage() {
                 Browser GUI cannot be launched inside Docker containers. To authenticate browsers:
               </p>
               <ol className="list-decimal list-inside text-sm text-secondary mt-2 space-y-1">
-                <li>Run void-server natively: <code className="bg-surface px-1 rounded">./run.sh native</code></li>
+                <li>
+                  Run void-server natively:{' '}
+                  <code className="bg-surface px-1 rounded">./run.sh native</code>
+                </li>
                 <li>Create and authenticate browser profiles</li>
-                <li>Switch back to Docker - profiles persist in <code className="bg-surface px-1 rounded">config/browsers/</code></li>
+                <li>
+                  Switch back to Docker - profiles persist in{' '}
+                  <code className="bg-surface px-1 rounded">config/browsers/</code>
+                </li>
               </ol>
             </div>
           </div>
@@ -262,7 +286,12 @@ export default function BrowsersPage() {
               <input
                 type="text"
                 value={newBrowser.id}
-                onChange={(e) => setNewBrowser({ ...newBrowser, id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
+                onChange={e =>
+                  setNewBrowser({
+                    ...newBrowser,
+                    id: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+                  })
+                }
                 placeholder="x-auth"
                 className="form-input w-full"
               />
@@ -270,13 +299,11 @@ export default function BrowsersPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">
-                Display Name
-              </label>
+              <label className="block text-sm font-medium text-secondary mb-1">Display Name</label>
               <input
                 type="text"
                 value={newBrowser.name}
-                onChange={(e) => setNewBrowser({ ...newBrowser, name: e.target.value })}
+                onChange={e => setNewBrowser({ ...newBrowser, name: e.target.value })}
                 placeholder="X.com Authentication"
                 className="form-input w-full"
               />
@@ -285,26 +312,22 @@ export default function BrowsersPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">
-                Description
-              </label>
+              <label className="block text-sm font-medium text-secondary mb-1">Description</label>
               <input
                 type="text"
                 value={newBrowser.description}
-                onChange={(e) => setNewBrowser({ ...newBrowser, description: e.target.value })}
+                onChange={e => setNewBrowser({ ...newBrowser, description: e.target.value })}
                 placeholder="Browser profile for downloading X.com videos"
                 className="form-input w-full"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-secondary mb-1">
-                CDP Port
-              </label>
+              <label className="block text-sm font-medium text-secondary mb-1">CDP Port</label>
               <input
                 type="number"
                 value={newBrowser.port}
-                onChange={(e) => setNewBrowser({ ...newBrowser, port: e.target.value })}
+                onChange={e => setNewBrowser({ ...newBrowser, port: e.target.value })}
                 placeholder={`Auto (${portRange.start}-${portRange.end})`}
                 className="form-input w-full"
                 min={1024}
@@ -316,7 +339,10 @@ export default function BrowsersPage() {
 
           <div className="flex justify-end gap-2">
             <button
-              onClick={() => { setShowCreateForm(false); setNewBrowser({ id: '', name: '', description: '', port: '' }); }}
+              onClick={() => {
+                setShowCreateForm(false);
+                setNewBrowser({ id: '', name: '', description: '', port: '' });
+              }}
               className="btn btn-secondary"
             >
               Cancel
@@ -341,47 +367,57 @@ export default function BrowsersPage() {
         <div className="card text-center py-12">
           <Globe className="w-12 h-12 text-tertiary mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-text-primary">No Browser Profiles</h3>
-          <p className="text-secondary mt-2">Create a browser profile to store authenticated sessions for plugins.</p>
+          <p className="text-secondary mt-2">
+            Create a browser profile to store authenticated sessions for plugins.
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {browsers.map((browser) => (
+          {browsers.map(browser => (
             <div key={browser.id} className="card">
               {editingBrowser === browser.id ? (
                 /* Edit Mode */
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-text-primary">Edit Browser Profile</h3>
+                    <h3 className="text-lg font-semibold text-text-primary">
+                      Edit Browser Profile
+                    </h3>
                     <span className="text-xs text-tertiary">ID: {browser.id}</span>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Display Name</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">
+                        Display Name
+                      </label>
                       <input
                         type="text"
                         value={editForm.name}
-                        onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                        onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                         placeholder="Browser name"
                         className="form-input w-full"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">Description</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">
+                        Description
+                      </label>
                       <input
                         type="text"
                         value={editForm.description}
-                        onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                        onChange={e => setEditForm({ ...editForm, description: e.target.value })}
                         placeholder="Description"
                         className="form-input w-full"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-secondary mb-1">CDP Port</label>
+                      <label className="block text-sm font-medium text-secondary mb-1">
+                        CDP Port
+                      </label>
                       <input
                         type="number"
                         value={editForm.port}
-                        onChange={(e) => setEditForm({ ...editForm, port: e.target.value })}
+                        onChange={e => setEditForm({ ...editForm, port: e.target.value })}
                         placeholder={`Auto (${portRange.start}-${portRange.end})`}
                         className="form-input w-full"
                         min={1024}
@@ -394,7 +430,10 @@ export default function BrowsersPage() {
                     <button onClick={cancelEditing} className="btn btn-secondary btn-sm">
                       Cancel
                     </button>
-                    <button onClick={() => handleUpdate(browser.id)} className="btn btn-primary btn-sm flex items-center gap-1">
+                    <button
+                      onClick={() => handleUpdate(browser.id)}
+                      className="btn btn-primary btn-sm flex items-center gap-1"
+                    >
                       <Save size={16} />
                       Save Changes
                     </button>
@@ -406,70 +445,74 @@ export default function BrowsersPage() {
                   <div className="flex items-center gap-4">
                     <Globe className="w-10 h-10 text-primary p-2 bg-primary/10 rounded-lg" />
                     <div>
-                      <h3 className="text-lg font-semibold text-text-primary">{browser.name || browser.id}</h3>
+                      <h3 className="text-lg font-semibold text-text-primary">
+                        {browser.name || browser.id}
+                      </h3>
                       {browser.description && (
                         <p className="text-secondary text-sm">{browser.description}</p>
                       )}
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-xs text-tertiary">ID: {browser.id}</span>
-                        <span className="text-xs text-tertiary">Port: {browser.port || 'none'}</span>
+                        <span className="text-xs text-tertiary">
+                          Port: {browser.port || 'none'}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                <div className="flex items-center gap-4">
-                  {renderStatusBadge(browser)}
+                  <div className="flex items-center gap-4">
+                    {renderStatusBadge(browser)}
 
-                  <div className="flex items-center gap-2">
-                    {browser.running ? (
-                      <button
-                        onClick={() => handleClose(browser.id)}
-                        className="btn btn-secondary btn-sm flex items-center gap-1"
-                        title="Close browser"
-                      >
-                        <X size={16} />
-                        Close
-                      </button>
-                    ) : (
-                      <>
+                    <div className="flex items-center gap-2">
+                      {browser.running ? (
                         <button
-                          onClick={() => handleLaunch(browser.id, 'https://x.com/login')}
-                          className="btn btn-primary btn-sm flex items-center gap-1"
-                          title="Launch for X.com authentication"
-                          disabled={isDockerEnv}
-                        >
-                          <Play size={16} />
-                          Launch (X.com)
-                        </button>
-                        <button
-                          onClick={() => handleLaunch(browser.id)}
+                          onClick={() => handleClose(browser.id)}
                           className="btn btn-secondary btn-sm flex items-center gap-1"
-                          title="Launch with blank page"
-                          disabled={isDockerEnv}
+                          title="Close browser"
                         >
-                          <ExternalLink size={16} />
+                          <X size={16} />
+                          Close
                         </button>
-                      </>
-                    )}
-                    <button
-                      onClick={() => startEditing(browser)}
-                      className="btn btn-ghost btn-sm"
-                      title="Edit profile"
-                      disabled={browser.running}
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(browser.id)}
-                      className="btn btn-ghost btn-sm text-error"
-                      title="Delete profile"
-                      disabled={browser.running}
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleLaunch(browser.id, 'https://x.com/login')}
+                            className="btn btn-primary btn-sm flex items-center gap-1"
+                            title="Launch for X.com authentication"
+                            disabled={isDockerEnv}
+                          >
+                            <Play size={16} />
+                            Launch (X.com)
+                          </button>
+                          <button
+                            onClick={() => handleLaunch(browser.id)}
+                            className="btn btn-secondary btn-sm flex items-center gap-1"
+                            title="Launch with blank page"
+                            disabled={isDockerEnv}
+                          >
+                            <ExternalLink size={16} />
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => startEditing(browser)}
+                        className="btn btn-ghost btn-sm"
+                        title="Edit profile"
+                        disabled={browser.running}
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(browser.id)}
+                        className="btn btn-ghost btn-sm text-error"
+                        title="Delete profile"
+                        disabled={browser.running}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
               )}
             </div>
           ))}
@@ -480,10 +523,22 @@ export default function BrowsersPage() {
       <div className="card bg-surface-alt">
         <h3 className="text-lg font-semibold text-text-primary mb-3">How Browser Profiles Work</h3>
         <div className="space-y-2 text-sm text-secondary">
-          <p>Browser profiles store authentication cookies/sessions for plugins that need web access.</p>
-          <p><strong>Setup:</strong> Create a profile, launch the browser, log into the website, close the browser.</p>
-          <p><strong>Usage:</strong> Plugins can use authenticated profiles for headless operations (e.g., video downloads).</p>
-          <p><strong>Docker:</strong> Profiles are stored in <code className="bg-surface px-1 rounded">config/browsers/</code> and persist across container restarts.</p>
+          <p>
+            Browser profiles store authentication cookies/sessions for plugins that need web access.
+          </p>
+          <p>
+            <strong>Setup:</strong> Create a profile, launch the browser, log into the website,
+            close the browser.
+          </p>
+          <p>
+            <strong>Usage:</strong> Plugins can use authenticated profiles for headless operations
+            (e.g., video downloads).
+          </p>
+          <p>
+            <strong>Docker:</strong> Profiles are stored in{' '}
+            <code className="bg-surface px-1 rounded">config/browsers/</code> and persist across
+            container restarts.
+          </p>
         </div>
       </div>
     </div>

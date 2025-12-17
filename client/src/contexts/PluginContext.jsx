@@ -9,7 +9,7 @@ const PluginContext = createContext({
   basePath: '',
   navigate: () => {},
   location: null,
-  buildPath: (path) => path,
+  buildPath: path => path,
 });
 
 export const usePlugin = () => useContext(PluginContext);
@@ -25,7 +25,7 @@ export function PluginProvider({ basePath = '', children }) {
   const location = useLocation();
 
   // Build a full path from a relative plugin path
-  const buildPath = (relativePath) => {
+  const buildPath = relativePath => {
     if (!relativePath) return basePath;
     if (relativePath.startsWith('/')) {
       // Absolute path - check if it starts with basePath
@@ -45,10 +45,13 @@ export function PluginProvider({ basePath = '', children }) {
       navigate(buildPath(to), options);
     } else {
       // Handle object form of navigation
-      navigate({
-        ...to,
-        pathname: buildPath(to.pathname),
-      }, options);
+      navigate(
+        {
+          ...to,
+          pathname: buildPath(to.pathname),
+        },
+        options
+      );
     }
   };
 
@@ -68,11 +71,7 @@ export function PluginProvider({ basePath = '', children }) {
     getRelativePath,
   };
 
-  return (
-    <PluginContext.Provider value={value}>
-      {children}
-    </PluginContext.Provider>
-  );
+  return <PluginContext.Provider value={value}>{children}</PluginContext.Provider>;
 }
 
 export default PluginContext;

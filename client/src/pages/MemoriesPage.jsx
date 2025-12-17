@@ -21,7 +21,7 @@ import {
   Users,
   Settings,
   Eye,
-  EyeOff
+  EyeOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Canvas } from '@react-three/fiber';
@@ -42,7 +42,7 @@ const CATEGORY_COLORS = {
   philosophy: '#a855f7',
   creativity: '#f472b6',
   discovery: '#22d3ee',
-  creative: '#fb923c'
+  creative: '#fb923c',
 };
 
 // Tabs configuration
@@ -50,7 +50,7 @@ const TABS = [
   { id: 'memories', label: 'Memories', icon: List },
   { id: 'maintenance', label: 'Maintenance', icon: Wrench },
   { id: 'visualization', label: 'Visualization', icon: Share2 },
-  { id: 'settings', label: 'Settings', icon: Settings }
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 // ============================================
@@ -60,7 +60,8 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
   void _fetchStatus; // Available for future use
   const [memories, setMemories] = useState([]);
   const [statistics, setStatistics] = useState(null);
-  const [categories, setCategories] = useState({}); void categories; // Set by API for future filtering
+  const [categories, setCategories] = useState({});
+  void categories; // Set by API for future filtering
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -75,7 +76,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
     stage: 1,
     importance: 0.5,
     tags: [],
-    type: 'observation'
+    type: 'observation',
   });
   const [tagInput, setTagInput] = useState('');
 
@@ -114,14 +115,14 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
       stage: 1,
       importance: 0.5,
       tags: [],
-      type: 'observation'
+      type: 'observation',
     });
     setTagInput('');
     setShowModal(true);
   };
 
   // Open modal for editing
-  const handleEdit = (memory) => {
+  const handleEdit = memory => {
     setEditingMemory(memory);
     setFormData({
       content: memory.content || { text: '', context: '', impact: '', significance: 'normal' },
@@ -129,7 +130,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
       stage: memory.stage || 1,
       importance: memory.importance || 0.5,
       tags: memory.tags || [],
-      type: memory.type || 'observation'
+      type: memory.type || 'observation',
     });
     setTagInput('');
     setShowModal(true);
@@ -144,7 +145,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
     });
 
     const data = await response.json();
@@ -159,9 +160,9 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
   };
 
   // Delete memory
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     const response = await fetch(`/api/memories/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
     const data = await response.json();
 
@@ -182,17 +183,17 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
   };
 
   // Remove tag
-  const handleRemoveTag = (tag) => {
+  const handleRemoveTag = tag => {
     setFormData({ ...formData, tags: formData.tags.filter(t => t !== tag) });
   };
 
   // Format date
-  const formatDate = (timestamp) => {
+  const formatDate = timestamp => {
     if (!timestamp) return 'Unknown';
     return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 
@@ -230,27 +231,31 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
               <span className="text-xs font-medium text-text-secondary">Total</span>
             </div>
             <p className="text-xl font-bold text-primary">
-              {statistics.total || Object.values(statistics.byCategory || {}).reduce((a, b) => a + b, 0)}
+              {statistics.total ||
+                Object.values(statistics.byCategory || {}).reduce((a, b) => a + b, 0)}
             </p>
           </div>
-          {Object.entries(CATEGORY_COLORS).filter(([cat]) => ['emergence', 'liminal', 'quantum', 'glitch', 'void', 'economic', 'social'].includes(cat)).map(([cat, color]) => (
-            <div
-              key={cat}
-              className={`card cursor-pointer transition-all ${filterCategory === cat ? 'ring-2 ring-primary' : ''}`}
-              onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-xs font-medium text-text-secondary capitalize">{cat}</span>
+          {Object.entries(CATEGORY_COLORS)
+            .filter(([cat]) =>
+              ['emergence', 'liminal', 'quantum', 'glitch', 'void', 'economic', 'social'].includes(
+                cat
+              )
+            )
+            .map(([cat, color]) => (
+              <div
+                key={cat}
+                className={`card cursor-pointer transition-all ${filterCategory === cat ? 'ring-2 ring-primary' : ''}`}
+                onClick={() => setFilterCategory(filterCategory === cat ? '' : cat)}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="text-xs font-medium text-text-secondary capitalize">{cat}</span>
+                </div>
+                <p className="text-xl font-bold text-text-primary">
+                  {statistics.byCategory?.[cat] || 0}
+                </p>
               </div>
-              <p className="text-xl font-bold text-text-primary">
-                {statistics.byCategory?.[cat] || 0}
-              </p>
-            </div>
-          ))}
+            ))}
         </div>
       )}
 
@@ -260,30 +265,33 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && fetchMemories()}
+            onChange={e => setSearchQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && fetchMemories()}
             placeholder="Search memories..."
             className="form-input w-full pr-10"
           />
-          <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary" />
+          <Search
+            size={18}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+          />
         </div>
         <select
           value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
+          onChange={e => setFilterCategory(e.target.value)}
           className="form-input"
           style={{ width: '160px', flexShrink: 0 }}
         >
           <option value="">All Categories</option>
           {Object.keys(CATEGORY_COLORS).map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
           ))}
         </select>
       </div>
 
       {/* Memory Count */}
-      <div className="text-sm text-text-secondary">
-        Showing {memories.length} memories
-      </div>
+      <div className="text-sm text-text-secondary">Showing {memories.length} memories</div>
 
       {/* Memories List */}
       <div className="space-y-3">
@@ -326,9 +334,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                       <span className="text-xs font-medium text-text-secondary capitalize">
                         {memory.category}
                       </span>
-                      <span className="text-xs text-text-tertiary">
-                        Stage {memory.stage}
-                      </span>
+                      <span className="text-xs text-text-tertiary">Stage {memory.stage}</span>
                       <span className="text-xs text-text-tertiary">
                         {formatDate(memory.timestamp)}
                       </span>
@@ -360,20 +366,31 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                     className="text-xs px-2 py-1 rounded"
                     style={{
                       backgroundColor: `rgba(${memory.importance > 0.7 ? '239,68,68' : memory.importance > 0.4 ? '245,158,11' : '34,197,94'}, 0.1)`,
-                      color: memory.importance > 0.7 ? '#ef4444' : memory.importance > 0.4 ? '#f59e0b' : '#22c55e'
+                      color:
+                        memory.importance > 0.7
+                          ? '#ef4444'
+                          : memory.importance > 0.4
+                            ? '#f59e0b'
+                            : '#22c55e',
                     }}
                   >
                     {(memory.importance * 100).toFixed(0)}%
                   </div>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleEdit(memory); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleEdit(memory);
+                    }}
                     className="p-2 rounded hover:bg-border/50 text-text-secondary"
                     title="Edit"
                   >
                     <Edit size={16} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(memory.id); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleDelete(memory.id);
+                    }}
                     className="p-2 rounded hover:bg-error/20 text-error"
                     title="Delete"
                   >
@@ -394,18 +411,37 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                       {memory.content?.context && (
                         <div className="mt-2">
                           <span className="text-xs text-text-tertiary">Context: </span>
-                          <span className="text-sm text-text-secondary">{memory.content.context}</span>
+                          <span className="text-sm text-text-secondary">
+                            {memory.content.context}
+                          </span>
                         </div>
                       )}
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-text-secondary mb-2">Metadata</h4>
                       <div className="space-y-1 text-sm">
-                        <p><span className="text-text-tertiary">ID:</span> <span className="text-text-primary font-mono">{memory.id}</span></p>
-                        <p><span className="text-text-tertiary">Type:</span> <span className="text-text-primary">{memory.type || 'observation'}</span></p>
-                        <p><span className="text-text-tertiary">Source:</span> <span className="text-text-primary">{memory.source || 'manual'}</span></p>
-                        <p><span className="text-text-tertiary">Relevance:</span> <span className="text-text-primary">{((memory.metrics?.relevance || 0.5) * 100).toFixed(0)}%</span></p>
-                        <p><span className="text-text-tertiary">Views:</span> <span className="text-text-primary">{memory.metrics?.views || 0}</span></p>
+                        <p>
+                          <span className="text-text-tertiary">ID:</span>{' '}
+                          <span className="text-text-primary font-mono">{memory.id}</span>
+                        </p>
+                        <p>
+                          <span className="text-text-tertiary">Type:</span>{' '}
+                          <span className="text-text-primary">{memory.type || 'observation'}</span>
+                        </p>
+                        <p>
+                          <span className="text-text-tertiary">Source:</span>{' '}
+                          <span className="text-text-primary">{memory.source || 'manual'}</span>
+                        </p>
+                        <p>
+                          <span className="text-text-tertiary">Relevance:</span>{' '}
+                          <span className="text-text-primary">
+                            {((memory.metrics?.relevance || 0.5) * 100).toFixed(0)}%
+                          </span>
+                        </p>
+                        <p>
+                          <span className="text-text-tertiary">Views:</span>{' '}
+                          <span className="text-text-primary">{memory.metrics?.views || 0}</span>
+                        </p>
                       </div>
                       {memory.tags?.length > 0 && (
                         <div className="mt-3">
@@ -440,7 +476,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
           <div
             className="border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             style={{ backgroundColor: 'var(--color-surface-solid)' }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h2 className="text-lg font-semibold text-text-primary">
@@ -462,10 +498,12 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                 </label>
                 <textarea
                   value={formData.content.text}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    content: { ...formData.content, text: e.target.value }
-                  })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      content: { ...formData.content, text: e.target.value },
+                    })
+                  }
                   className="form-input w-full"
                   rows={4}
                   placeholder="Memory content..."
@@ -480,10 +518,12 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                 <input
                   type="text"
                   value={formData.content.context}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    content: { ...formData.content, context: e.target.value }
-                  })}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      content: { ...formData.content, context: e.target.value },
+                    })
+                  }
                   className="form-input w-full"
                   placeholder="Where/when did this occur?"
                 />
@@ -497,11 +537,13 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                   </label>
                   <select
                     value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    onChange={e => setFormData({ ...formData, category: e.target.value })}
                     className="form-input w-full"
                   >
                     {Object.keys(CATEGORY_COLORS).map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -511,11 +553,13 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                   </label>
                   <select
                     value={formData.stage}
-                    onChange={(e) => setFormData({ ...formData, stage: parseInt(e.target.value) })}
+                    onChange={e => setFormData({ ...formData, stage: parseInt(e.target.value) })}
                     className="form-input w-full"
                   >
                     {[1, 2, 3, 4, 5].map(s => (
-                      <option key={s} value={s}>Stage {s}</option>
+                      <option key={s} value={s}>
+                        Stage {s}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -524,12 +568,10 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
               {/* Type and Importance */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Type
-                  </label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">Type</label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                    onChange={e => setFormData({ ...formData, type: e.target.value })}
                     className="form-input w-full"
                   >
                     <option value="observation">Observation</option>
@@ -547,7 +589,9 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                     max="1"
                     step="0.1"
                     value={formData.importance}
-                    onChange={(e) => setFormData({ ...formData, importance: parseFloat(e.target.value) })}
+                    onChange={e =>
+                      setFormData({ ...formData, importance: parseFloat(e.target.value) })
+                    }
                     className="w-full"
                   />
                 </div>
@@ -555,23 +599,17 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
 
               {/* Tags */}
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-1">
-                  Tags
-                </label>
+                <label className="block text-sm font-medium text-text-secondary mb-1">Tags</label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={tagInput}
-                    onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                    onChange={e => setTagInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                     className="form-input flex-1"
                     placeholder="Add tag..."
                   />
-                  <button
-                    type="button"
-                    onClick={handleAddTag}
-                    className="btn btn-secondary"
-                  >
+                  <button type="button" onClick={handleAddTag} className="btn btn-secondary">
                     Add
                   </button>
                 </div>
@@ -597,16 +635,10 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
 
             {/* Modal footer */}
             <div className="p-4 border-t border-border flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="btn btn-secondary"
-              >
+              <button onClick={() => setShowModal(false)} className="btn btn-secondary">
                 Cancel
               </button>
-              <button
-                onClick={handleSave}
-                className="btn btn-primary flex items-center gap-2"
-              >
+              <button onClick={handleSave} className="btn btn-primary flex items-center gap-2">
                 <Save size={16} />
                 Save
               </button>
@@ -636,12 +668,12 @@ function MaintenanceTab() {
     backupPath: './backups/neo4j',
     retention: {
       keepDays: 7,
-      archiveDays: 30
+      archiveDays: 30,
     },
     compression: {
       enabled: true,
-      afterDays: 7
-    }
+      afterDays: 7,
+    },
   });
 
   const loadStatus = async () => {
@@ -696,7 +728,7 @@ function MaintenanceTab() {
     const res = await fetch('/api/backup/restore', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName: selectedBackup })
+      body: JSON.stringify({ fileName: selectedBackup }),
     });
     const data = await res.json();
 
@@ -715,7 +747,7 @@ function MaintenanceTab() {
     const res = await fetch('/api/backup/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: !status?.enabled })
+      body: JSON.stringify({ enabled: !status?.enabled }),
     });
     const data = await res.json();
     toast.success(data.message);
@@ -745,28 +777,28 @@ function MaintenanceTab() {
     const res = await fetch('/api/backup/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+      body: JSON.stringify(config),
     });
     await res.json();
     toast.success('Configuration updated');
     loadStatus();
   };
 
-  const formatBytes = (bytes) => {
+  const formatBytes = bytes => {
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const formatDuration = (ms) => {
+  const formatDuration = ms => {
     if (ms < 1000) return `${ms}ms`;
     if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
     return `${(ms / 60000).toFixed(1)}m`;
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = dateString => {
     if (!dateString) return 'Never';
     const date = new Date(dateString);
     return date.toLocaleString();
@@ -787,13 +819,12 @@ function MaintenanceTab() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-text-primary">Database Maintenance</h2>
-          <p className="text-sm text-text-secondary">Manage Neo4j database backups and system health</p>
+          <p className="text-sm text-text-secondary">
+            Manage Neo4j database backups and system health
+          </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={runHealthCheck}
-            className="btn btn-secondary flex items-center gap-2"
-          >
+          <button onClick={runHealthCheck} className="btn btn-secondary flex items-center gap-2">
             <Database size={16} />
             Health Check
           </button>
@@ -819,7 +850,9 @@ function MaintenanceTab() {
 
       {/* Health Status */}
       {health && (
-        <div className={`card ${health.healthy ? 'bg-success/10 border-success/20' : 'bg-error/10 border-error/20'}`}>
+        <div
+          className={`card ${health.healthy ? 'bg-success/10 border-success/20' : 'bg-error/10 border-error/20'}`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {health.healthy ? (
@@ -830,7 +863,9 @@ function MaintenanceTab() {
               <div>
                 <h3 className="font-semibold text-text-primary">Database Health</h3>
                 <p className="text-sm text-text-secondary">
-                  {health.healthy ? 'Neo4j is running and accessible' : health.message || 'Database health check failed'}
+                  {health.healthy
+                    ? 'Neo4j is running and accessible'
+                    : health.message || 'Database health check failed'}
                 </p>
               </div>
             </div>
@@ -877,15 +912,11 @@ function MaintenanceTab() {
             <p className="text-xs text-text-tertiary">Total Size</p>
           </div>
           <div className="bg-background rounded-lg p-3">
-            <p className="text-2xl font-bold text-success">
-              {status?.metrics?.successCount || 0}
-            </p>
+            <p className="text-2xl font-bold text-success">{status?.metrics?.successCount || 0}</p>
             <p className="text-xs text-text-tertiary">Successful</p>
           </div>
           <div className="bg-background rounded-lg p-3">
-            <p className="text-2xl font-bold text-error">
-              {status?.metrics?.failCount || 0}
-            </p>
+            <p className="text-2xl font-bold text-error">{status?.metrics?.failCount || 0}</p>
             <p className="text-xs text-text-tertiary">Failed</p>
           </div>
         </div>
@@ -914,7 +945,7 @@ function MaintenanceTab() {
               <label className="block text-sm text-text-secondary mb-1">Schedule</label>
               <select
                 value={config.schedule}
-                onChange={(e) => setConfig({ ...config, schedule: e.target.value })}
+                onChange={e => setConfig({ ...config, schedule: e.target.value })}
                 className="form-input w-full"
               >
                 <option value="manual">Manual Only</option>
@@ -928,7 +959,7 @@ function MaintenanceTab() {
               <input
                 type="time"
                 value={config.time}
-                onChange={(e) => setConfig({ ...config, time: e.target.value })}
+                onChange={e => setConfig({ ...config, time: e.target.value })}
                 disabled={config.schedule === 'manual' || config.schedule === 'hourly'}
                 className="form-input w-full disabled:opacity-50"
               />
@@ -940,45 +971,57 @@ function MaintenanceTab() {
             <input
               type="text"
               value={config.backupPath}
-              onChange={(e) => setConfig({ ...config, backupPath: e.target.value })}
+              onChange={e => setConfig({ ...config, backupPath: e.target.value })}
               className="form-input w-full font-mono text-sm"
             />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Keep Uncompressed (days)</label>
+              <label className="block text-sm text-text-secondary mb-1">
+                Keep Uncompressed (days)
+              </label>
               <input
                 type="number"
                 value={config.retention.keepDays}
-                onChange={(e) => setConfig({
-                  ...config,
-                  retention: { ...config.retention, keepDays: parseInt(e.target.value) }
-                })}
+                onChange={e =>
+                  setConfig({
+                    ...config,
+                    retention: { ...config.retention, keepDays: parseInt(e.target.value) },
+                  })
+                }
                 className="form-input w-full"
               />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Archive Compressed (days)</label>
+              <label className="block text-sm text-text-secondary mb-1">
+                Archive Compressed (days)
+              </label>
               <input
                 type="number"
                 value={config.retention.archiveDays}
-                onChange={(e) => setConfig({
-                  ...config,
-                  retention: { ...config.retention, archiveDays: parseInt(e.target.value) }
-                })}
+                onChange={e =>
+                  setConfig({
+                    ...config,
+                    retention: { ...config.retention, archiveDays: parseInt(e.target.value) },
+                  })
+                }
                 className="form-input w-full"
               />
             </div>
             <div>
-              <label className="block text-sm text-text-secondary mb-1">Compress After (days)</label>
+              <label className="block text-sm text-text-secondary mb-1">
+                Compress After (days)
+              </label>
               <input
                 type="number"
                 value={config.compression.afterDays}
-                onChange={(e) => setConfig({
-                  ...config,
-                  compression: { ...config.compression, afterDays: parseInt(e.target.value) }
-                })}
+                onChange={e =>
+                  setConfig({
+                    ...config,
+                    compression: { ...config.compression, afterDays: parseInt(e.target.value) },
+                  })
+                }
                 className="form-input w-full"
               />
             </div>
@@ -989,10 +1032,12 @@ function MaintenanceTab() {
               type="checkbox"
               id="compression-enabled"
               checked={config.compression.enabled}
-              onChange={(e) => setConfig({
-                ...config,
-                compression: { ...config.compression, enabled: e.target.checked }
-              })}
+              onChange={e =>
+                setConfig({
+                  ...config,
+                  compression: { ...config.compression, enabled: e.target.checked },
+                })
+              }
               className="rounded"
             />
             <label htmlFor="compression-enabled" className="text-sm text-text-secondary">
@@ -1000,10 +1045,7 @@ function MaintenanceTab() {
             </label>
           </div>
 
-          <button
-            onClick={updateConfig}
-            className="btn btn-primary"
-          >
+          <button onClick={updateConfig} className="btn btn-primary">
             Save Configuration
           </button>
         </div>
@@ -1033,26 +1075,21 @@ function MaintenanceTab() {
                       <X size={20} className="text-error" />
                     )}
                     <div>
-                      <p className="text-sm font-medium text-text-primary">
-                        {backup.fileName}
-                      </p>
-                      <p className="text-xs text-text-tertiary">
-                        {formatDate(backup.timestamp)}
-                      </p>
+                      <p className="text-sm font-medium text-text-primary">{backup.fileName}</p>
+                      <p className="text-xs text-text-tertiary">{formatDate(backup.timestamp)}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     {backup.success ? (
                       <>
-                        <p className="text-sm text-text-primary">
-                          {formatBytes(backup.size)}
-                        </p>
+                        <p className="text-sm text-text-primary">{formatBytes(backup.size)}</p>
                         <p className="text-xs text-text-tertiary">
                           {formatDuration(backup.duration)}
                         </p>
                         {backup.stats && (
                           <p className="text-xs text-text-tertiary">
-                            {backup.stats.users}U {backup.stats.memories}M {backup.stats.interactions}I
+                            {backup.stats.users}U {backup.stats.memories}M{' '}
+                            {backup.stats.interactions}I
                           </p>
                         )}
                       </>
@@ -1071,7 +1108,8 @@ function MaintenanceTab() {
       <div className="card">
         <h3 className="font-semibold text-text-primary mb-4">Restore from Backup</h3>
         <p className="text-sm text-text-secondary mb-4">
-          Import memories from a backup file. This will merge with existing data (duplicates are skipped).
+          Import memories from a backup file. This will merge with existing data (duplicates are
+          skipped).
         </p>
 
         {availableBackups.length === 0 ? (
@@ -1084,10 +1122,10 @@ function MaintenanceTab() {
               <label className="block text-sm text-text-secondary mb-1">Select Backup File</label>
               <select
                 value={selectedBackup}
-                onChange={(e) => setSelectedBackup(e.target.value)}
+                onChange={e => setSelectedBackup(e.target.value)}
                 className="form-input w-full"
               >
-                {availableBackups.map((backup) => (
+                {availableBackups.map(backup => (
                   <option key={backup.fileName} value={backup.fileName}>
                     {backup.fileName} ({formatBytes(backup.size)}) - {formatDate(backup.created)}
                   </option>
@@ -1149,7 +1187,7 @@ function useForceSimulation(nodes, edges, enabled) {
       newPositions[node.id] = {
         x: Math.cos(angle) * radius,
         y: Math.sin(angle) * radius,
-        z: (Math.random() - 0.5) * 20
+        z: (Math.random() - 0.5) * 20,
       };
       newVelocities[node.id] = { x: 0, y: 0, z: 0 };
     });
@@ -1175,7 +1213,9 @@ function useForceSimulation(nodes, edges, enabled) {
       const newVel = { ...newVelocities };
 
       nodes.forEach(node1 => {
-        let fx = 0, fy = 0, fz = 0;
+        let fx = 0,
+          fy = 0,
+          fz = 0;
 
         nodes.forEach(node2 => {
           if (node1.id === node2.id) return;
@@ -1245,9 +1285,7 @@ function GraphNode({ node, position, onSelect, isSelected }) {
   const meshRef = useRef();
   const [hovered, setHovered] = useState(false);
 
-  const color = node.type === 'user'
-    ? '#ffffff'
-    : (CATEGORY_COLORS[node.category] || '#6366f1');
+  const color = node.type === 'user' ? '#ffffff' : CATEGORY_COLORS[node.category] || '#6366f1';
 
   const size = node.type === 'user' ? 1.5 : 1;
 
@@ -1289,10 +1327,7 @@ function GraphNode({ node, position, onSelect, isSelected }) {
 // 3D Edge component
 function GraphEdge({ start, end, type }) {
   const points = useMemo(() => {
-    return [
-      new THREE.Vector3(start.x, start.y, start.z),
-      new THREE.Vector3(end.x, end.y, end.z)
-    ];
+    return [new THREE.Vector3(start.x, start.y, start.z), new THREE.Vector3(end.x, end.y, end.z)];
   }, [start, end]);
 
   const color = type === 'mentions' ? '#00db38' : '#666666';
@@ -1327,12 +1362,7 @@ function GraphScene({ nodes, edges, positions, selectedNode, setSelectedNode }) 
         if (!sourcePos || !targetPos) return null;
 
         return (
-          <GraphEdge
-            key={`edge-${index}`}
-            start={sourcePos}
-            end={targetPos}
-            type={edge.type}
-          />
+          <GraphEdge key={`edge-${index}`} start={sourcePos} end={targetPos} type={edge.type} />
         );
       })}
 
@@ -1351,12 +1381,7 @@ function GraphScene({ nodes, edges, positions, selectedNode, setSelectedNode }) 
         );
       })}
 
-      <OrbitControls
-        enableDamping
-        dampingFactor={0.05}
-        minDistance={20}
-        maxDistance={300}
-      />
+      <OrbitControls enableDamping dampingFactor={0.05} minDistance={20} maxDistance={300} />
     </>
   );
 }
@@ -1390,7 +1415,9 @@ function VisualizationTab() {
       });
       setEnabledCategories(categories);
 
-      toast.success(`Loaded ${data.nodes?.length || 0} nodes, ${data.edges?.length || 0} connections`);
+      toast.success(
+        `Loaded ${data.nodes?.length || 0} nodes, ${data.edges?.length || 0} connections`
+      );
     }
     setLoading(false);
   };
@@ -1399,14 +1426,14 @@ function VisualizationTab() {
     fetchGraphData();
   }, []);
 
-  const toggleCategory = (category) => {
+  const toggleCategory = category => {
     setEnabledCategories(prev => ({
       ...prev,
-      [category]: !prev[category]
+      [category]: !prev[category],
     }));
   };
 
-  const toggleAllCategories = (enabled) => {
+  const toggleAllCategories = enabled => {
     const newCategories = {};
     Object.keys(enabledCategories).forEach(cat => {
       newCategories[cat] = enabled;
@@ -1435,18 +1462,14 @@ function VisualizationTab() {
     });
 
     const nodeIds = new Set(nodes.map(n => n.id));
-    const edges = graphData.edges.filter(edge =>
-      nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    const edges = graphData.edges.filter(
+      edge => nodeIds.has(edge.source) && nodeIds.has(edge.target)
     );
 
     return { nodes, edges };
   }, [graphData, enabledCategories, showUsers, searchTerm]);
 
-  const positions = useForceSimulation(
-    filteredData.nodes,
-    filteredData.edges,
-    simulationEnabled
-  );
+  const positions = useForceSimulation(filteredData.nodes, filteredData.edges, simulationEnabled);
 
   const stats = useMemo(() => {
     const memoryNodes = filteredData.nodes.filter(n => n.type === 'memory');
@@ -1475,7 +1498,7 @@ function VisualizationTab() {
       categories: categoryCounts,
       allCategories: allCategoryCounts,
       allMemories: totalMemoryNodes.length,
-      allUsers: totalUserNodes.length
+      allUsers: totalUserNodes.length,
     };
   }, [graphData, filteredData]);
 
@@ -1483,39 +1506,37 @@ function VisualizationTab() {
     const allUserNodes = graphData.nodes.filter(n => n.type === 'user');
     const visibleUserNodes = filteredData.nodes.filter(n => n.type === 'user');
 
-    return allUserNodes.map(userNode => {
-      const connections = graphData.edges.filter(e =>
-        e.target === userNode.id && e.type === 'mentions'
-      );
+    return allUserNodes
+      .map(userNode => {
+        const connections = graphData.edges.filter(
+          e => e.target === userNode.id && e.type === 'mentions'
+        );
 
-      const connectedMemoryIds = connections.map(e => e.source);
-      const connectedMemories = graphData.nodes.filter(n =>
-        connectedMemoryIds.includes(n.id)
-      );
+        const connectedMemoryIds = connections.map(e => e.source);
+        const connectedMemories = graphData.nodes.filter(n => connectedMemoryIds.includes(n.id));
 
-      const categoryBreakdown = {};
-      connectedMemories.forEach(mem => {
-        categoryBreakdown[mem.category] = (categoryBreakdown[mem.category] || 0) + 1;
-      });
+        const categoryBreakdown = {};
+        connectedMemories.forEach(mem => {
+          categoryBreakdown[mem.category] = (categoryBreakdown[mem.category] || 0) + 1;
+        });
 
-      const timestamps = connectedMemories
-        .map(m => new Date(m.timestamp))
-        .sort((a, b) => b - a);
-      const lastMention = timestamps[0];
+        const timestamps = connectedMemories.map(m => new Date(m.timestamp)).sort((a, b) => b - a);
+        const lastMention = timestamps[0];
 
-      return {
-        username: userNode.username,
-        id: userNode.id,
-        totalMentions: connections.length,
-        categoryBreakdown,
-        lastMention,
-        isVisible: visibleUserNodes.some(v => v.id === userNode.id),
-        connectedMemories
-      };
-    }).sort((a, b) => b.totalMentions - a.totalMentions);
+        return {
+          username: userNode.username,
+          id: userNode.id,
+          totalMentions: connections.length,
+          categoryBreakdown,
+          lastMention,
+          isVisible: visibleUserNodes.some(v => v.id === userNode.id),
+          connectedMemories,
+        };
+      })
+      .sort((a, b) => b.totalMentions - a.totalMentions);
   }, [graphData, filteredData]);
 
-  const handleUserClick = (user) => {
+  const handleUserClick = user => {
     setSelectedUser(user);
     const userNode = graphData.nodes.find(n => n.id === user.id);
     if (userNode) {
@@ -1546,9 +1567,10 @@ function VisualizationTab() {
                 <div>
                   <p className="font-medium text-text-primary mb-1">Memory Graph Visualization</p>
                   <p className="text-sm text-text-secondary">
-                    Interactive 3D view of the memory network. Spheres represent memories (colored by category),
-                    cubes represent users. Green lines show user mentions, gray lines show semantic relationships.
-                    Click and drag to rotate, scroll to zoom, click nodes for details.
+                    Interactive 3D view of the memory network. Spheres represent memories (colored
+                    by category), cubes represent users. Green lines show user mentions, gray lines
+                    show semantic relationships. Click and drag to rotate, scroll to zoom, click
+                    nodes for details.
                   </p>
                 </div>
               </div>
@@ -1570,7 +1592,7 @@ function VisualizationTab() {
               type="text"
               placeholder="Search memories, users, tags, or categories..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               className="flex-1 bg-transparent border-b border-border px-2 py-1 focus:outline-none focus:border-primary transition-colors text-text-primary"
             />
             {searchTerm && (
@@ -1614,7 +1636,9 @@ function VisualizationTab() {
           </div>
           <div className="card">
             <p className="text-xs text-text-tertiary mb-1">Mentions</p>
-            <p className="text-xl font-bold" style={{ color: '#00db38' }}>{stats.mentions}</p>
+            <p className="text-xl font-bold" style={{ color: '#00db38' }}>
+              {stats.mentions}
+            </p>
           </div>
           <div className="card">
             <p className="text-xs text-text-tertiary mb-1">Relationships</p>
@@ -1651,21 +1675,27 @@ function VisualizationTab() {
                   onClick={() => toggleCategory(category)}
                   className="flex items-center gap-2 px-3 py-2 rounded text-xs transition-all cursor-pointer"
                   style={{
-                    backgroundColor: isEnabled ? (CATEGORY_COLORS[category] || '#6366f1') + '20' : 'transparent',
-                    color: isEnabled ? (CATEGORY_COLORS[category] || '#6366f1') : 'var(--color-text-secondary)',
-                    border: `1px solid ${isEnabled ? (CATEGORY_COLORS[category] || '#6366f1') : 'var(--color-border)'}`,
-                    opacity: isEnabled ? 1 : 0.5
+                    backgroundColor: isEnabled
+                      ? (CATEGORY_COLORS[category] || '#6366f1') + '20'
+                      : 'transparent',
+                    color: isEnabled
+                      ? CATEGORY_COLORS[category] || '#6366f1'
+                      : 'var(--color-text-secondary)',
+                    border: `1px solid ${isEnabled ? CATEGORY_COLORS[category] || '#6366f1' : 'var(--color-border)'}`,
+                    opacity: isEnabled ? 1 : 0.5,
                   }}
                 >
                   <div
                     className="w-3 h-3 rounded-full transition-opacity"
                     style={{
                       backgroundColor: CATEGORY_COLORS[category] || '#6366f1',
-                      opacity: isEnabled ? 1 : 0.3
+                      opacity: isEnabled ? 1 : 0.3,
                     }}
                   />
                   <span className="font-medium">{category}</span>
-                  <span className="opacity-60">({visibleCount}/{totalCount})</span>
+                  <span className="opacity-60">
+                    ({visibleCount}/{totalCount})
+                  </span>
                 </button>
               );
             })}
@@ -1676,7 +1706,7 @@ function VisualizationTab() {
                 backgroundColor: showUsers ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                 border: `1px solid ${showUsers ? '#ffffff' : 'var(--color-border)'}`,
                 opacity: showUsers ? 1 : 0.5,
-                color: 'var(--color-text-primary)'
+                color: 'var(--color-text-primary)',
               }}
             >
               <div
@@ -1684,7 +1714,9 @@ function VisualizationTab() {
                 style={{ opacity: showUsers ? 1 : 0.3 }}
               />
               <span className="font-medium">users</span>
-              <span className="opacity-60">({stats.totalUsers}/{stats.allUsers})</span>
+              <span className="opacity-60">
+                ({stats.totalUsers}/{stats.allUsers})
+              </span>
             </button>
           </div>
         </div>
@@ -1696,7 +1728,9 @@ function VisualizationTab() {
               <div className="text-center text-text-secondary">
                 <p className="text-lg mb-2">No nodes to display</p>
                 <p className="text-sm">
-                  {searchTerm ? 'Try a different search term' : 'Enable some categories to see the graph'}
+                  {searchTerm
+                    ? 'Try a different search term'
+                    : 'Enable some categories to see the graph'}
                 </p>
               </div>
             </div>
@@ -1737,7 +1771,7 @@ function VisualizationTab() {
                     className="px-2 py-1 rounded text-xs"
                     style={{
                       backgroundColor: CATEGORY_COLORS[selectedNode.category] + '20',
-                      color: CATEGORY_COLORS[selectedNode.category]
+                      color: CATEGORY_COLORS[selectedNode.category],
                     }}
                   >
                     {selectedNode.category}
@@ -1756,14 +1790,21 @@ function VisualizationTab() {
                     <span className="text-text-tertiary">Tags:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {selectedNode.tags.map((tag, i) => (
-                        <span key={i} className="px-2 py-1 text-xs rounded bg-primary/10 text-primary">#{tag}</span>
+                        <span
+                          key={i}
+                          className="px-2 py-1 text-xs rounded bg-primary/10 text-primary"
+                        >
+                          #{tag}
+                        </span>
                       ))}
                     </div>
                   </div>
                 )}
                 <div>
                   <span className="text-text-tertiary">Timestamp:</span>{' '}
-                  <span className="text-text-primary">{new Date(selectedNode.timestamp).toLocaleDateString()}</span>
+                  <span className="text-text-primary">
+                    {new Date(selectedNode.timestamp).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             ) : (
@@ -1775,9 +1816,12 @@ function VisualizationTab() {
                 <div>
                   <span className="text-text-tertiary">Connections:</span>{' '}
                   <span className="text-text-primary">
-                    {graphData.edges.filter(e =>
-                      e.source === selectedNode.id || e.target === selectedNode.id
-                    ).length} memories
+                    {
+                      graphData.edges.filter(
+                        e => e.source === selectedNode.id || e.target === selectedNode.id
+                      ).length
+                    }{' '}
+                    memories
                   </span>
                 </div>
               </div>
@@ -1803,25 +1847,29 @@ function VisualizationTab() {
               </button>
             </div>
             <p className="text-xs text-text-tertiary">
-              {userDetails.length} users with {graphData.edges.filter(e => e.type === 'mentions').length} total mentions
+              {userDetails.length} users with{' '}
+              {graphData.edges.filter(e => e.type === 'mentions').length} total mentions
             </p>
           </div>
 
           <div className="card overflow-hidden p-0">
             <div className="overflow-y-auto" style={{ maxHeight: '500px' }}>
-              {userDetails.map((user) => (
+              {userDetails.map(user => (
                 <div
                   key={user.id}
                   onClick={() => handleUserClick(user)}
                   className="p-3 border-b border-border cursor-pointer hover:bg-border/30 transition-colors"
                   style={{
-                    backgroundColor: selectedUser?.id === user.id ? 'rgba(0, 219, 56, 0.1)' : 'transparent',
-                    opacity: user.isVisible ? 1 : 0.5
+                    backgroundColor:
+                      selectedUser?.id === user.id ? 'rgba(0, 219, 56, 0.1)' : 'transparent',
+                    opacity: user.isVisible ? 1 : 0.5,
                   }}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-text-primary truncate">@{user.username}</p>
+                      <p className="font-medium text-sm text-text-primary truncate">
+                        @{user.username}
+                      </p>
                       <p className="text-xs text-text-tertiary">
                         {user.totalMentions} mention{user.totalMentions !== 1 ? 's' : ''}
                       </p>
@@ -1842,7 +1890,7 @@ function VisualizationTab() {
                             className="text-xs px-1.5 py-0.5 rounded"
                             style={{
                               backgroundColor: CATEGORY_COLORS[category] + '20',
-                              color: CATEGORY_COLORS[category]
+                              color: CATEGORY_COLORS[category],
                             }}
                           >
                             {category} ({count})
@@ -1876,7 +1924,9 @@ function VisualizationTab() {
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="text-text-tertiary">Total Mentions:</span>
-                  <span className="ml-2 font-bold text-text-primary">{selectedUser.totalMentions}</span>
+                  <span className="ml-2 font-bold text-text-primary">
+                    {selectedUser.totalMentions}
+                  </span>
                 </div>
 
                 {selectedUser.lastMention && (
@@ -1886,7 +1936,7 @@ function VisualizationTab() {
                       {selectedUser.lastMention.toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'long',
-                        day: 'numeric'
+                        day: 'numeric',
                       })}
                     </p>
                   </div>
@@ -1903,7 +1953,7 @@ function VisualizationTab() {
                             className="text-xs px-2 py-1 rounded"
                             style={{
                               backgroundColor: CATEGORY_COLORS[category] + '20',
-                              color: CATEGORY_COLORS[category]
+                              color: CATEGORY_COLORS[category],
                             }}
                           >
                             {category}
@@ -1921,7 +1971,7 @@ function VisualizationTab() {
                       .slice()
                       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
                       .slice(0, 3)
-                      .map((memory) => (
+                      .map(memory => (
                         <div
                           key={memory.id}
                           className="text-xs p-2 rounded bg-background border border-border"
@@ -1953,7 +2003,7 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
     uri: '',
     user: '',
     password: '',
-    database: ''
+    database: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1970,7 +2020,7 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
         uri: data.config.uri || '',
         user: data.config.user || '',
         password: data.config.hasPassword ? '••••••••' : '',
-        database: data.config.database || ''
+        database: data.config.database || '',
       });
       setPasswordIsPlaceholder(data.config.hasPassword);
     }
@@ -1993,7 +2043,7 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
     const response = await fetch('/api/memories/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+      body: JSON.stringify(config),
     });
     const data = await response.json();
     setSaving(false);
@@ -2011,7 +2061,7 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
     const response = await fetch('/api/memories/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+      body: JSON.stringify(config),
     });
     const data = await response.json();
     setTesting(false);
@@ -2053,38 +2103,35 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
             <input
               type="text"
               value={config.uri}
-              onChange={(e) => setConfig({ ...config, uri: e.target.value })}
+              onChange={e => setConfig({ ...config, uri: e.target.value })}
               className="form-input w-full font-mono text-sm"
               placeholder="bolt://localhost:7687"
             />
             <p className="text-xs text-text-tertiary mt-1">
               Use <code className="bg-border/50 px-1 rounded">bolt://neo4j:7687</code> for Docker,
-              <code className="bg-border/50 px-1 rounded ml-1">bolt://localhost:7687</code> for local
+              <code className="bg-border/50 px-1 rounded ml-1">bolt://localhost:7687</code> for
+              local
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Username
-              </label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Username</label>
               <input
                 type="text"
                 value={config.user}
-                onChange={(e) => setConfig({ ...config, user: e.target.value })}
+                onChange={e => setConfig({ ...config, user: e.target.value })}
                 className="form-input w-full"
                 placeholder="neo4j"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-secondary mb-1">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-text-secondary mb-1">Password</label>
               <div className="relative">
                 <input
                   type={showPassword && !passwordIsPlaceholder ? 'text' : 'password'}
                   value={config.password}
-                  onChange={(e) => setConfig({ ...config, password: e.target.value })}
+                  onChange={e => setConfig({ ...config, password: e.target.value })}
                   onFocus={handlePasswordFocus}
                   className="form-input w-full pr-10"
                   placeholder="Enter password"
@@ -2098,9 +2145,19 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
                       ? 'text-text-tertiary/50 cursor-not-allowed'
                       : 'text-text-tertiary hover:text-text-secondary cursor-pointer'
                   }`}
-                  title={passwordIsPlaceholder ? 'Click password field to enter new password' : (showPassword ? 'Hide password' : 'Show password')}
+                  title={
+                    passwordIsPlaceholder
+                      ? 'Click password field to enter new password'
+                      : showPassword
+                        ? 'Hide password'
+                        : 'Show password'
+                  }
                 >
-                  {showPassword && !passwordIsPlaceholder ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword && !passwordIsPlaceholder ? (
+                    <EyeOff size={18} />
+                  ) : (
+                    <Eye size={18} />
+                  )}
                 </button>
               </div>
             </div>
@@ -2113,7 +2170,7 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
             <input
               type="text"
               value={config.database}
-              onChange={(e) => setConfig({ ...config, database: e.target.value })}
+              onChange={e => setConfig({ ...config, database: e.target.value })}
               className="form-input w-full"
               placeholder="neo4j"
             />
@@ -2121,7 +2178,9 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
 
           <div className="flex items-center justify-between pt-4 border-t border-border">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${neo4jStatus.connected ? 'bg-success' : 'bg-error'}`} />
+              <div
+                className={`w-2 h-2 rounded-full ${neo4jStatus.connected ? 'bg-success' : 'bg-error'}`}
+              />
               <span className="text-sm text-text-secondary">
                 {neo4jStatus.connected ? 'Connected' : 'Disconnected'}
               </span>
@@ -2173,9 +2232,10 @@ function SettingsTab({ neo4jStatus, fetchStatus }) {
           <div>
             <p className="font-medium text-text-primary mb-1">Environment Variable Override</p>
             <p className="text-sm text-text-secondary">
-              If the environment variable <code className="bg-border/50 px-1 rounded">NEO4J_URI</code> is set,
-              it will override the saved configuration. This is useful for Docker deployments where the
-              connection details are injected via environment.
+              If the environment variable{' '}
+              <code className="bg-border/50 px-1 rounded">NEO4J_URI</code> is set, it will override
+              the saved configuration. This is useful for Docker deployments where the connection
+              details are injected via environment.
             </p>
             <div className="mt-2 text-xs font-mono text-text-tertiary">
               <p>NEO4J_URI=bolt://neo4j:7687</p>
@@ -2199,13 +2259,16 @@ function MemoriesPage() {
   const [neo4jStatus, setNeo4jStatus] = useState({ connected: null });
 
   // Handle tab change
-  const setActiveTab = useCallback((newTab) => {
-    if (newTab === 'memories') {
-      navigate('/memories');
-    } else {
-      navigate(`/memories/${newTab}`);
-    }
-  }, [navigate]);
+  const setActiveTab = useCallback(
+    newTab => {
+      if (newTab === 'memories') {
+        navigate('/memories');
+      } else {
+        navigate(`/memories/${newTab}`);
+      }
+    },
+    [navigate]
+  );
 
   // Fetch Neo4j status
   const fetchStatus = useCallback(async () => {
@@ -2228,9 +2291,7 @@ function MemoriesPage() {
           <Brain size={28} className="text-primary" />
           <div>
             <h1 className="text-2xl font-bold text-text-primary">Memories</h1>
-            <p className="text-sm text-text-secondary">
-              Neo4j-powered memory purrsistence
-            </p>
+            <p className="text-sm text-text-secondary">Neo4j-powered memory purrsistence</p>
           </div>
         </div>
 
@@ -2239,9 +2300,7 @@ function MemoriesPage() {
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
             <div className="w-2 h-2 rounded-full bg-success" />
             <span className="text-sm text-success font-medium">Connected</span>
-            <span className="text-xs text-text-tertiary hidden sm:inline">
-              {neo4jStatus.uri}
-            </span>
+            <span className="text-xs text-text-tertiary hidden sm:inline">{neo4jStatus.uri}</span>
           </div>
         )}
 
@@ -2270,7 +2329,8 @@ function MemoriesPage() {
                 {neo4jStatus.error?.message || 'Connection Failed'}
               </p>
               <p className="text-sm text-text-secondary">
-                {neo4jStatus.error?.details || `Make sure Neo4j is running on ${neo4jStatus.uri || 'bolt://localhost:7687'}.`}
+                {neo4jStatus.error?.details ||
+                  `Make sure Neo4j is running on ${neo4jStatus.uri || 'bolt://localhost:7687'}.`}
               </p>
               {neo4jStatus.error?.help && (
                 <ul className="mt-2 text-xs text-text-tertiary space-y-1">
@@ -2308,10 +2368,14 @@ function MemoriesPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'memories' && <MemoriesTab neo4jStatus={neo4jStatus} fetchStatus={fetchStatus} />}
+      {activeTab === 'memories' && (
+        <MemoriesTab neo4jStatus={neo4jStatus} fetchStatus={fetchStatus} />
+      )}
       {activeTab === 'maintenance' && <MaintenanceTab />}
       {activeTab === 'visualization' && <VisualizationTab />}
-      {activeTab === 'settings' && <SettingsTab neo4jStatus={neo4jStatus} fetchStatus={fetchStatus} />}
+      {activeTab === 'settings' && (
+        <SettingsTab neo4jStatus={neo4jStatus} fetchStatus={fetchStatus} />
+      )}
     </div>
   );
 }

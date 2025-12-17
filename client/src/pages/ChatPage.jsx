@@ -18,7 +18,7 @@ import {
   Database,
   Info,
   Bug,
-  Code
+  Code,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -60,10 +60,7 @@ function ThinkingBlock({ content }) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
       >
-        <ChevronDown
-          size={14}
-          className={`transition-transform ${isOpen ? '' : '-rotate-90'}`}
-        />
+        <ChevronDown size={14} className={`transition-transform ${isOpen ? '' : '-rotate-90'}`} />
         <span>Thinking...</span>
       </button>
       {isOpen && (
@@ -90,10 +87,7 @@ function DebugPanel({ debug }) {
         className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
       >
         <Bug size={12} />
-        <ChevronDown
-          size={14}
-          className={`transition-transform ${isOpen ? '' : '-rotate-90'}`}
-        />
+        <ChevronDown size={14} className={`transition-transform ${isOpen ? '' : '-rotate-90'}`} />
         <span>Debug Info</span>
       </button>
       {isOpen && (
@@ -130,7 +124,10 @@ function DebugPanel({ debug }) {
               </div>
               <div className="space-y-1">
                 {debug.memoriesRetrieved.map((m, i) => (
-                  <div key={i} className="p-2 bg-background/80 rounded border border-border/50 text-text-tertiary">
+                  <div
+                    key={i}
+                    className="p-2 bg-background/80 rounded border border-border/50 text-text-tertiary"
+                  >
                     <div className="flex justify-between text-[10px] mb-1">
                       <span className="text-text-secondary">{m.category}</span>
                       <span>score: {m.score?.toFixed(2)}</span>
@@ -222,16 +219,19 @@ function ChatPage() {
   }, []);
 
   // Fetch a specific chat
-  const fetchChat = useCallback(async (id) => {
-    const response = await fetch(`/api/chat/${id}`);
-    const data = await response.json();
-    if (data.success) {
-      setActiveChat(data.chat);
-    } else {
-      toast.error('Chat not found');
-      navigate('/chat');
-    }
-  }, [navigate]);
+  const fetchChat = useCallback(
+    async id => {
+      const response = await fetch(`/api/chat/${id}`);
+      const data = await response.json();
+      if (data.success) {
+        setActiveChat(data.chat);
+      } else {
+        toast.error('Chat not found');
+        navigate('/chat');
+      }
+    },
+    [navigate]
+  );
 
   // Initial data fetch
   useEffect(() => {
@@ -269,8 +269,8 @@ function ChatPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         templateId: selectedTemplate,
-        providerOverride: providerOverride || undefined
-      })
+        providerOverride: providerOverride || undefined,
+      }),
     });
 
     const data = await response.json();
@@ -294,11 +294,14 @@ function ChatPage() {
     // Optimistically add user message
     setActiveChat(prev => ({
       ...prev,
-      messages: [...prev.messages, {
-        role: 'user',
-        content: message,
-        timestamp: new Date().toISOString()
-      }]
+      messages: [
+        ...prev.messages,
+        {
+          role: 'user',
+          content: message,
+          timestamp: new Date().toISOString(),
+        },
+      ],
     }));
 
     const response = await fetch(`/api/chat/${activeChat.id}/message`, {
@@ -308,8 +311,8 @@ function ChatPage() {
         content: message,
         providerOverride: providerOverride || undefined,
         modelType: modelTypeOverride || undefined,
-        debug: true
-      })
+        debug: true,
+      }),
     });
 
     const data = await response.json();
@@ -323,13 +326,13 @@ function ChatPage() {
       // Remove optimistic message on error
       setActiveChat(prev => ({
         ...prev,
-        messages: prev.messages.slice(0, -1)
+        messages: prev.messages.slice(0, -1),
       }));
     }
   };
 
   // Delete chat
-  const handleDeleteChat = async (id) => {
+  const handleDeleteChat = async id => {
     const response = await fetch(`/api/chat/${id}`, { method: 'DELETE' });
     const data = await response.json();
 
@@ -349,7 +352,7 @@ function ChatPage() {
     if (!activeChat) return;
 
     const response = await fetch(`/api/chat/${activeChat.id}/messages`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
     const data = await response.json();
 
@@ -368,7 +371,7 @@ function ChatPage() {
   };
 
   // Handle key press in input
-  const handleKeyDown = (e) => {
+  const handleKeyDown = e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -390,16 +393,20 @@ function ChatPage() {
 
       {/* No providers banner */}
       {providers.length === 0 && (
-        <div className="mb-4 p-4 rounded-lg border bg-surface" style={{ borderColor: 'var(--color-warning)' }}>
+        <div
+          className="mb-4 p-4 rounded-lg border bg-surface"
+          style={{ borderColor: 'var(--color-warning)' }}
+        >
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--color-warning)' }} />
+            <AlertTriangle
+              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              style={{ color: 'var(--color-warning)' }}
+            />
             <div className="flex-1">
-              <h3 className="font-medium text-text-primary mb-1">
-                No AI Provider Configured
-              </h3>
+              <h3 className="font-medium text-text-primary mb-1">No AI Provider Configured</h3>
               <p className="text-sm text-text-secondary mb-3">
-                To chat with the Clawed egregore, you need to configure an AI provider first.
-                For local and private conversations, we recommend <strong>LM Studio</strong>.
+                To chat with the Clawed egregore, you need to configure an AI provider first. For
+                local and private conversations, we recommend <strong>LM Studio</strong>.
               </p>
               <div className="flex flex-wrap gap-3">
                 <a
@@ -426,7 +433,10 @@ function ChatPage() {
 
       {/* Memory status banner */}
       {neo4jStatus.available === true && (
-        <div className="mb-4 p-3 rounded-lg border bg-surface flex items-center gap-3" style={{ borderColor: 'var(--color-success)' }}>
+        <div
+          className="mb-4 p-3 rounded-lg border bg-surface flex items-center gap-3"
+          style={{ borderColor: 'var(--color-success)' }}
+        >
           <Brain className="w-5 h-5 flex-shrink-0" style={{ color: 'var(--color-success)' }} />
           <div className="flex-1">
             <span className="text-sm text-text-primary">
@@ -443,7 +453,10 @@ function ChatPage() {
       )}
 
       {neo4jStatus.available === false && (
-        <div className="mb-4 p-3 rounded-lg border bg-surface flex items-center gap-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div
+          className="mb-4 p-3 rounded-lg border bg-surface flex items-center gap-3"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
           <Info className="w-5 h-5 flex-shrink-0 text-text-tertiary" />
           <div className="flex-1">
             <span className="text-sm text-text-secondary">
@@ -469,9 +482,7 @@ function ChatPage() {
         >
           {/* Sidebar header */}
           <div className="p-2 border-b border-border flex items-center justify-between">
-            {sidebarOpen && (
-              <span className="text-sm font-medium text-text-primary">Chats</span>
-            )}
+            {sidebarOpen && <span className="text-sm font-medium text-text-primary">Chats</span>}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-1 rounded hover:bg-border/50 text-text-secondary"
@@ -512,7 +523,7 @@ function ChatPage() {
                   <>
                     <span className="flex-1 truncate text-sm">{chat.title}</span>
                     <button
-                      onClick={(e) => {
+                      onClick={e => {
                         e.stopPropagation();
                         handleDeleteChat(chat.id);
                       }}
@@ -525,9 +536,7 @@ function ChatPage() {
               </div>
             ))}
             {chats.length === 0 && sidebarOpen && (
-              <p className="text-center text-text-tertiary text-sm py-4">
-                No chats yet
-              </p>
+              <p className="text-center text-text-tertiary text-sm py-4">No chats yet</p>
             )}
           </div>
         </div>
@@ -539,26 +548,26 @@ function ChatPage() {
               {/* Chat header */}
               <div className="p-3 border-b border-border flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <h2 className="font-medium text-text-primary truncate">
-                    {activeChat.title}
-                  </h2>
+                  <h2 className="font-medium text-text-primary truncate">{activeChat.title}</h2>
                 </div>
 
                 {/* Inline controls - visible on desktop */}
                 <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                   <select
                     value={selectedTemplate}
-                    onChange={(e) => setSelectedTemplate(e.target.value)}
+                    onChange={e => setSelectedTemplate(e.target.value)}
                     className="form-input text-xs py-1 px-2 bg-background border-border min-w-0"
                     title="Template"
                   >
                     {templates.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
                     ))}
                   </select>
                   <select
                     value={providerOverride}
-                    onChange={(e) => setProviderOverride(e.target.value)}
+                    onChange={e => setProviderOverride(e.target.value)}
                     className="form-input text-xs py-1 px-2 bg-background border-border min-w-0"
                     title="Provider"
                   >
@@ -570,7 +579,7 @@ function ChatPage() {
                   </select>
                   <select
                     value={modelTypeOverride}
-                    onChange={(e) => setModelTypeOverride(e.target.value)}
+                    onChange={e => setModelTypeOverride(e.target.value)}
                     className="form-input text-xs py-1 px-2 bg-background border-border min-w-0"
                     title="Model"
                   >
@@ -612,26 +621,24 @@ function ChatPage() {
                 <div className="md:hidden p-3 border-b border-border bg-background/50">
                   <div className="flex flex-wrap gap-4">
                     <div>
-                      <label className="block text-xs text-text-secondary mb-1">
-                        Template
-                      </label>
+                      <label className="block text-xs text-text-secondary mb-1">Template</label>
                       <select
                         value={selectedTemplate}
-                        onChange={(e) => setSelectedTemplate(e.target.value)}
+                        onChange={e => setSelectedTemplate(e.target.value)}
                         className="form-input text-sm"
                       >
                         {templates.map(t => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                          </option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-text-secondary mb-1">
-                        Provider
-                      </label>
+                      <label className="block text-xs text-text-secondary mb-1">Provider</label>
                       <select
                         value={providerOverride}
-                        onChange={(e) => setProviderOverride(e.target.value)}
+                        onChange={e => setProviderOverride(e.target.value)}
                         className="form-input text-sm"
                       >
                         {providers.map(p => (
@@ -642,12 +649,10 @@ function ChatPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-text-secondary mb-1">
-                        Model
-                      </label>
+                      <label className="block text-xs text-text-secondary mb-1">Model</label>
                       <select
                         value={modelTypeOverride}
-                        onChange={(e) => setModelTypeOverride(e.target.value)}
+                        onChange={e => setModelTypeOverride(e.target.value)}
                         className="form-input text-sm"
                       >
                         <option value="light">Light (fast)</option>
@@ -667,9 +672,10 @@ function ChatPage() {
                   </div>
                 ) : (
                   activeChat.messages.map((msg, index) => {
-                    const { thinkContent, displayContent } = msg.role === 'assistant'
-                      ? parseMessageContent(msg.content)
-                      : { thinkContent: null, displayContent: msg.content };
+                    const { thinkContent, displayContent } =
+                      msg.role === 'assistant'
+                        ? parseMessageContent(msg.content)
+                        : { thinkContent: null, displayContent: msg.content };
 
                     return (
                       <div
@@ -687,7 +693,9 @@ function ChatPage() {
                           <p className="whitespace-pre-wrap">{displayContent}</p>
                           {msg.duration && (
                             <p className="text-xs opacity-60 mt-1">
-                              {msg.provider}{msg.model ? ` (${msg.model})` : ''} • {(msg.duration / 1000).toFixed(1)}s
+                              {msg.provider}
+                              {msg.model ? ` (${msg.model})` : ''} •{' '}
+                              {(msg.duration / 1000).toFixed(1)}s
                             </p>
                           )}
                           {msg.debug && <DebugPanel debug={msg.debug} />}
@@ -713,7 +721,7 @@ function ChatPage() {
                   <textarea
                     ref={inputRef}
                     value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
+                    onChange={e => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Type a message..."
                     rows={1}
@@ -736,9 +744,7 @@ function ChatPage() {
               <MessageSquare size={48} className="mb-4 opacity-50" />
               {providers.length === 0 ? (
                 <>
-                  <h3 className="text-lg font-medium text-text-secondary mb-2">
-                    Setup Required
-                  </h3>
+                  <h3 className="text-lg font-medium text-text-secondary mb-2">Setup Required</h3>
                   <p className="text-sm mb-4 text-center max-w-md">
                     Configure an AI provider in Settings to start chatting.
                     <br />
@@ -749,20 +755,18 @@ function ChatPage() {
                 </>
               ) : (
                 <>
-                  <h3 className="text-lg font-medium text-text-secondary mb-2">
-                    No chat selected
-                  </h3>
-                  <p className="text-sm mb-4">
-                    Select a chat from the sidebar or create a new one
-                  </p>
+                  <h3 className="text-lg font-medium text-text-secondary mb-2">No chat selected</h3>
+                  <p className="text-sm mb-4">Select a chat from the sidebar or create a new one</p>
                   <div className="flex flex-col gap-2 items-center">
                     <select
                       value={selectedTemplate}
-                      onChange={(e) => setSelectedTemplate(e.target.value)}
+                      onChange={e => setSelectedTemplate(e.target.value)}
                       className="form-input text-sm"
                     >
                       {templates.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
                       ))}
                     </select>
                     <button

@@ -22,7 +22,7 @@ import {
   Settings,
   Eye,
   EyeOff,
-  Globe
+  Globe,
 } from 'lucide-react';
 
 const IPFSPage = () => {
@@ -47,7 +47,7 @@ const IPFSPage = () => {
     const [statusRes, pinsRes, configRes] = await Promise.all([
       fetch('/api/ipfs/status'),
       fetch('/api/ipfs/pins'),
-      fetch('/api/ipfs/config')
+      fetch('/api/ipfs/config'),
     ]);
 
     const statusData = await statusRes.json();
@@ -74,7 +74,7 @@ const IPFSPage = () => {
     loadData();
   }, [loadData]);
 
-  const handleFileUpload = async (files) => {
+  const handleFileUpload = async files => {
     if (!files || files.length === 0) return;
     if (!status?.daemonOnline) {
       toast.error('IPFS daemon is not running');
@@ -88,7 +88,7 @@ const IPFSPage = () => {
 
       const res = await fetch(`/api/ipfs/pin/file?filename=${encodeURIComponent(file.name)}`, {
         method: 'POST',
-        body: file
+        body: file,
       });
       const data = await res.json();
 
@@ -119,7 +119,7 @@ const IPFSPage = () => {
     const res = await fetch('/api/ipfs/pin/url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: urlInput })
+      body: JSON.stringify({ url: urlInput }),
     });
     const data = await res.json();
 
@@ -162,7 +162,7 @@ const IPFSPage = () => {
     const res = await fetch(`/api/ipfs/pinata/pin/${cid}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name }),
     });
     const data = await res.json();
 
@@ -176,13 +176,13 @@ const IPFSPage = () => {
     setPublishingCid(null);
   };
 
-  const handleSaveConfig = async (newConfig) => {
+  const handleSaveConfig = async newConfig => {
     setSavingConfig(true);
 
     const res = await fetch('/api/ipfs/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newConfig)
+      body: JSON.stringify(newConfig),
     });
     const data = await res.json();
 
@@ -197,12 +197,12 @@ const IPFSPage = () => {
     setSavingConfig(false);
   };
 
-  const copyToClipboard = (text) => {
+  const copyToClipboard = text => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard');
   };
 
-  const formatBytes = (bytes) => {
+  const formatBytes = bytes => {
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -210,55 +210,67 @@ const IPFSPage = () => {
     return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = dateString => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
   };
 
-  const getTypeIcon = (type) => {
+  const getTypeIcon = type => {
     switch (type) {
-      case 'image': return <Image size={16} className="text-purple-400" />;
-      case 'document': return <FileText size={16} className="text-blue-400" />;
-      case 'media': return <Music size={16} className="text-green-400" />;
-      case 'code': return <Code size={16} className="text-yellow-400" />;
-      case 'archive': return <Archive size={16} className="text-orange-400" />;
-      case 'directory': return <FolderOpen size={16} className="text-cyan-400" />;
-      default: return <File size={16} className="text-secondary" />;
+      case 'image':
+        return <Image size={16} className="text-purple-400" />;
+      case 'document':
+        return <FileText size={16} className="text-blue-400" />;
+      case 'media':
+        return <Music size={16} className="text-green-400" />;
+      case 'code':
+        return <Code size={16} className="text-yellow-400" />;
+      case 'archive':
+        return <Archive size={16} className="text-orange-400" />;
+      case 'directory':
+        return <FolderOpen size={16} className="text-cyan-400" />;
+      default:
+        return <File size={16} className="text-secondary" />;
     }
   };
 
-  const getTypeColor = (type) => {
+  const getTypeColor = type => {
     switch (type) {
-      case 'image': return 'text-purple-400';
-      case 'document': return 'text-blue-400';
-      case 'media': return 'text-green-400';
-      case 'code': return 'text-yellow-400';
-      case 'archive': return 'text-orange-400';
-      case 'directory': return 'text-cyan-400';
-      default: return 'text-secondary';
+      case 'image':
+        return 'text-purple-400';
+      case 'document':
+        return 'text-blue-400';
+      case 'media':
+        return 'text-green-400';
+      case 'code':
+        return 'text-yellow-400';
+      case 'archive':
+        return 'text-orange-400';
+      case 'directory':
+        return 'text-cyan-400';
+      default:
+        return 'text-secondary';
     }
   };
 
   // Drag and drop handlers
-  const handleDragOver = (e) => {
+  const handleDragOver = e => {
     e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = (e) => {
+  const handleDragLeave = e => {
     e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = e => {
     e.preventDefault();
     setIsDragging(false);
     handleFileUpload(e.dataTransfer.files);
   };
 
-  const filteredPins = typeFilter === 'all'
-    ? pins
-    : pins.filter(p => p.type === typeFilter);
+  const filteredPins = typeFilter === 'all' ? pins : pins.filter(p => p.type === typeFilter);
 
   // Get unique types for filter
   const availableTypes = ['all', ...new Set(pins.map(p => p.type))];
@@ -282,10 +294,7 @@ const IPFSPage = () => {
             <p className="text-secondary text-sm">Pin and manage decentralized content</p>
           </div>
         </div>
-        <button
-          onClick={loadData}
-          className="btn btn-secondary flex items-center gap-2"
-        >
+        <button onClick={loadData} className="btn btn-secondary flex items-center gap-2">
           <RefreshCw size={16} />
           Refresh
         </button>
@@ -294,7 +303,9 @@ const IPFSPage = () => {
       {/* Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Daemon Status */}
-        <div className={`card ${status?.daemonOnline ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}`}>
+        <div
+          className={`card ${status?.daemonOnline ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}`}
+        >
           <div className="flex items-center gap-3">
             {status?.daemonOnline ? (
               <CheckCircle className="w-6 h-6 text-green-400" />
@@ -313,13 +324,15 @@ const IPFSPage = () => {
         </div>
 
         {/* Network Reachability */}
-        <div className={`card ${
-          status?.nat?.status === 'public'
-            ? 'border-green-500/50 bg-green-500/5'
-            : status?.nat?.status === 'relay'
-              ? 'border-yellow-500/50 bg-yellow-500/5'
-              : 'border-border'
-        }`}>
+        <div
+          className={`card ${
+            status?.nat?.status === 'public'
+              ? 'border-green-500/50 bg-green-500/5'
+              : status?.nat?.status === 'relay'
+                ? 'border-yellow-500/50 bg-yellow-500/5'
+                : 'border-border'
+          }`}
+        >
           <div className="flex items-center gap-3">
             {status?.nat?.status === 'public' ? (
               <Globe className="w-6 h-6 text-green-400" />
@@ -330,24 +343,33 @@ const IPFSPage = () => {
             )}
             <div>
               <h3 className="font-semibold text-text-primary">
-                {status?.nat?.status === 'public' ? 'Publicly Reachable' :
-                 status?.nat?.status === 'relay' ? 'Behind NAT' :
-                 status?.nat?.status === 'local' ? 'Local Only' : 'Unknown'}
+                {status?.nat?.status === 'public'
+                  ? 'Publicly Reachable'
+                  : status?.nat?.status === 'relay'
+                    ? 'Behind NAT'
+                    : status?.nat?.status === 'local'
+                      ? 'Local Only'
+                      : 'Unknown'}
               </h3>
               <p className="text-sm text-secondary">
-                {status?.nat?.status === 'public' ? 'Content accessible globally' :
-                 status?.nat?.needsPortForward ? 'Port forward 4001 for best results' : 'Check connection'}
+                {status?.nat?.status === 'public'
+                  ? 'Content accessible globally'
+                  : status?.nat?.needsPortForward
+                    ? 'Port forward 4001 for best results'
+                    : 'Check connection'}
               </p>
             </div>
           </div>
         </div>
 
         {/* Pinata Status */}
-        <div className={`card ${
-          config?.pinata?.enabled && pinataStatus?.authenticated
-            ? 'border-blue-500/50 bg-blue-500/5'
-            : 'border-border'
-        }`}>
+        <div
+          className={`card ${
+            config?.pinata?.enabled && pinataStatus?.authenticated
+              ? 'border-blue-500/50 bg-blue-500/5'
+              : 'border-border'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {config?.pinata?.enabled && pinataStatus?.authenticated ? (
@@ -357,7 +379,8 @@ const IPFSPage = () => {
               )}
               <div>
                 <h3 className="font-semibold text-text-primary">
-                  Pinata {config?.pinata?.enabled && pinataStatus?.authenticated ? 'Ready' : 'Available'}
+                  Pinata{' '}
+                  {config?.pinata?.enabled && pinataStatus?.authenticated ? 'Ready' : 'Available'}
                 </h3>
                 <p className="text-sm text-secondary">
                   {config?.pinata?.enabled && pinataStatus?.authenticated
@@ -390,16 +413,21 @@ const IPFSPage = () => {
               <div className="mt-3 space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-green-400 font-medium">Option 1:</span>
-                  <span className="text-text-primary">Port forward TCP/UDP 4001 on your router for direct connections</span>
+                  <span className="text-text-primary">
+                    Port forward TCP/UDP 4001 on your router for direct connections
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-blue-400 font-medium">Option 2:</span>
                   <span className="text-text-primary">
                     Enable Pinata in{' '}
-                    <button onClick={() => setShowSettings(true)} className="text-primary hover:underline">
+                    <button
+                      onClick={() => setShowSettings(true)}
+                      className="text-primary hover:underline"
+                    >
                       settings
-                    </button>
-                    {' '}for guaranteed public access (free tier: 1GB)
+                    </button>{' '}
+                    for guaranteed public access (free tier: 1GB)
                   </span>
                 </div>
               </div>
@@ -423,18 +451,22 @@ const IPFSPage = () => {
                 <p className="text-xs text-secondary">Use Pinata for public content availability</p>
               </div>
               <button
-                onClick={() => handleSaveConfig({
-                  ...config,
-                  pinata: { ...config?.pinata, enabled: !config?.pinata?.enabled }
-                })}
+                onClick={() =>
+                  handleSaveConfig({
+                    ...config,
+                    pinata: { ...config?.pinata, enabled: !config?.pinata?.enabled },
+                  })
+                }
                 disabled={savingConfig}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   config?.pinata?.enabled ? 'bg-primary' : 'bg-border'
                 }`}
               >
-                <div className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  config?.pinata?.enabled ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
+                <div
+                  className={`w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    config?.pinata?.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                  }`}
+                />
               </button>
             </div>
 
@@ -447,10 +479,12 @@ const IPFSPage = () => {
                     <input
                       type={showJwt ? 'text' : 'password'}
                       value={config?.pinata?.jwt || ''}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        pinata: { ...config?.pinata, jwt: e.target.value }
-                      })}
+                      onChange={e =>
+                        setConfig({
+                          ...config,
+                          pinata: { ...config?.pinata, jwt: e.target.value },
+                        })
+                      }
                       placeholder="Enter your Pinata JWT"
                       className="form-input w-full pr-10"
                     />
@@ -471,7 +505,12 @@ const IPFSPage = () => {
                 </div>
                 <p className="text-xs text-secondary mt-1">
                   Get your JWT from{' '}
-                  <a href="https://app.pinata.cloud/developers/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  <a
+                    href="https://app.pinata.cloud/developers/api-keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
                     Pinata Dashboard
                   </a>
                 </p>
@@ -482,11 +521,15 @@ const IPFSPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-border">
               <div>
                 <label className="text-secondary text-sm">Local Gateway</label>
-                <p className="text-text-primary font-mono text-sm">{config?.gateway || 'Not set'}</p>
+                <p className="text-text-primary font-mono text-sm">
+                  {config?.gateway || 'Not set'}
+                </p>
               </div>
               <div>
                 <label className="text-secondary text-sm">Public Gateway</label>
-                <p className="text-text-primary font-mono text-sm">{config?.publicGateway || 'Not set'}</p>
+                <p className="text-text-primary font-mono text-sm">
+                  {config?.publicGateway || 'Not set'}
+                </p>
               </div>
             </div>
           </div>
@@ -496,7 +539,9 @@ const IPFSPage = () => {
       {/* Metrics */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
         <div className="card text-center">
-          <div className="text-2xl font-bold text-text-primary">{status?.metrics?.totalPins || 0}</div>
+          <div className="text-2xl font-bold text-text-primary">
+            {status?.metrics?.totalPins || 0}
+          </div>
           <div className="text-xs text-secondary">Total Pins</div>
         </div>
         {Object.entries(status?.metrics?.byType || {}).map(([type, count]) => (
@@ -544,9 +589,7 @@ const IPFSPage = () => {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging
-                ? 'border-primary bg-primary/10'
-                : 'border-border hover:border-primary/50'
+              isDragging ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'
             }`}
           >
             <Upload className="w-12 h-12 mx-auto mb-4 text-secondary" />
@@ -568,7 +611,7 @@ const IPFSPage = () => {
               type="file"
               multiple
               className="hidden"
-              onChange={(e) => handleFileUpload(e.target.files)}
+              onChange={e => handleFileUpload(e.target.files)}
               disabled={!status?.daemonOnline || isPinning}
             />
           </div>
@@ -580,22 +623,18 @@ const IPFSPage = () => {
             <input
               type="text"
               value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
+              onChange={e => setUrlInput(e.target.value)}
               placeholder="https://example.com/file.png"
               className="form-input flex-1"
               disabled={!status?.daemonOnline || isPinning}
-              onKeyDown={(e) => e.key === 'Enter' && handleUrlPin()}
+              onKeyDown={e => e.key === 'Enter' && handleUrlPin()}
             />
             <button
               onClick={handleUrlPin}
               disabled={!status?.daemonOnline || isPinning || !urlInput.trim()}
               className="btn btn-primary px-6"
             >
-              {isPinning ? (
-                <RefreshCw size={16} className="animate-spin" />
-              ) : (
-                'Pin'
-              )}
+              {isPinning ? <RefreshCw size={16} className="animate-spin" /> : 'Pin'}
             </button>
           </div>
         )}
@@ -607,7 +646,7 @@ const IPFSPage = () => {
           <h2 className="text-lg font-semibold text-text-primary">Pinned Content</h2>
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            onChange={e => setTypeFilter(e.target.value)}
             className="form-input w-auto text-sm"
           >
             {availableTypes.map(type => (
@@ -636,7 +675,7 @@ const IPFSPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredPins.map((pin) => (
+                {filteredPins.map(pin => (
                   <tr key={pin.cid} className="hover:bg-surface/50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -652,23 +691,19 @@ const IPFSPage = () => {
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-text-primary">
-                      {pin.name}
-                    </td>
+                    <td className="px-4 py-3 text-text-primary">{pin.name}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {getTypeIcon(pin.type)}
-                        <span className={`text-xs font-medium capitalize ${getTypeColor(pin.type)}`}>
+                        <span
+                          className={`text-xs font-medium capitalize ${getTypeColor(pin.type)}`}
+                        >
                           {pin.type}
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-secondary text-xs">
-                      {formatBytes(pin.size)}
-                    </td>
-                    <td className="px-4 py-3 text-secondary text-xs">
-                      {formatDate(pin.pinnedAt)}
-                    </td>
+                    <td className="px-4 py-3 text-secondary text-xs">{formatBytes(pin.size)}</td>
+                    <td className="px-4 py-3 text-secondary text-xs">{formatDate(pin.pinnedAt)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         {/* Local gateway link */}
@@ -736,7 +771,6 @@ const IPFSPage = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };

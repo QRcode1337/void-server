@@ -34,7 +34,8 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-      'react-hooks/set-state-in-effect': 'off', // Socket/context init requires setState in effect
+      'react-hooks/set-state-in-effect': 'off', // Data fetching in effects is standard React pattern
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
   // React source files
@@ -57,7 +58,8 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
-      'react-hooks/set-state-in-effect': 'warn', // Downgrade to warning - sometimes necessary
+      'react-hooks/set-state-in-effect': 'off', // Data fetching in effects is standard React pattern
+      'react-hooks/exhaustive-deps': 'error',
     },
   },
 ])

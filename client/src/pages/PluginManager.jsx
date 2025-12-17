@@ -15,7 +15,7 @@ import {
   Package,
   PackagePlus,
   Link as LinkIcon,
-  Hammer
+  Hammer,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -23,7 +23,7 @@ import IconPicker from '../components/IconPicker';
 import { useWebSocket } from '../contexts/WebSocketContext';
 
 // Convert kebab-case to PascalCase for lucide-react imports
-const kebabToPascal = (str) => {
+const kebabToPascal = str => {
   return str
     .split('-')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
@@ -31,7 +31,7 @@ const kebabToPascal = (str) => {
 };
 
 // Get icon component dynamically
-const getPluginIcon = (iconName) => {
+const getPluginIcon = iconName => {
   if (!iconName) return Box;
   const pascalName = kebabToPascal(iconName);
   return LucideIcons[pascalName] || Box;
@@ -43,11 +43,14 @@ const SECTION_PRESETS = [
   { value: 'Clawed', label: 'Clawed' },
   { value: 'Audio', label: 'Audio' },
   { value: 'Media', label: 'Media' },
-  { value: 'Tools', label: 'Tools' }
+  { value: 'Tools', label: 'Tools' },
 ];
 
 const PluginManager = () => {
-  const { plugins: _plugins, setPlugins } = useOutletContext() || { plugins: [], setPlugins: () => {} };
+  const { plugins: _plugins, setPlugins } = useOutletContext() || {
+    plugins: [],
+    setPlugins: () => {},
+  };
   void _plugins; // Used by parent context
   const { on, off } = useWebSocket();
 
@@ -148,30 +151,33 @@ const PluginManager = () => {
   }, [fetchPlugins]);
 
   // Handle enable/disable toggle
-  const handleToggle = async (plugin) => {
+  const handleToggle = async plugin => {
     setTogglingPlugin(plugin.name);
     const newEnabled = !plugin.enabled;
 
     const response = await fetch(`/api/plugins/${plugin.name}/enable`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: newEnabled })
+      body: JSON.stringify({ enabled: newEnabled }),
     });
 
     const result = await response.json();
     setTogglingPlugin(null);
 
     if (result.success) {
-      setInstalledPlugins(prev => prev.map(p =>
-        p.name === plugin.name ? { ...p, enabled: newEnabled } : p
-      ));
+      setInstalledPlugins(prev =>
+        prev.map(p => (p.name === plugin.name ? { ...p, enabled: newEnabled } : p))
+      );
 
       // In Docker, client rebuilds automatically
       if (result.rebuilding) {
         setRebuilding(plugin.name);
         toast.loading('Rebuilding client bundle...', { id: 'rebuild', duration: 60000 });
       } else if (result.requiresRestart) {
-        setPendingChanges(prev => [...prev, { type: 'toggle', plugin: plugin.name, action: newEnabled ? 'enable' : 'disable' }]);
+        setPendingChanges(prev => [
+          ...prev,
+          { type: 'toggle', plugin: plugin.name, action: newEnabled ? 'enable' : 'disable' },
+        ]);
         toast.success(result.message, { duration: 4000 });
       } else {
         toast.success(result.message, { duration: 4000 });
@@ -182,13 +188,13 @@ const PluginManager = () => {
   };
 
   // Handle install from manifest
-  const handleInstall = async (plugin) => {
+  const handleInstall = async plugin => {
     setInstalling(plugin.name);
 
     const response = await fetch('/api/plugins/install', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plugin: plugin.name })
+      body: JSON.stringify({ plugin: plugin.name }),
     });
 
     const result = await response.json();
@@ -218,7 +224,7 @@ const PluginManager = () => {
     const response = await fetch('/api/plugins/install', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gitUrl: installUrl.trim() })
+      body: JSON.stringify({ gitUrl: installUrl.trim() }),
     });
 
     const result = await response.json();
@@ -242,9 +248,9 @@ const PluginManager = () => {
   };
 
   // Handle uninstall
-  const handleUninstall = async (plugin) => {
+  const handleUninstall = async plugin => {
     const response = await fetch(`/api/plugins/${plugin.name}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
 
     const result = await response.json();
@@ -261,16 +267,16 @@ const PluginManager = () => {
   };
 
   // Configuration modal handlers
-  const openEditModal = (plugin) => {
+  const openEditModal = plugin => {
     setEditingPlugin(plugin);
     setFormData({
       mountPath: plugin.mountPath,
       navSection: plugin.navConfig?.navSection || '',
       navTitle: plugin.navConfig?.navTitle || '',
-      navIcon: plugin.navConfig?.navIcon || 'box'
+      navIcon: plugin.navConfig?.navIcon || 'box',
     });
     const isPreset = SECTION_PRESETS.some(p => p.value === (plugin.navConfig?.navSection || ''));
-    setCustomSection(isPreset ? '' : (plugin.navConfig?.navSection || ''));
+    setCustomSection(isPreset ? '' : plugin.navConfig?.navSection || '');
   };
 
   const closeEditModal = () => {
@@ -290,24 +296,26 @@ const PluginManager = () => {
         mountPath: formData.mountPath,
         navSection: navSection === '' ? null : navSection,
         navTitle: formData.navTitle,
-        navIcon: formData.navIcon
-      })
+        navIcon: formData.navIcon,
+      }),
     });
 
     const result = await response.json();
     setSaving(false);
 
     if (result.success) {
-      setPlugins(prev => prev.map(p =>
-        p.name === editingPlugin.name
-          ? {
-            ...p,
-            navSection: navSection === '' ? null : navSection,
-            navTitle: formData.navTitle,
-            navIcon: formData.navIcon
-          }
-          : p
-      ));
+      setPlugins(prev =>
+        prev.map(p =>
+          p.name === editingPlugin.name
+            ? {
+                ...p,
+                navSection: navSection === '' ? null : navSection,
+                navTitle: formData.navTitle,
+                navIcon: formData.navIcon,
+              }
+            : p
+        )
+      );
 
       if (result.requiresRestart) {
         setPendingChanges(prev => [...prev, { type: 'config', plugin: editingPlugin.name }]);
@@ -322,7 +330,7 @@ const PluginManager = () => {
     }
   };
 
-  const handleSectionChange = (e) => {
+  const handleSectionChange = e => {
     const value = e.target.value;
     if (value === '__custom__') {
       setCustomSection('');
@@ -396,20 +404,22 @@ const PluginManager = () => {
       <div className="flex border-b border-[var(--color-border)] mb-4">
         <button
           onClick={() => setActiveTab('installed')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'installed'
-            ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-            : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'installed'
+              ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+              : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+          }`}
         >
           <Package className="w-4 h-4" />
           Installed ({installedPlugins.length})
         </button>
         <button
           onClick={() => setActiveTab('available')}
-          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'available'
-            ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
-            : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
-            }`}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'available'
+              ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
+              : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+          }`}
         >
           <Download className="w-4 h-4" />
           Available ({availablePlugins.length})
@@ -431,15 +441,12 @@ const PluginManager = () => {
             <div className="card text-center py-12">
               <Box className="w-12 h-12 mx-auto mb-4 text-[var(--color-text-secondary)]" />
               <p className="text-[var(--color-text-secondary)]">No plugins installed</p>
-              <button
-                onClick={() => setActiveTab('available')}
-                className="btn btn-secondary mt-4"
-              >
+              <button onClick={() => setActiveTab('available')} className="btn btn-secondary mt-4">
                 Browse Available Plugins
               </button>
             </div>
           ) : (
-            installedPlugins.map((plugin) => {
+            installedPlugins.map(plugin => {
               const PluginIcon = getPluginIcon(plugin.navConfig?.navIcon);
               const isDisabled = plugin.enabled === false;
 
@@ -447,26 +454,30 @@ const PluginManager = () => {
                 <div key={plugin.name} className={`card ${isDisabled ? 'opacity-60' : ''}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${isDisabled
-                        ? 'bg-[var(--color-border)]'
-                        : 'bg-[var(--color-background)]'
-                        }`}>
-                        <PluginIcon className={`w-6 h-6 ${isDisabled
-                          ? 'text-[var(--color-text-secondary)]'
-                          : 'text-[var(--color-primary)]'
-                          }`} />
+                      <div
+                        className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                          isDisabled ? 'bg-[var(--color-border)]' : 'bg-[var(--color-background)]'
+                        }`}
+                      >
+                        <PluginIcon
+                          className={`w-6 h-6 ${
+                            isDisabled
+                              ? 'text-[var(--color-text-secondary)]'
+                              : 'text-[var(--color-primary)]'
+                          }`}
+                        />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold text-[var(--color-text-primary)]">
                             {plugin.navConfig?.navTitle || plugin.name.replace('void-plugin-', '')}
                           </h3>
-                          <span className={`badge ${isDisabled ? 'badge-secondary' : 'badge-success'}`}>
+                          <span
+                            className={`badge ${isDisabled ? 'badge-secondary' : 'badge-success'}`}
+                          >
                             {isDisabled ? 'disabled' : 'enabled'}
                           </span>
-                          {plugin.loaded && (
-                            <span className="badge badge-info">loaded</span>
-                          )}
+                          {plugin.loaded && <span className="badge badge-info">loaded</span>}
                           <span className="badge badge-secondary text-xs">
                             {plugin.installationType}
                           </span>
@@ -475,7 +486,8 @@ const PluginManager = () => {
                           )}
                         </div>
                         <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                          Mount: <code className="text-[var(--color-primary)]">{plugin.mountPath}</code>
+                          Mount:{' '}
+                          <code className="text-[var(--color-primary)]">{plugin.mountPath}</code>
                         </p>
                         {plugin.description && (
                           <p className="text-sm text-[var(--color-text-secondary)] mt-1 max-w-md">
@@ -490,10 +502,11 @@ const PluginManager = () => {
                       <button
                         onClick={() => handleToggle(plugin)}
                         disabled={togglingPlugin === plugin.name}
-                        className={`p-2 rounded-lg transition-colors ${isDisabled
-                          ? 'text-[var(--color-text-secondary)] hover:text-green-500'
-                          : 'text-green-500 hover:text-[var(--color-text-secondary)]'
-                          }`}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isDisabled
+                            ? 'text-[var(--color-text-secondary)] hover:text-green-500'
+                            : 'text-green-500 hover:text-[var(--color-text-secondary)]'
+                        }`}
                         title={isDisabled ? 'Enable' : 'Disable'}
                       >
                         {togglingPlugin === plugin.name ? (
@@ -545,11 +558,14 @@ const PluginManager = () => {
               </p>
             </div>
           ) : (
-            availablePlugins.map((plugin) => {
+            availablePlugins.map(plugin => {
               const PluginIcon = getPluginIcon(plugin.icon);
 
               return (
-                <div key={plugin.name} className="card hover:border-[var(--color-primary)] transition-colors">
+                <div
+                  key={plugin.name}
+                  className="card hover:border-[var(--color-primary)] transition-colors"
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-lg bg-[var(--color-background)] flex items-center justify-center">
@@ -608,7 +624,7 @@ const PluginManager = () => {
         >
           <div
             className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg w-full max-w-lg"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
@@ -629,7 +645,7 @@ const PluginManager = () => {
                 <input
                   type="url"
                   value={installUrl}
-                  onChange={(e) => setInstallUrl(e.target.value)}
+                  onChange={e => setInstallUrl(e.target.value)}
                   placeholder="https://github.com/org/void-plugin-example.git"
                   className="form-input"
                   autoFocus
@@ -641,10 +657,7 @@ const PluginManager = () => {
             </div>
 
             <div className="flex justify-end gap-3 p-4 border-t border-[var(--color-border)]">
-              <button
-                onClick={() => setShowInstallUrl(false)}
-                className="btn btn-secondary"
-              >
+              <button onClick={() => setShowInstallUrl(false)} className="btn btn-secondary">
                 Cancel
               </button>
               <button
@@ -677,7 +690,7 @@ const PluginManager = () => {
         >
           <div
             className="bg-[var(--color-surface)] border border-red-500 rounded-lg w-full max-w-sm"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="p-6 text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/10 flex items-center justify-center">
@@ -717,7 +730,7 @@ const PluginManager = () => {
         >
           <div
             className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg w-full max-w-lg"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
               <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
@@ -737,7 +750,7 @@ const PluginManager = () => {
                 <input
                   type="text"
                   value={formData.mountPath}
-                  onChange={(e) => setFormData(prev => ({ ...prev, mountPath: e.target.value }))}
+                  onChange={e => setFormData(prev => ({ ...prev, mountPath: e.target.value }))}
                   className="form-input"
                   placeholder="/audio"
                 />
@@ -751,7 +764,7 @@ const PluginManager = () => {
                 <input
                   type="text"
                   value={formData.navTitle}
-                  onChange={(e) => setFormData(prev => ({ ...prev, navTitle: e.target.value }))}
+                  onChange={e => setFormData(prev => ({ ...prev, navTitle: e.target.value }))}
                   className="form-input"
                   placeholder="Audio"
                 />
@@ -776,7 +789,7 @@ const PluginManager = () => {
                   <input
                     type="text"
                     value={customSection}
-                    onChange={(e) => setCustomSection(e.target.value)}
+                    onChange={e => setCustomSection(e.target.value)}
                     className="form-input mt-2"
                     placeholder="Enter custom section name"
                     autoFocus
@@ -788,7 +801,7 @@ const PluginManager = () => {
                 <label className="form-label">Navigation Icon</label>
                 <IconPicker
                   value={formData.navIcon}
-                  onChange={(iconValue) => setFormData(prev => ({ ...prev, navIcon: iconValue }))}
+                  onChange={iconValue => setFormData(prev => ({ ...prev, navIcon: iconValue }))}
                 />
               </div>
             </div>

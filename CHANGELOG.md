@@ -10,11 +10,15 @@ Patch release with Docker improvements and documentation updates.
 - **Simplified CI/CD pipeline** - PR checks only run lint + build; e2e tests run locally before releases
 - **Optimized Docker build** - Added more exclusions to .dockerignore (tests, scripts, screenshots)
 - **Documentation restructure** - Extracted STYLE-GUIDE.md, PLUGINS.md from CLAUDE.md; added CONTRIBUTING.md
+- **Code formatter** - Added Prettier for consistent code style; runs automatically in pre-commit hook
+- **ESLint cleanup** - Removed warning-level rules; all issues are now errors or disabled
+  - Disabled `set-state-in-effect` (standard data fetching pattern)
+  - Kept `exhaustive-deps` as error for catching real bugs
 
 ### Fixes
 
-- **Lint errors** - Fixed unused variables, function ordering, eslint config for node files
-- **Pre-commit hook** - Now runs ESLint on client files in addition to secret scanning
+- **Lint errors** - Fixed unused variables, function ordering, useCallback for handleUpdate
+- **Pre-commit hook** - Now runs Prettier before ESLint on client files
 
 ---
 

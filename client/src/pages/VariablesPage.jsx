@@ -10,7 +10,7 @@ import {
   ChevronRight,
   FileText,
   RotateCcw,
-  Shield
+  Shield,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -19,7 +19,7 @@ const CATEGORIES = [
   { value: 'system', label: 'System', description: 'System prompts and contexts' },
   { value: 'narrative', label: 'Narrative', description: 'Story elements and lore' },
   { value: 'visual', label: 'Visual', description: 'Visual styling and formatting' },
-  { value: 'general', label: 'General', description: 'General purpose variables' }
+  { value: 'general', label: 'General', description: 'General purpose variables' },
 ];
 
 function VariablesPage() {
@@ -37,7 +37,7 @@ function VariablesPage() {
     name: '',
     category: 'general',
     description: '',
-    content: ''
+    content: '',
   });
 
   // Fetch variables
@@ -93,20 +93,20 @@ function VariablesPage() {
       name: '',
       category: 'general',
       description: '',
-      content: ''
+      content: '',
     });
     setShowModal(true);
   };
 
   // Open modal for editing
-  const handleEdit = (variable) => {
+  const handleEdit = variable => {
     setEditingVariable(variable);
     setFormData({
       id: variable.id,
       name: variable.name,
       category: variable.category || 'general',
       description: variable.description || '',
-      content: variable.content
+      content: variable.content,
     });
     setShowModal(true);
   };
@@ -120,7 +120,7 @@ function VariablesPage() {
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
     });
 
     const data = await response.json();
@@ -136,7 +136,7 @@ function VariablesPage() {
   };
 
   // Delete variable
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     const usedBy = usage[id]?.usedBy || [];
     if (usedBy.length > 0) {
       toast.error(`Cannot delete: used by ${usedBy.length} template(s)`);
@@ -144,7 +144,7 @@ function VariablesPage() {
     }
 
     const response = await fetch(`/api/prompts/variables/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
     const data = await response.json();
 
@@ -158,9 +158,9 @@ function VariablesPage() {
   };
 
   // Reset core variable to default
-  const handleReset = async (id) => {
+  const handleReset = async id => {
     const response = await fetch(`/api/prompts/variables/${id}/reset`, {
-      method: 'POST'
+      method: 'POST',
     });
     const data = await response.json();
 
@@ -173,7 +173,7 @@ function VariablesPage() {
   };
 
   // Get category info
-  const getCategoryInfo = (cat) => {
+  const getCategoryInfo = cat => {
     return CATEGORIES.find(c => c.value === cat) || CATEGORIES[4];
   };
 
@@ -202,17 +202,19 @@ function VariablesPage() {
           type="text"
           placeholder="Search variables..."
           value={searchFilter}
-          onChange={(e) => setSearchFilter(e.target.value)}
+          onChange={e => setSearchFilter(e.target.value)}
           className="form-input flex-1 min-w-[200px]"
         />
         <select
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onChange={e => setCategoryFilter(e.target.value)}
           className="form-input"
         >
           <option value="">All Categories</option>
           {CATEGORIES.map(cat => (
-            <option key={cat.value} value={cat.value}>{cat.label}</option>
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
           ))}
         </select>
       </div>
@@ -238,9 +240,7 @@ function VariablesPage() {
               <div key={category}>
                 <h2 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">
                   {catInfo.label}
-                  <span className="text-sm font-normal text-text-tertiary">
-                    ({vars.length})
-                  </span>
+                  <span className="text-sm font-normal text-text-tertiary">({vars.length})</span>
                 </h2>
                 <div className="space-y-2">
                   {vars.map(variable => {
@@ -249,9 +249,11 @@ function VariablesPage() {
                       <div key={variable.id} className="card">
                         <div
                           className="flex items-center justify-between cursor-pointer"
-                          onClick={() => setExpandedVariable(
-                            expandedVariable === variable.id ? null : variable.id
-                          )}
+                          onClick={() =>
+                            setExpandedVariable(
+                              expandedVariable === variable.id ? null : variable.id
+                            )
+                          }
                         >
                           <div className="flex items-center gap-3">
                             {expandedVariable === variable.id ? (
@@ -281,7 +283,10 @@ function VariablesPage() {
                               </span>
                             )}
                             <button
-                              onClick={(e) => { e.stopPropagation(); handleEdit(variable); }}
+                              onClick={e => {
+                                e.stopPropagation();
+                                handleEdit(variable);
+                              }}
                               className="p-2 rounded hover:bg-border/50 text-text-secondary"
                               title="Edit"
                             >
@@ -289,7 +294,10 @@ function VariablesPage() {
                             </button>
                             {variable.isCore ? (
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleReset(variable.id); }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handleReset(variable.id);
+                                }}
                                 className="p-2 rounded hover:bg-amber-500/20 text-amber-500"
                                 title="Reset to default"
                               >
@@ -297,7 +305,10 @@ function VariablesPage() {
                               </button>
                             ) : (
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(variable.id); }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  handleDelete(variable.id);
+                                }}
                                 className={`p-2 rounded ${
                                   varUsage.length > 0
                                     ? 'text-text-tertiary cursor-not-allowed'
@@ -366,7 +377,7 @@ function VariablesPage() {
         >
           <div
             className="bg-surface border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h2 className="text-lg font-semibold text-text-primary">
@@ -384,13 +395,11 @@ function VariablesPage() {
               {/* ID and Name */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    ID
-                  </label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">ID</label>
                   <input
                     type="text"
                     value={formData.id}
-                    onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                    onChange={e => setFormData({ ...formData, id: e.target.value })}
                     className="form-input w-full font-mono"
                     placeholder="variableId"
                     disabled={!!editingVariable}
@@ -400,13 +409,11 @@ function VariablesPage() {
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Name
-                  </label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">Name</label>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="form-input w-full"
                     placeholder="Variable Name"
                   />
@@ -420,11 +427,13 @@ function VariablesPage() {
                 </label>
                 <select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={e => setFormData({ ...formData, category: e.target.value })}
                   className="form-input w-full"
                 >
                   {CATEGORIES.map(cat => (
-                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -437,7 +446,7 @@ function VariablesPage() {
                 <input
                   type="text"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={e => setFormData({ ...formData, description: e.target.value })}
                   className="form-input w-full"
                   placeholder="What this variable contains..."
                 />
@@ -450,7 +459,7 @@ function VariablesPage() {
                 </label>
                 <textarea
                   value={formData.content}
-                  onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                  onChange={e => setFormData({ ...formData, content: e.target.value })}
                   className="form-input w-full font-mono text-sm"
                   rows={12}
                   placeholder="The variable content that will be substituted into templates..."
@@ -463,16 +472,10 @@ function VariablesPage() {
 
             {/* Modal footer */}
             <div className="p-4 border-t border-border flex justify-end gap-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="btn btn-secondary"
-              >
+              <button onClick={() => setShowModal(false)} className="btn btn-secondary">
                 Cancel
               </button>
-              <button
-                onClick={handleSave}
-                className="btn btn-primary flex items-center gap-2"
-              >
+              <button onClick={handleSave} className="btn btn-primary flex items-center gap-2">
                 <Save size={16} />
                 Save
               </button>

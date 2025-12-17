@@ -50,21 +50,25 @@ function App() {
         <Route path="ipfs" element={<IPFSPage />} />
 
         {/* Dynamic plugin routes - all handled by PluginViewer */}
-        {pluginsLoaded && plugins.map(plugin => (
-          <Route
-            key={plugin.name}
-            path={`${plugin.mountPath.replace(/^\//, '')}/*`}
-            element={<PluginViewer plugin={plugin} />}
-          />
-        ))}
+        {pluginsLoaded &&
+          plugins.map(plugin => (
+            <Route
+              key={plugin.name}
+              path={`${plugin.mountPath.replace(/^\//, '')}/*`}
+              element={<PluginViewer plugin={plugin} />}
+            />
+          ))}
 
         {/* Loading state */}
         {!pluginsLoaded && (
-          <Route path="*" element={
-            <div className="flex items-center justify-center h-64">
-              <div className="text-[var(--color-text-secondary)]">Loading...</div>
-            </div>
-          } />
+          <Route
+            path="*"
+            element={
+              <div className="flex items-center justify-center h-64">
+                <div className="text-[var(--color-text-secondary)]">Loading...</div>
+              </div>
+            }
+          />
         )}
 
         {/* Catch-all for unmatched routes */}

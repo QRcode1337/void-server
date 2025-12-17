@@ -104,7 +104,7 @@ export const ThemeProvider = ({ children }) => {
     document.body.dataset.theme = themeName;
   }, [themeName, theme]);
 
-  const setTheme = (name) => {
+  const setTheme = name => {
     if (themes[name]) {
       setThemeName(name);
     }

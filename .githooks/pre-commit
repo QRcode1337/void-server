@@ -125,6 +125,47 @@ scan_file() {
   done < "$PATTERNS_FILE"
 }
 
+# Format staged client files with Prettier
+format_client() {
+  # Check if any client files are staged
+  local client_files
+  client_files=$(git diff --cached --name-only --diff-filter=ACMR | grep "^client/src/" || true)
+
+  if [[ -z "$client_files" ]]; then
+    return 0
+  fi
+
+  echo ""
+  echo "Formatting client files..."
+
+  # Check if client node_modules exists
+  if [[ ! -d "$PROJECT_ROOT/client/node_modules" ]]; then
+    echo -e "${YELLOW}Skipping format: client dependencies not installed${NC}"
+    return 0
+  fi
+
+  cd "$PROJECT_ROOT/client"
+
+  # Format only staged files
+  local files_to_format=""
+  while IFS= read -r file; do
+    # Remove client/ prefix for prettier
+    local relative_file="${file#client/}"
+    files_to_format="$files_to_format $relative_file"
+  done <<< "$client_files"
+
+  # Run prettier on staged files
+  if npx prettier --write $files_to_format 2>/dev/null; then
+    echo -e "${GREEN}Format complete${NC}"
+    # Re-add formatted files to staging
+    cd "$PROJECT_ROOT"
+    echo "$client_files" | xargs git add
+  else
+    echo -e "${YELLOW}Format skipped (prettier error)${NC}"
+    cd "$PROJECT_ROOT"
+  fi
+}
+
 # Lint staged client files
 lint_client() {
   # Check if any client files are staged
@@ -144,38 +185,25 @@ lint_client() {
     return 0
   fi
 
-  # Run lint (only fail on errors, not warnings)
   cd "$PROJECT_ROOT/client"
-  if npm run lint -- --max-warnings=-1 2>/dev/null; then
+  if npm run lint 2>/dev/null; then
     echo -e "${GREEN}Lint passed!${NC}"
     cd "$PROJECT_ROOT"
     return 0
-  else
-    # Check if there are actual errors (not just warnings)
-    local exit_code
-    npm run lint -- --quiet 2>/dev/null
-    exit_code=$?
-
-    if [[ $exit_code -eq 0 ]]; then
-      # Only warnings, no errors - allow commit
-      echo -e "${YELLOW}Lint warnings found (see 'npm run lint' for details)${NC}"
-      cd "$PROJECT_ROOT"
-      return 0
-    fi
-
-    echo ""
-    echo -e "${RED}================================${NC}"
-    echo -e "${RED}       LINT ERRORS FOUND        ${NC}"
-    echo -e "${RED}================================${NC}"
-    echo ""
-    npm run lint -- --quiet 2>&1 | head -50
-    echo ""
-    echo -e "${YELLOW}Run 'cd client && npm run lint' for full output${NC}"
-    echo ""
-    echo -e "${RED}Commit blocked.${NC}"
-    cd "$PROJECT_ROOT"
-    exit 1
   fi
+
+  echo ""
+  echo -e "${RED}================================${NC}"
+  echo -e "${RED}       LINT ERRORS FOUND        ${NC}"
+  echo -e "${RED}================================${NC}"
+  echo ""
+  npm run lint 2>&1 | head -50
+  echo ""
+  echo -e "${YELLOW}Run 'cd client && npm run lint' for full output${NC}"
+  echo ""
+  echo -e "${RED}Commit blocked.${NC}"
+  cd "$PROJECT_ROOT"
+  exit 1
 }
 
 # Main
@@ -206,7 +234,8 @@ main() {
     fi
   fi
 
-  # Run lint check
+  # Format and lint client files
+  format_client
   lint_client
 
   exit 0

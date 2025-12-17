@@ -66,7 +66,7 @@ function LogsPage() {
       toast.success(`Connected to ${selectedProcess} logs`);
     };
 
-    eventSource.onmessage = (event) => {
+    eventSource.onmessage = event => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'log') {
@@ -128,7 +128,7 @@ function LogsPage() {
   };
 
   // Handle process change
-  const handleProcessChange = (e) => {
+  const handleProcessChange = e => {
     setSelectedProcess(e.target.value);
     setLogs([]);
     setTotalLines(0);
@@ -167,10 +167,12 @@ function LogsPage() {
   };
 
   // Get log line color
-  const getLogColor = (log) => {
+  const getLogColor = log => {
     if (log.stream === 'err') return 'var(--color-error, #ff4444)';
-    if (log.message.includes('ERROR') || log.message.includes('error')) return 'var(--color-error, #ff4444)';
-    if (log.message.includes('WARN') || log.message.includes('warn')) return 'var(--color-warning, #ffaa00)';
+    if (log.message.includes('ERROR') || log.message.includes('error'))
+      return 'var(--color-error, #ff4444)';
+    if (log.message.includes('WARN') || log.message.includes('warn'))
+      return 'var(--color-warning, #ffaa00)';
     return 'var(--color-primary, #00ff00)';
   };
 
@@ -185,9 +187,7 @@ function LogsPage() {
       <div className="mb-4">
         <div className="flex items-center gap-3 mb-2">
           <FileText size={28} className="text-primary" />
-          <h1 className="text-2xl font-bold text-text-primary">
-            PM2 Logs
-          </h1>
+          <h1 className="text-2xl font-bold text-text-primary">PM2 Logs</h1>
         </div>
         <p className="text-sm text-text-secondary">
           Stream and monitor PM2 process logs in real-time
@@ -215,7 +215,7 @@ function LogsPage() {
           type="text"
           placeholder="Filter logs..."
           value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+          onChange={e => setFilter(e.target.value)}
           className="px-3 py-2 rounded-lg border bg-surface border-border text-text-primary focus:outline-none focus:ring-2 focus:ring-primary flex-1 min-w-[200px]"
         />
 
@@ -228,18 +228,12 @@ function LogsPage() {
           {isPaused ? 'Resume' : 'Pause'}
         </button>
 
-        <button
-          onClick={handleClear}
-          className="btn btn-secondary flex items-center gap-2"
-        >
+        <button onClick={handleClear} className="btn btn-secondary flex items-center gap-2">
           <Trash2 size={18} />
           Clear
         </button>
 
-        <button
-          onClick={handleReconnect}
-          className="btn btn-secondary flex items-center gap-2"
-        >
+        <button onClick={handleReconnect} className="btn btn-secondary flex items-center gap-2">
           <RefreshCw size={18} />
           Reconnect
         </button>
@@ -262,34 +256,34 @@ function LogsPage() {
               </label>
               <select
                 value={initialLines}
-                onChange={(e) => setInitialLines(Number(e.target.value))}
+                onChange={e => setInitialLines(Number(e.target.value))}
                 className="px-3 py-2 rounded-lg border bg-background border-border text-text-primary focus:outline-none"
               >
                 {INITIAL_LINES_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm mb-2 text-text-secondary">
-                Max Lines in View
-              </label>
+              <label className="block text-sm mb-2 text-text-secondary">Max Lines in View</label>
               <select
                 value={maxDomLines}
-                onChange={(e) => setMaxDomLines(Number(e.target.value))}
+                onChange={e => setMaxDomLines(Number(e.target.value))}
                 className="px-3 py-2 rounded-lg border bg-background border-border text-text-primary focus:outline-none"
               >
                 {MAX_DOM_LINES_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="flex items-end">
-              <p className="text-xs text-text-tertiary">
-                Changes take effect on reconnect
-              </p>
+              <p className="text-xs text-text-tertiary">Changes take effect on reconnect</p>
             </div>
           </div>
         </div>
@@ -299,15 +293,15 @@ function LogsPage() {
       <div className="mb-2 flex items-center justify-between text-sm text-text-secondary">
         <div className="flex items-center gap-4">
           <span className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span
+              className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
+            />
             <span style={{ color: isConnected ? 'var(--color-success)' : 'var(--color-error)' }}>
               {isConnected ? `Connected (${selectedProcess})` : 'Disconnected'}
             </span>
           </span>
           {isPaused && (
-            <span style={{ color: 'var(--color-warning)' }}>
-              Paused (logs buffered)
-            </span>
+            <span style={{ color: 'var(--color-warning)' }}>Paused (logs buffered)</span>
           )}
         </div>
         <div className="flex items-center gap-4">
@@ -347,10 +341,7 @@ function LogsPage() {
           <div className="space-y-0.5">
             {filteredLogs.map((log, index) => (
               <div key={index} className="flex gap-2 hover:bg-white/5 px-1 -mx-1 rounded">
-                <span
-                  className="flex-shrink-0 text-xs font-mono"
-                  style={{ color: '#666' }}
-                >
+                <span className="flex-shrink-0 text-xs font-mono" style={{ color: '#666' }}>
                   {new Date(log.timestamp).toLocaleTimeString()}
                 </span>
                 <span

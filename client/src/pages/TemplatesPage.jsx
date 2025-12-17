@@ -11,14 +11,15 @@ import {
   ChevronDown,
   ChevronRight,
   RotateCcw,
-  Shield
+  Shield,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 function TemplatesPage() {
   const [templates, setTemplates] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [variables, setVariables] = useState([]); void variables; // Set by API for template variable management
+  const [variables, setVariables] = useState([]);
+  void variables; // Set by API for template variable management
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [testResult, setTestResult] = useState(null);
@@ -32,7 +33,7 @@ function TemplatesPage() {
     template: '',
     variables: [],
     provider: { key: '', modelType: 'medium' },
-    settings: { temperature: 0.7, max_tokens: 2048 }
+    settings: { temperature: 0.7, max_tokens: 2048 },
   });
 
   // Fetch templates
@@ -78,14 +79,14 @@ function TemplatesPage() {
       template: '',
       variables: [],
       provider: { key: 'lmstudio', modelType: 'medium' },
-      settings: { temperature: 0.7, max_tokens: 2048 }
+      settings: { temperature: 0.7, max_tokens: 2048 },
     });
     setTestResult(null);
     setShowModal(true);
   };
 
   // Open modal for editing
-  const handleEdit = (template) => {
+  const handleEdit = template => {
     setEditingTemplate(template);
     setFormData({
       id: template.id,
@@ -94,7 +95,7 @@ function TemplatesPage() {
       template: template.template,
       variables: template.variables || [],
       provider: template.provider || { key: '', modelType: 'medium' },
-      settings: template.settings || { temperature: 0.7, max_tokens: 2048 }
+      settings: template.settings || { temperature: 0.7, max_tokens: 2048 },
     });
     setTestResult(null);
     setShowModal(true);
@@ -109,7 +110,7 @@ function TemplatesPage() {
     const response = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
+      body: JSON.stringify(formData),
     });
 
     const data = await response.json();
@@ -124,9 +125,9 @@ function TemplatesPage() {
   };
 
   // Delete template
-  const handleDelete = async (id) => {
+  const handleDelete = async id => {
     const response = await fetch(`/api/prompts/templates/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
     });
     const data = await response.json();
 
@@ -139,9 +140,9 @@ function TemplatesPage() {
   };
 
   // Reset core template to default
-  const handleReset = async (id) => {
+  const handleReset = async id => {
     const response = await fetch(`/api/prompts/templates/${id}/reset`, {
-      method: 'POST'
+      method: 'POST',
     });
     const data = await response.json();
 
@@ -159,8 +160,8 @@ function TemplatesPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        values: { userMessage: 'Hello, this is a test message.' }
-      })
+        values: { userMessage: 'Hello, this is a test message.' },
+      }),
     });
 
     const data = await response.json();
@@ -174,31 +175,31 @@ function TemplatesPage() {
   };
 
   // Duplicate template
-  const handleDuplicate = (template) => {
+  const handleDuplicate = template => {
     setEditingTemplate(null);
     setFormData({
       ...template,
       id: `${template.id}-copy`,
-      name: `${template.name} (Copy)`
+      name: `${template.name} (Copy)`,
     });
     setTestResult(null);
     setShowModal(true);
   };
 
   // Extract variables from template string
-  const extractVariables = (templateStr) => {
+  const extractVariables = templateStr => {
     const matches = templateStr.match(/\{\{#?(\w+)\}\}/g) || [];
     const vars = matches.map(m => m.replace(/\{\{#?|\}\}/g, ''));
     return [...new Set(vars)];
   };
 
   // Auto-extract variables when template changes
-  const handleTemplateChange = (value) => {
+  const handleTemplateChange = value => {
     const extracted = extractVariables(value);
     setFormData(prev => ({
       ...prev,
       template: value,
-      variables: extracted
+      variables: extracted,
     }));
   };
 
@@ -236,9 +237,9 @@ function TemplatesPage() {
             <div key={template.id} className="card">
               <div
                 className="flex items-center justify-between cursor-pointer"
-                onClick={() => setExpandedTemplate(
-                  expandedTemplate === template.id ? null : template.id
-                )}
+                onClick={() =>
+                  setExpandedTemplate(expandedTemplate === template.id ? null : template.id)
+                }
               >
                 <div className="flex items-center gap-3">
                   {expandedTemplate === template.id ? (
@@ -267,14 +268,20 @@ function TemplatesPage() {
                     </span>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleDuplicate(template); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleDuplicate(template);
+                    }}
                     className="p-2 rounded hover:bg-border/50 text-text-secondary"
                     title="Duplicate"
                   >
                     <Copy size={16} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleEdit(template); }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleEdit(template);
+                    }}
                     className="p-2 rounded hover:bg-border/50 text-text-secondary"
                     title="Edit"
                   >
@@ -282,7 +289,10 @@ function TemplatesPage() {
                   </button>
                   {template.isCore ? (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleReset(template.id); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleReset(template.id);
+                      }}
                       className="p-2 rounded hover:bg-amber-500/20 text-amber-500"
                       title="Reset to default"
                     >
@@ -290,7 +300,10 @@ function TemplatesPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleDelete(template.id); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDelete(template.id);
+                      }}
                       className="p-2 rounded hover:bg-error/20 text-error"
                       title="Delete"
                     >
@@ -313,9 +326,7 @@ function TemplatesPage() {
                       </pre>
                     </div>
                     <div>
-                      <h4 className="text-sm font-medium text-text-secondary mb-2">
-                        Variables
-                      </h4>
+                      <h4 className="text-sm font-medium text-text-secondary mb-2">Variables</h4>
                       <div className="flex flex-wrap gap-2">
                         {(template.variables || []).map(v => (
                           <span
@@ -328,12 +339,10 @@ function TemplatesPage() {
                       </div>
                       {template.settings && (
                         <div className="mt-4">
-                          <h4 className="text-sm font-medium text-text-secondary mb-2">
-                            Settings
-                          </h4>
+                          <h4 className="text-sm font-medium text-text-secondary mb-2">Settings</h4>
                           <p className="text-xs text-text-tertiary">
-                            Temperature: {template.settings.temperature} |
-                            Max tokens: {template.settings.max_tokens}
+                            Temperature: {template.settings.temperature} | Max tokens:{' '}
+                            {template.settings.max_tokens}
                           </p>
                         </div>
                       )}
@@ -354,7 +363,7 @@ function TemplatesPage() {
         >
           <div
             className="bg-surface border border-border rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
           >
             <div className="p-4 border-b border-border flex items-center justify-between">
               <h2 className="text-lg font-semibold text-text-primary">
@@ -372,26 +381,22 @@ function TemplatesPage() {
               {/* ID and Name */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    ID
-                  </label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">ID</label>
                   <input
                     type="text"
                     value={formData.id}
-                    onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                    onChange={e => setFormData({ ...formData, id: e.target.value })}
                     className="form-input w-full"
                     placeholder="template-id"
                     disabled={!!editingTemplate}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-text-secondary mb-1">
-                    Name
-                  </label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1">Name</label>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="form-input w-full"
                     placeholder="Template Name"
                   />
@@ -406,7 +411,7 @@ function TemplatesPage() {
                 <input
                   type="text"
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={e => setFormData({ ...formData, description: e.target.value })}
                   className="form-input w-full"
                   placeholder="What this template is for..."
                 />
@@ -419,7 +424,7 @@ function TemplatesPage() {
                 </label>
                 <textarea
                   value={formData.template}
-                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  onChange={e => handleTemplateChange(e.target.value)}
                   className="form-input w-full font-mono text-sm"
                   rows={8}
                   placeholder="Use {{variableName}} for variable substitution..."
@@ -437,15 +442,19 @@ function TemplatesPage() {
                   </label>
                   <select
                     value={formData.provider.key}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      provider: { ...formData.provider, key: e.target.value }
-                    })}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        provider: { ...formData.provider, key: e.target.value },
+                      })
+                    }
                     className="form-input w-full"
                   >
                     <option value="">Use active provider</option>
                     {providers.map(p => (
-                      <option key={p.key} value={p.key}>{p.name}</option>
+                      <option key={p.key} value={p.key}>
+                        {p.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -455,10 +464,12 @@ function TemplatesPage() {
                   </label>
                   <select
                     value={formData.provider.modelType}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      provider: { ...formData.provider, modelType: e.target.value }
-                    })}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        provider: { ...formData.provider, modelType: e.target.value },
+                      })
+                    }
                     className="form-input w-full"
                   >
                     <option value="light">Light (fast)</option>
@@ -480,10 +491,12 @@ function TemplatesPage() {
                     max="2"
                     step="0.1"
                     value={formData.settings.temperature}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      settings: { ...formData.settings, temperature: parseFloat(e.target.value) }
-                    })}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, temperature: parseFloat(e.target.value) },
+                      })
+                    }
                     className="form-input w-full"
                   />
                 </div>
@@ -497,10 +510,12 @@ function TemplatesPage() {
                     max="32000"
                     step="100"
                     value={formData.settings.max_tokens}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      settings: { ...formData.settings, max_tokens: parseInt(e.target.value) }
-                    })}
+                    onChange={e =>
+                      setFormData({
+                        ...formData,
+                        settings: { ...formData.settings, max_tokens: parseInt(e.target.value) },
+                      })
+                    }
                     className="form-input w-full"
                   />
                 </div>
@@ -509,9 +524,7 @@ function TemplatesPage() {
               {/* Test result */}
               {testResult && (
                 <div className="p-3 rounded-lg bg-background">
-                  <h4 className="text-sm font-medium text-text-secondary mb-2">
-                    Test Result
-                  </h4>
+                  <h4 className="text-sm font-medium text-text-secondary mb-2">Test Result</h4>
                   <pre className="text-xs overflow-auto max-h-32 text-text-primary">
                     {testResult.prompt || testResult.error}
                   </pre>
@@ -530,16 +543,10 @@ function TemplatesPage() {
                 Test
               </button>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="btn btn-secondary"
-                >
+                <button onClick={() => setShowModal(false)} className="btn btn-secondary">
                   Cancel
                 </button>
-                <button
-                  onClick={handleSave}
-                  className="btn btn-primary flex items-center gap-2"
-                >
+                <button onClick={handleSave} className="btn btn-primary flex items-center gap-2">
                   <Save size={16} />
                   Save
                 </button>

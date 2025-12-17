@@ -4,7 +4,7 @@ import * as LucideIcons from 'lucide-react';
 import { ICON_DEFINITIONS, ICON_CATEGORIES, DEFAULT_ICON } from '../config/icons';
 
 // Convert kebab-case to PascalCase for lucide-react imports
-const kebabToPascal = (str) => {
+const kebabToPascal = str => {
   return str
     .split('-')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
@@ -12,7 +12,7 @@ const kebabToPascal = (str) => {
 };
 
 // Get icon component from lucide-react
-const getIconComponent = (iconName) => {
+const getIconComponent = iconName => {
   const pascalName = kebabToPascal(iconName);
   return LucideIcons[pascalName] || LucideIcons.Box;
 };
@@ -34,10 +34,11 @@ export default function IconPicker({ value, onChange, className = '' }) {
       return ICON_DEFINITIONS;
     }
     const searchLower = search.toLowerCase();
-    return ICON_DEFINITIONS.filter(icon =>
-      icon.label.toLowerCase().includes(searchLower) ||
-      icon.value.toLowerCase().includes(searchLower) ||
-      icon.category.toLowerCase().includes(searchLower)
+    return ICON_DEFINITIONS.filter(
+      icon =>
+        icon.label.toLowerCase().includes(searchLower) ||
+        icon.value.toLowerCase().includes(searchLower) ||
+        icon.category.toLowerCase().includes(searchLower)
     );
   }, [search]);
 
@@ -57,14 +58,14 @@ export default function IconPicker({ value, onChange, className = '' }) {
   const currentIcon = ICON_DEFINITIONS.find(i => i.value === value) || {
     value: value || DEFAULT_ICON,
     label: value || DEFAULT_ICON,
-    category: 'general'
+    category: 'general',
   };
 
   const CurrentIconComponent = getIconComponent(currentIcon.value);
 
   // Close on outside click
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    const handleClickOutside = e => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
       }
@@ -89,7 +90,7 @@ export default function IconPicker({ value, onChange, className = '' }) {
   }, [highlightedIndex, isOpen]);
 
   // Handle keyboard navigation
-  const handleKeyDown = (e) => {
+  const handleKeyDown = e => {
     if (!isOpen) {
       if (e.key === 'Enter' || e.key === 'ArrowDown') {
         e.preventDefault();
@@ -101,9 +102,7 @@ export default function IconPicker({ value, onChange, className = '' }) {
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
-        setHighlightedIndex(prev =>
-          Math.min(prev + 1, filteredIcons.length - 1)
-        );
+        setHighlightedIndex(prev => Math.min(prev + 1, filteredIcons.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -123,7 +122,7 @@ export default function IconPicker({ value, onChange, className = '' }) {
     }
   };
 
-  const selectIcon = (iconValue) => {
+  const selectIcon = iconValue => {
     onChange(iconValue);
     setIsOpen(false);
     setSearch('');
@@ -154,7 +153,9 @@ export default function IconPicker({ value, onChange, className = '' }) {
             {ICON_CATEGORIES[currentIcon.category] || currentIcon.category}
           </div>
         </div>
-        <ChevronDown className={`w-5 h-5 text-[var(--color-text-secondary)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`w-5 h-5 text-[var(--color-text-secondary)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {/* Dropdown */}
@@ -168,7 +169,7 @@ export default function IconPicker({ value, onChange, className = '' }) {
                 ref={inputRef}
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={e => setSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Search icons..."
                 className="w-full pl-9 pr-8 py-2 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none focus:border-[var(--color-primary)]"
@@ -199,7 +200,7 @@ export default function IconPicker({ value, onChange, className = '' }) {
                   </div>
                   {/* Icons Grid */}
                   <div className="grid grid-cols-4 gap-1 p-2">
-                    {icons.map((icon) => {
+                    {icons.map(icon => {
                       const IconComponent = getIconComponent(icon.value);
                       const itemIndex = flatIndex++;
                       const isHighlighted = itemIndex === highlightedIndex;
@@ -215,8 +216,8 @@ export default function IconPicker({ value, onChange, className = '' }) {
                             isSelected
                               ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                               : isHighlighted
-                              ? 'bg-[var(--color-border)]'
-                              : 'hover:bg-[var(--color-border)]'
+                                ? 'bg-[var(--color-border)]'
+                                : 'hover:bg-[var(--color-border)]'
                           }`}
                           title={icon.label}
                         >
