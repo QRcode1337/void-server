@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.9.3] - 2025-12-16
+
+Patch release with core template/variable protection and navigation improvements.
+
+### New Features
+
+- **Core Template & Variable Protection** - Essential templates and variables are now protected
+  - Core templates and variables cannot be deleted (required for system features)
+  - Users can edit core items but reset them to defaults with one click
+  - Missing core items are automatically restored on startup
+  - Visual "Core" badge with shield icon identifies protected items
+  - Reset button (rotate icon) appears instead of delete for core items
+- **Auto-collapse Navigation Setting** - New toggle in Settings > General
+  - When enabled (default): navigation starts collapsed and auto-collapses after navigating
+  - When disabled: navigation state persists across page loads and navigation
+  - Setting syncs across browser tabs
+
+### Fixes
+
+- **Update toast button visibility** - Fixed Update button in toast notification not showing
+  - Button used `bg-primary` which wasn't defined as a utility class
+  - Changed to `bg-[var(--color-primary)]` for proper styling
+- **Plugin client not loading after install** - Fixed newly installed plugins showing "no client-side interface"
+  - Server restart now also restarts void-client (Vite) so it picks up new plugins
+  - Vite's virtual module cache was stale when only server restarted
+- **Docker missing default templates** - Fixed Docker builds not including `data_template/` directory
+  - Users in Docker had no templates/variables on fresh install
+  - Dockerfile now copies `data_template/` to the production image
+
+---
+
 ## [0.9.2] - 2025-12-16
 
 Patch release fixing plugin installation UX.

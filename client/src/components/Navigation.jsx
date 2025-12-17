@@ -70,7 +70,7 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
                                         toast.dismiss(t.id);
                                         handleUpdate(data);
                                     }}
-                                    className="px-3 py-1 bg-primary text-white rounded text-sm hover:bg-primary/80"
+                                    className="px-3 py-1 bg-[var(--color-primary)] text-background rounded text-sm hover:bg-[var(--color-primary)]/80"
                                 >
                                     Update
                                 </button>

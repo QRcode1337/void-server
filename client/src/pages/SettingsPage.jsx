@@ -18,7 +18,8 @@ import {
   Sliders,
   ExternalLink,
   Palette,
-  ChevronDown
+  ChevronDown,
+  PanelLeftClose
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '../contexts/ThemeContext';
@@ -27,6 +28,23 @@ const SettingsPage = () => {
   const { tab } = useParams();
   const navigate = useNavigate();
   const { themeName, setTheme, themes } = useTheme();
+
+  // Auto-collapse navigation setting
+  const [autoCollapseNav, setAutoCollapseNav] = useState(() => {
+    const saved = localStorage.getItem('autoCollapseNav');
+    return saved === null ? true : saved === 'true';
+  });
+
+  const handleAutoCollapseChange = (enabled) => {
+    setAutoCollapseNav(enabled);
+    localStorage.setItem('autoCollapseNav', enabled.toString());
+    // Dispatch storage event for other tabs/components to pick up
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'autoCollapseNav',
+      newValue: enabled.toString()
+    }));
+    toast.success(enabled ? 'Navigation will auto-collapse' : 'Navigation will stay open');
+  };
 
   const [providers, setProviders] = useState({});
   const [activeProvider, setActiveProvider] = useState('');
@@ -424,6 +442,38 @@ const SettingsPage = () => {
                   </span>
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Navigation Settings */}
+          <div className="card">
+            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
+              <PanelLeftClose className="w-5 h-5" />
+              Navigation
+            </h3>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+              Control how the sidebar navigation behaves.
+            </p>
+
+            <div className="flex items-center justify-between p-4 bg-[var(--color-background)] rounded-lg border border-[var(--color-border)]">
+              <div>
+                <h4 className="font-medium text-[var(--color-text-primary)]">Auto-collapse navigation</h4>
+                <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                  {autoCollapseNav
+                    ? 'Navigation collapses automatically when you navigate to a page'
+                    : 'Navigation stays open as you move between pages'
+                  }
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={autoCollapseNav}
+                  onChange={(e) => handleAutoCollapseChange(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-[var(--color-surface)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
+              </label>
             </div>
           </div>
         </div>

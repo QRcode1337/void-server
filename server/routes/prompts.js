@@ -14,11 +14,23 @@ const promptExecutor = require('../services/prompt-executor');
 
 /**
  * GET /api/prompts/templates
- * List all templates
+ * List all templates (with isCore flag)
  */
 router.get('/templates', (req, res) => {
-  const templates = promptService.getTemplates();
+  const templates = promptService.getTemplates().map(t => ({
+    ...t,
+    isCore: promptService.isCoreTemplate(t.id)
+  }));
   res.json({ success: true, templates });
+});
+
+/**
+ * GET /api/prompts/templates/core
+ * Get list of core template IDs
+ */
+router.get('/templates/core', (req, res) => {
+  const coreIds = promptService.getCoreTemplateIds();
+  res.json({ success: true, coreIds });
 });
 
 /**
@@ -65,13 +77,27 @@ router.put('/templates/:id', (req, res) => {
 
 /**
  * DELETE /api/prompts/templates/:id
- * Delete a template
+ * Delete a template (core templates cannot be deleted)
  */
 router.delete('/templates/:id', (req, res) => {
   const result = promptService.deleteTemplate(req.params.id);
 
   if (!result.success) {
-    return res.status(404).json(result);
+    return res.status(400).json(result);
+  }
+
+  res.json(result);
+});
+
+/**
+ * POST /api/prompts/templates/:id/reset
+ * Reset a core template to its default value
+ */
+router.post('/templates/:id/reset', (req, res) => {
+  const result = promptService.resetTemplate(req.params.id);
+
+  if (!result.success) {
+    return res.status(400).json(result);
   }
 
   res.json(result);
@@ -112,11 +138,23 @@ router.post('/templates/validate', (req, res) => {
 
 /**
  * GET /api/prompts/variables
- * List all variables
+ * List all variables (with isCore flag)
  */
 router.get('/variables', (req, res) => {
-  const variables = promptService.getVariables();
+  const variables = promptService.getVariables().map(v => ({
+    ...v,
+    isCore: promptService.isCoreVariable(v.id)
+  }));
   res.json({ success: true, variables });
+});
+
+/**
+ * GET /api/prompts/variables/core
+ * Get list of core variable IDs
+ */
+router.get('/variables/core', (req, res) => {
+  const coreIds = promptService.getCoreVariableIds();
+  res.json({ success: true, coreIds });
 });
 
 /**
@@ -172,13 +210,27 @@ router.put('/variables/:id', (req, res) => {
 
 /**
  * DELETE /api/prompts/variables/:id
- * Delete a variable
+ * Delete a variable (core variables cannot be deleted)
  */
 router.delete('/variables/:id', (req, res) => {
   const result = promptService.deleteVariable(req.params.id);
 
   if (!result.success) {
-    return res.status(404).json(result);
+    return res.status(400).json(result);
+  }
+
+  res.json(result);
+});
+
+/**
+ * POST /api/prompts/variables/:id/reset
+ * Reset a core variable to its default value
+ */
+router.post('/variables/:id/reset', (req, res) => {
+  const result = promptService.resetVariable(req.params.id);
+
+  if (!result.success) {
+    return res.status(400).json(result);
   }
 
   res.json(result);

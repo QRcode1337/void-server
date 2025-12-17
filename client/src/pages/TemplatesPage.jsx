@@ -9,7 +9,9 @@ import {
   Play,
   Copy,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  RotateCcw,
+  Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -136,6 +138,21 @@ function TemplatesPage() {
     }
   };
 
+  // Reset core template to default
+  const handleReset = async (id) => {
+    const response = await fetch(`/api/prompts/templates/${id}/reset`, {
+      method: 'POST'
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      await fetchTemplates();
+      toast.success('Template reset to default');
+    } else {
+      toast.error(data.error || 'Failed to reset template');
+    }
+  };
+
   // Test template
   const handleTest = async () => {
     const response = await fetch(`/api/prompts/templates/${formData.id || 'test'}/test`, {
@@ -238,6 +255,12 @@ function TemplatesPage() {
                   <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary">
                     {template.id}
                   </span>
+                  {template.isCore && (
+                    <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-500 flex items-center gap-1">
+                      <Shield size={12} />
+                      Core
+                    </span>
+                  )}
                   {template.provider?.key && (
                     <span className="text-xs px-2 py-1 rounded bg-border text-text-secondary">
                       {template.provider.key}
@@ -257,13 +280,23 @@ function TemplatesPage() {
                   >
                     <Edit size={16} />
                   </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDelete(template.id); }}
-                    className="p-2 rounded hover:bg-error/20 text-error"
-                    title="Delete"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  {template.isCore ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleReset(template.id); }}
+                      className="p-2 rounded hover:bg-amber-500/20 text-amber-500"
+                      title="Reset to default"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(template.id); }}
+                      className="p-2 rounded hover:bg-error/20 text-error"
+                      title="Delete"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
 

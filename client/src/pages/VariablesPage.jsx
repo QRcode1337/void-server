@@ -8,7 +8,9 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  FileText
+  FileText,
+  RotateCcw,
+  Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -155,6 +157,21 @@ function VariablesPage() {
     }
   };
 
+  // Reset core variable to default
+  const handleReset = async (id) => {
+    const response = await fetch(`/api/prompts/variables/${id}/reset`, {
+      method: 'POST'
+    });
+    const data = await response.json();
+
+    if (data.success) {
+      await fetchVariables();
+      toast.success('Variable reset to default');
+    } else {
+      toast.error(data.error || 'Failed to reset variable');
+    }
+  };
+
   // Get category info
   const getCategoryInfo = (cat) => {
     return CATEGORIES.find(c => c.value === cat) || CATEGORIES[4];
@@ -251,6 +268,12 @@ function VariablesPage() {
                             <span className="text-xs px-2 py-1 rounded bg-primary/10 text-primary font-mono">
                               {`{{${variable.id}}}`}
                             </span>
+                            {variable.isCore && (
+                              <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-500 flex items-center gap-1">
+                                <Shield size={12} />
+                                Core
+                              </span>
+                            )}
                             {varUsage.length > 0 && (
                               <span className="text-xs px-2 py-1 rounded bg-border text-text-secondary flex items-center gap-1">
                                 <FileText size={12} />
@@ -264,18 +287,28 @@ function VariablesPage() {
                             >
                               <Edit size={16} />
                             </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(variable.id); }}
-                              className={`p-2 rounded ${
-                                varUsage.length > 0
-                                  ? 'text-text-tertiary cursor-not-allowed'
-                                  : 'hover:bg-error/20 text-error'
-                              }`}
-                              title={varUsage.length > 0 ? 'In use by templates' : 'Delete'}
-                              disabled={varUsage.length > 0}
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {variable.isCore ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleReset(variable.id); }}
+                                className="p-2 rounded hover:bg-amber-500/20 text-amber-500"
+                                title="Reset to default"
+                              >
+                                <RotateCcw size={16} />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(variable.id); }}
+                                className={`p-2 rounded ${
+                                  varUsage.length > 0
+                                    ? 'text-text-tertiary cursor-not-allowed'
+                                    : 'hover:bg-error/20 text-error'
+                                }`}
+                                title={varUsage.length > 0 ? 'In use by templates' : 'Delete'}
+                                disabled={varUsage.length > 0}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
                           </div>
                         </div>
 

@@ -18,6 +18,68 @@ const TEMPLATE_VARIABLES_PATH = path.join(TEMPLATE_DIR, 'variables.json');
 
 let templatesData = null;
 let variablesData = null;
+let defaultTemplates = null;
+let defaultVariables = null;
+
+/**
+ * Load default templates from data_template (cached)
+ */
+function getDefaultTemplates() {
+  if (!defaultTemplates) {
+    if (fs.existsSync(TEMPLATE_TEMPLATES_PATH)) {
+      defaultTemplates = JSON.parse(fs.readFileSync(TEMPLATE_TEMPLATES_PATH, 'utf8'));
+    } else {
+      defaultTemplates = { templates: {} };
+    }
+  }
+  return defaultTemplates;
+}
+
+/**
+ * Load default variables from data_template (cached)
+ */
+function getDefaultVariables() {
+  if (!defaultVariables) {
+    if (fs.existsSync(TEMPLATE_VARIABLES_PATH)) {
+      defaultVariables = JSON.parse(fs.readFileSync(TEMPLATE_VARIABLES_PATH, 'utf8'));
+    } else {
+      defaultVariables = { variables: {} };
+    }
+  }
+  return defaultVariables;
+}
+
+/**
+ * Check if a template is a core template (defined in data_template)
+ */
+function isCoreTemplate(id) {
+  const defaults = getDefaultTemplates();
+  return !!defaults.templates[id];
+}
+
+/**
+ * Check if a variable is a core variable (defined in data_template)
+ */
+function isCoreVariable(id) {
+  const defaults = getDefaultVariables();
+  return !!defaults.variables[id];
+}
+
+/**
+ * Get list of core template IDs
+ */
+function getCoreTemplateIds() {
+  const defaults = getDefaultTemplates();
+  return Object.keys(defaults.templates);
+}
+
+/**
+ * Get list of core variable IDs
+ */
+function getCoreVariableIds() {
+  const defaults = getDefaultVariables();
+  return Object.keys(defaults.variables);
+}
 
 /**
  * Ensure config directory exists
@@ -66,7 +128,7 @@ function isEmptyConfig(filePath, key) {
 }
 
 /**
- * Load templates from disk
+ * Load templates from disk and merge missing core templates
  */
 function loadTemplates() {
   ensureConfigDir();
@@ -83,6 +145,20 @@ function loadTemplates() {
   }
   templatesData = JSON.parse(fs.readFileSync(TEMPLATES_PATH, 'utf8'));
 
+  // Merge any missing core templates
+  const defaults = getDefaultTemplates();
+  let merged = 0;
+  for (const [id, template] of Object.entries(defaults.templates)) {
+    if (!templatesData.templates[id]) {
+      templatesData.templates[id] = template;
+      merged++;
+    }
+  }
+  if (merged > 0) {
+    saveTemplates();
+    console.log(`📋 Added ${merged} missing core template(s)`);
+  }
+
   return templatesData;
 }
 
@@ -95,7 +171,7 @@ function saveTemplates() {
 }
 
 /**
- * Load variables from disk
+ * Load variables from disk and merge missing core variables
  */
 function loadVariables() {
   ensureConfigDir();
@@ -110,6 +186,20 @@ function loadVariables() {
     }
   }
   variablesData = JSON.parse(fs.readFileSync(VARIABLES_PATH, 'utf8'));
+
+  // Merge any missing core variables
+  const defaults = getDefaultVariables();
+  let merged = 0;
+  for (const [id, variable] of Object.entries(defaults.variables)) {
+    if (!variablesData.variables[id]) {
+      variablesData.variables[id] = variable;
+      merged++;
+    }
+  }
+  if (merged > 0) {
+    saveVariables();
+    console.log(`📋 Added ${merged} missing core variable(s)`);
+  }
 
   return variablesData;
 }
@@ -200,7 +290,7 @@ function updateTemplate(id, updates) {
 }
 
 /**
- * Delete a template
+ * Delete a template (core templates cannot be deleted)
  */
 function deleteTemplate(id) {
   if (!templatesData) loadTemplates();
@@ -209,12 +299,34 @@ function deleteTemplate(id) {
     return { success: false, error: `Template "${id}" not found` };
   }
 
+  if (isCoreTemplate(id)) {
+    return { success: false, error: `Cannot delete core template "${id}". You can reset it to defaults instead.` };
+  }
+
   const name = templatesData.templates[id].name;
   delete templatesData.templates[id];
   saveTemplates();
 
   console.log(`🗑️ Deleted template: ${name}`);
   return { success: true, message: `Deleted template "${name}"` };
+}
+
+/**
+ * Reset a core template to its default value
+ */
+function resetTemplate(id) {
+  if (!templatesData) loadTemplates();
+  const defaults = getDefaultTemplates();
+
+  if (!defaults.templates[id]) {
+    return { success: false, error: `Template "${id}" is not a core template and cannot be reset` };
+  }
+
+  templatesData.templates[id] = { ...defaults.templates[id] };
+  saveTemplates();
+
+  console.log(`🔄 Reset template to default: ${templatesData.templates[id].name}`);
+  return { success: true, template: templatesData.templates[id] };
 }
 
 // ============================================================================
@@ -289,7 +401,7 @@ function updateVariable(id, updates) {
 }
 
 /**
- * Delete a variable
+ * Delete a variable (core variables cannot be deleted)
  */
 function deleteVariable(id) {
   if (!variablesData) loadVariables();
@@ -298,12 +410,34 @@ function deleteVariable(id) {
     return { success: false, error: `Variable "${id}" not found` };
   }
 
+  if (isCoreVariable(id)) {
+    return { success: false, error: `Cannot delete core variable "${id}". You can reset it to defaults instead.` };
+  }
+
   const name = variablesData.variables[id].name;
   delete variablesData.variables[id];
   saveVariables();
 
   console.log(`🗑️ Deleted variable: ${name}`);
   return { success: true, message: `Deleted variable "${name}"` };
+}
+
+/**
+ * Reset a core variable to its default value
+ */
+function resetVariable(id) {
+  if (!variablesData) loadVariables();
+  const defaults = getDefaultVariables();
+
+  if (!defaults.variables[id]) {
+    return { success: false, error: `Variable "${id}" is not a core variable and cannot be reset` };
+  }
+
+  variablesData.variables[id] = { ...defaults.variables[id] };
+  saveVariables();
+
+  console.log(`🔄 Reset variable to default: ${variablesData.variables[id].name}`);
+  return { success: true, variable: variablesData.variables[id] };
 }
 
 // ============================================================================
@@ -474,11 +608,17 @@ module.exports = {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  resetTemplate,
+  isCoreTemplate,
+  getCoreTemplateIds,
   getVariables,
   getVariable,
   createVariable,
   updateVariable,
   deleteVariable,
+  resetVariable,
+  isCoreVariable,
+  getCoreVariableIds,
   buildPrompt,
   validateTemplate,
   getVariableUsage

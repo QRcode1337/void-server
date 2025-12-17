@@ -39,9 +39,10 @@ RUN npm ci --omit=dev
 # Copy built client from builder
 COPY --from=builder /app/client/dist ./client/dist
 
-# Copy server and plugins
+# Copy server, plugins, and data templates
 COPY server/ ./server/
 COPY plugins/ ./plugins/
+COPY data_template/ ./data_template/
 
 # Create directories for volume mounts
 RUN mkdir -p config backups logs data
