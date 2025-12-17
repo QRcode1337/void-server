@@ -688,6 +688,7 @@ function ChatPage() {
                               ? 'bg-primary text-background'
                               : 'bg-border/50 text-text-primary'
                           }`}
+                          data-role={msg.role}
                         >
                           {thinkContent && <ThinkingBlock content={thinkContent} />}
                           <p className="whitespace-pre-wrap">{displayContent}</p>
@@ -727,11 +728,13 @@ function ChatPage() {
                     rows={1}
                     className="form-input flex-1 resize-none"
                     disabled={isLoading}
+                    data-testid="message-input"
                   />
                   <button
                     onClick={handleSend}
                     disabled={!inputValue.trim() || isLoading}
                     className="btn btn-primary px-4"
+                    data-testid="send-button"
                   >
                     <Send size={18} />
                   </button>

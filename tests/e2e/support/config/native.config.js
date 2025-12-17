@@ -11,11 +11,11 @@ module.exports = {
       ipfs: {
         url: 'http://localhost:5001',
         gateway: 'http://localhost:8080/ipfs',
-        mock: true,
+        mock: false,
       },
       lmstudio: {
         url: 'http://localhost:1234/v1',
-        mock: true,
+        mock: false,
       },
     },
     timeouts: {

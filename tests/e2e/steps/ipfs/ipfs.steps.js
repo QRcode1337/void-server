@@ -6,13 +6,14 @@ Then('I should see the IPFS interface', async function () {
 });
 
 Then('I should see the daemon status', async function () {
-  await expect(this.page.locator('text=Online, text=Offline, text=Status')).toBeVisible();
+  // Look for IPFS status heading which shows "IPFS Online" or "IPFS Offline"
+  await expect(this.page.locator('h3:has-text("IPFS Online"), h3:has-text("IPFS Offline")')).toBeVisible({ timeout: 5000 });
 });
 
 Given('IPFS daemon is running', async function () {
   const response = await this.request.get(`${this.config.appUrl}/api/ipfs/status`);
   const status = await response.json();
-  if (!status.online) {
+  if (!status.daemonOnline && !status.online) {
     return 'skipped';
   }
 });
@@ -20,7 +21,7 @@ Given('IPFS daemon is running', async function () {
 Given('IPFS daemon is not running', async function () {
   const response = await this.request.get(`${this.config.appUrl}/api/ipfs/status`);
   const status = await response.json();
-  if (status.online) {
+  if (status.daemonOnline || status.online) {
     return 'skipped';
   }
 });

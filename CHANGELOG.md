@@ -2,7 +2,7 @@
 
 ## [0.10.3] - 2025-12-17
 
-Patch release with Docker improvements and documentation updates.
+Patch release with Docker improvements, documentation updates, and comprehensive test infrastructure.
 
 ### Improvements
 
@@ -15,11 +15,22 @@ Patch release with Docker improvements and documentation updates.
   - Disabled `set-state-in-effect` (standard data fetching pattern)
   - Kept `exhaustive-deps` as error for catching real bugs
 - **Pre-push hook for version tags** - E2E tests run automatically when pushing v* tags
+- **E2E test infrastructure** - Comprehensive test framework with mock services and cleanup
+  - Added `failFast: true` to Cucumber config for faster debugging
+  - Configured 1s default timeout, 10s navigation timeout
+  - Added mock LM Studio server for CI - tests don't require real LLM
+  - Reorganized tests to CRUD order with automatic cleanup
+  - Tests use unique timestamps to prevent data conflicts
+  - Added data-testid attributes to ChatPage (message-input, send-button, data-role)
+  - 50 scenarios passing, 7 skipped (environment-dependent)
 
 ### Fixes
 
 - **Lint errors** - Fixed unused variables, function ordering, useCallback for handleUpdate
 - **Pre-commit hook** - Now runs Prettier before ESLint on client files
+- **Test selectors** - Fixed data-testid attribute patterns to match test step expectations
+- **IPFS daemon status check** - Fixed to check `daemonOnline` field (not `online`)
+- **Chat API response** - Fixed test to extract chat from nested response object
 
 ---
 

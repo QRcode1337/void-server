@@ -1,9 +1,12 @@
 const { Given, When, Then } = require('@cucumber/cucumber');
 const { expect } = require('@playwright/test');
 
+// Page navigation timeout - longer than default since it includes network requests
+const NAV_TIMEOUT = 10000;
+
 Given('I am on the dashboard page', async function () {
-  await this.page.goto(`${this.config.appUrl}/`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the {string} page', async function (pageName) {
@@ -26,53 +29,53 @@ Given('I am on the {string} page', async function (pageName) {
   if (!route) {
     throw new Error(`Unknown page: ${pageName}`);
   }
-  await this.page.goto(`${this.config.appUrl}${route}`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}${route}`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the settings page', async function () {
-  await this.page.goto(`${this.config.appUrl}/settings`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/settings`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the templates page', async function () {
-  await this.page.goto(`${this.config.appUrl}/prompts/templates`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/prompts/templates`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the variables page', async function () {
-  await this.page.goto(`${this.config.appUrl}/prompts/variables`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/prompts/variables`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the chat page', async function () {
-  await this.page.goto(`${this.config.appUrl}/chat`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/chat`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the memories page', async function () {
-  await this.page.goto(`${this.config.appUrl}/memories`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/memories`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the plugin manager page', async function () {
-  await this.page.goto(`${this.config.appUrl}/plugins`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/plugins`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the wallet page', async function () {
-  await this.page.goto(`${this.config.appUrl}/wallet`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/wallet`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the IPFS page', async function () {
-  await this.page.goto(`${this.config.appUrl}/ipfs`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/ipfs`, { timeout: NAV_TIMEOUT });
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Given('I am on the {string} settings tab', async function (tabName) {
   await this.page.click(`button:has-text("${tabName}")`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 When('I click the {string} button', async function (buttonText) {
@@ -81,7 +84,7 @@ When('I click the {string} button', async function (buttonText) {
 
 When('I click on the {string} tab', async function (tabName) {
   await this.page.click(`button:has-text("${tabName}")`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.waitForLoadState('networkidle', { timeout: NAV_TIMEOUT });
 });
 
 Then('I should see the {string} tab', async function (tabName) {

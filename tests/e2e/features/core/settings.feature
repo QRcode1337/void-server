@@ -14,7 +14,7 @@ Feature: Settings Page
 
   Scenario: Theme selection
     Given I am on the "General" settings tab
-    When I select the "Catppuccin Mocha" theme
+    When I select the "Green" theme
     Then I should see a success toast
 
   Scenario: Auto-collapse navigation toggle

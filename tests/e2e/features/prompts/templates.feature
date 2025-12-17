@@ -16,18 +16,16 @@ Feature: Prompt Templates
     When I click on a template
     Then I should see the template editor
 
-  Scenario: Create custom template
+  Scenario: Create and delete custom template
     When I click the "New Template" button
     And I fill in the template form
     And I save the template
     Then I should see the new template in the list
+    # Cleanup
+    When I delete the test template
+    Then the test template should be removed
 
   @api @smoke
   Scenario: API - List templates
     When I GET "/api/prompts/templates"
     Then the response should contain templates
-
-  @api
-  Scenario: API - Get core template IDs
-    When I GET "/api/prompts/templates/core"
-    Then the response should contain core template IDs

@@ -116,7 +116,7 @@ Then('the response should contain derived addresses', async function () {
 
 Then('the response should contain daemon status', async function () {
   const response = this.testData.lastResponse;
-  expect(response.online !== undefined || response.status !== undefined).toBeTruthy();
+  expect(response.daemonOnline !== undefined || response.online !== undefined || response.status !== undefined).toBeTruthy();
 });
 
 Then('the response should contain update information', async function () {

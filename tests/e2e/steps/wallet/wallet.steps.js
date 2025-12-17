@@ -28,9 +28,12 @@ When('I enter wallet name {string}', async function (name) {
 });
 
 When('I complete the wallet creation', async function () {
-  await this.page.click('button:has-text("Create"), button:has-text("Save")');
+  // Target the button inside the modal (last match since modal overlays the page)
+  // Use force:true if modal backdrop intercepts clicks
+  const button = this.page.locator('button:has-text("Create"), button:has-text("Import"), button:has-text("Save")').last();
+  await button.click({ timeout: 5000 });
 });
 
 Then('a wallet should be created', async function () {
-  await expect(this.page.locator('text=Test Wallet')).toBeVisible({ timeout: 10000 });
+  await expect(this.page.locator('text=Test Wallet').first()).toBeVisible({ timeout: 10000 });
 });

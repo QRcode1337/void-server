@@ -14,11 +14,14 @@ Feature: Memories System
     And I should see the memory list or empty state
 
   @requires-neo4j
-  Scenario: Create new memory
+  Scenario: Create and delete memory
     When I click the "New Memory" button
     And I fill in the memory form
     And I save the memory
     Then the memory should appear in the list
+    # Cleanup
+    When I delete the test memory
+    Then the test memory should be removed
 
   @requires-neo4j
   Scenario: Search memories
@@ -28,7 +31,7 @@ Feature: Memories System
 
   @requires-neo4j
   Scenario: View memory graph
-    When I click the "Graph" tab
+    When I click the "Visualization" tab
     Then I should see the graph visualization
 
   @api @requires-neo4j @smoke

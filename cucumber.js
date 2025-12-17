@@ -8,6 +8,7 @@ const common = {
   formatOptions: {
     snippetInterface: 'async-await',
   },
+  failFast: true,
 };
 
 module.exports = {

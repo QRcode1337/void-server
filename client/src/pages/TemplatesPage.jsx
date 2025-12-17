@@ -223,7 +223,7 @@ function TemplatesPage() {
       </div>
 
       {/* Templates list */}
-      <div className="space-y-3">
+      <div data-testid="templates" className="space-y-3">
         {templates.length === 0 ? (
           <div className="card text-center py-8">
             <FileCode size={48} className="mx-auto mb-4 text-text-tertiary opacity-50" />
@@ -234,7 +234,7 @@ function TemplatesPage() {
           </div>
         ) : (
           templates.map(template => (
-            <div key={template.id} className="card">
+            <div key={template.id} data-testid={`template-${template.id}`} className="card template-item">
               <div
                 className="flex items-center justify-between cursor-pointer"
                 onClick={() =>
@@ -395,6 +395,8 @@ function TemplatesPage() {
                   <label className="block text-sm font-medium text-text-secondary mb-1">Name</label>
                   <input
                     type="text"
+                    name="name"
+                    data-testid="template-name"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="form-input w-full"
@@ -423,6 +425,8 @@ function TemplatesPage() {
                   Template Content
                 </label>
                 <textarea
+                  name="content"
+                  data-testid="template-content"
                   value={formData.template}
                   onChange={e => handleTemplateChange(e.target.value)}
                   className="form-input w-full font-mono text-sm"

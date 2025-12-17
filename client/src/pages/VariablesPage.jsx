@@ -237,7 +237,7 @@ function VariablesPage() {
           Object.entries(groupedVariables).map(([category, vars]) => {
             const catInfo = getCategoryInfo(category);
             return (
-              <div key={category}>
+              <div key={category} data-testid={`category-${category}`} className="variable-category">
                 <h2 className="text-lg font-semibold text-text-primary mb-3 flex items-center gap-2">
                   {catInfo.label}
                   <span className="text-sm font-normal text-text-tertiary">({vars.length})</span>
@@ -398,6 +398,8 @@ function VariablesPage() {
                   <label className="block text-sm font-medium text-text-secondary mb-1">ID</label>
                   <input
                     type="text"
+                    name="id"
+                    data-testid="variable-id"
                     value={formData.id}
                     onChange={e => setFormData({ ...formData, id: e.target.value })}
                     className="form-input w-full font-mono"
@@ -412,6 +414,8 @@ function VariablesPage() {
                   <label className="block text-sm font-medium text-text-secondary mb-1">Name</label>
                   <input
                     type="text"
+                    name="name"
+                    data-testid="variable-name"
                     value={formData.name}
                     onChange={e => setFormData({ ...formData, name: e.target.value })}
                     className="form-input w-full"
@@ -458,6 +462,7 @@ function VariablesPage() {
                   Content
                 </label>
                 <textarea
+                  name="value"
                   value={formData.content}
                   onChange={e => setFormData({ ...formData, content: e.target.value })}
                   className="form-input w-full font-mono text-sm"

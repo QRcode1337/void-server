@@ -409,6 +409,8 @@ const SettingsPage = () => {
               {Object.entries(themes).map(([key, themeConfig]) => (
                 <button
                   key={key}
+                  data-testid={`theme-${key}`}
+                  data-theme={key}
                   onClick={() => {
                     setTheme(key);
                     toast.success(`Theme: ${themeConfig.name}`);
@@ -479,7 +481,10 @@ const SettingsPage = () => {
                     : 'Navigation stays open as you move between pages'}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
+              <label
+                data-testid="auto-collapse-toggle"
+                className="relative inline-flex items-center cursor-pointer"
+              >
                 <input
                   type="checkbox"
                   className="sr-only peer"
@@ -499,6 +504,7 @@ const SettingsPage = () => {
           {providerList.map(provider => (
             <div
               key={provider.key}
+              data-testid={`provider-${provider.key}`}
               className={`card hover:border-[var(--color-primary)] transition-all duration-200 flex flex-col ${
                 activeProvider === provider.key
                   ? 'border-[var(--color-primary)]/50 shadow-[0_0_15px_rgba(0,219,56,0.1)]'

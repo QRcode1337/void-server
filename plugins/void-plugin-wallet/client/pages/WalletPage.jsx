@@ -966,6 +966,8 @@ const CreateWalletModal = ({ onClose, onSuccess }) => {
             <label className="block text-sm text-[var(--color-text-secondary)] mb-1">Wallet Name</label>
             <input
               type="text"
+              name="name"
+              data-testid="wallet-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="My Wallet"

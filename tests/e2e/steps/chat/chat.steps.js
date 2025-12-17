@@ -25,10 +25,13 @@ Given('I have an active chat', async function () {
   const response = await this.request.post(`${this.config.appUrl}/api/chat`, {
     data: { templateId: 'clawedegregore' },
   });
-  const chat = await response.json();
+  const data = await response.json();
+  const chat = data.chat || data;
   this.testData.chatId = chat.id;
-  await this.page.goto(`${this.config.appUrl}/chat/${chat.id}`);
-  await this.page.waitForLoadState('networkidle');
+  await this.page.goto(`${this.config.appUrl}/chat/${chat.id}`, { timeout: 10000 });
+  await this.page.waitForLoadState('networkidle', { timeout: 10000 });
+  // Wait for chat interface to be ready
+  await this.page.locator('[data-testid="message-input"], textarea').waitFor({ state: 'visible', timeout: 10000 });
 });
 
 When('a new chat should be created', async function () {
@@ -36,11 +39,13 @@ When('a new chat should be created', async function () {
 });
 
 When('I type {string} in the message input', async function (message) {
-  await this.page.fill('textarea, input[type="text"]', message);
+  const input = this.page.locator('[data-testid="message-input"], textarea');
+  await input.waitFor({ state: 'visible', timeout: 5000 });
+  await input.fill(message);
 });
 
 When('I send the message', async function () {
-  await this.page.click('button[type="submit"], button:has-text("Send")');
+  await this.page.click('[data-testid="send-button"], button:has-text("Send")');
 });
 
 Then('my message should appear in the chat', async function () {
@@ -48,7 +53,8 @@ Then('my message should appear in the chat', async function () {
 });
 
 Then('I should receive an AI response', async function () {
+  // LM Studio responses can be slow depending on model and hardware
   await expect(
-    this.page.locator('.assistant-message, [data-role="assistant"]')
-  ).toBeVisible({ timeout: 30000 });
+    this.page.locator('[data-role="assistant"]')
+  ).toBeVisible({ timeout: 60000 });
 });

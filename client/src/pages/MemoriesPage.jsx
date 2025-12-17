@@ -264,6 +264,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
         <div className="relative flex-grow" style={{ minWidth: '200px' }}>
           <input
             type="text"
+            data-testid="search"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && fetchMemories()}
@@ -294,7 +295,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
       <div className="text-sm text-text-secondary">Showing {memories.length} memories</div>
 
       {/* Memories List */}
-      <div className="space-y-3">
+      <div data-testid="memories" className="space-y-3">
         {loading ? (
           <div className="card text-center py-8">
             <RefreshCw size={24} className="mx-auto mb-2 animate-spin text-primary" />
@@ -312,7 +313,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
           </div>
         ) : (
           memories.map(memory => (
-            <div key={memory.id} className="card">
+            <div key={memory.id} data-testid={`memory-${memory.id}`} className="card memory-item">
               <div
                 className="flex items-start justify-between cursor-pointer"
                 onClick={() => setExpandedMemory(expandedMemory === memory.id ? null : memory.id)}
@@ -497,6 +498,8 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                   Content
                 </label>
                 <textarea
+                  name="content"
+                  data-testid="memory-content"
                   value={formData.content.text}
                   onChange={e =>
                     setFormData({
@@ -1722,7 +1725,7 @@ function VisualizationTab() {
         </div>
 
         {/* 3D Canvas */}
-        <div className="card overflow-hidden" style={{ height: '600px' }}>
+        <div data-testid="graph" className="card overflow-hidden" style={{ height: '600px' }}>
           {filteredData.nodes.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center text-text-secondary">

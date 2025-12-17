@@ -436,7 +436,7 @@ const PluginManager = () => {
 
       {/* Installed Plugins Tab */}
       {!loading && activeTab === 'installed' && (
-        <div className="space-y-4">
+        <div data-testid="plugins" className="space-y-4">
           {installedPlugins.length === 0 ? (
             <div className="card text-center py-12">
               <Box className="w-12 h-12 mx-auto mb-4 text-[var(--color-text-secondary)]" />
@@ -451,7 +451,11 @@ const PluginManager = () => {
               const isDisabled = plugin.enabled === false;
 
               return (
-                <div key={plugin.name} className={`card ${isDisabled ? 'opacity-60' : ''}`}>
+                <div
+                  key={plugin.name}
+                  data-testid={`plugin-${plugin.name}`}
+                  className={`card ${isDisabled ? 'opacity-60' : ''}`}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-4">
                       <div
@@ -500,6 +504,9 @@ const PluginManager = () => {
                     <div className="flex items-center gap-2">
                       {/* Enable/Disable Toggle */}
                       <button
+                        data-testid={`plugin-toggle-${plugin.name}`}
+                        role="switch"
+                        aria-checked={!isDisabled}
                         onClick={() => handleToggle(plugin)}
                         disabled={togglingPlugin === plugin.name}
                         className={`p-2 rounded-lg transition-colors ${

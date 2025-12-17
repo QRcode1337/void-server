@@ -31,15 +31,20 @@ Then('I should see the memory list or empty state', async function () {
 });
 
 When('I fill in the memory form', async function () {
-  await this.page.fill('textarea[name="content"], [data-testid="memory-content"]', 'E2E Test Memory');
+  // Generate unique ID for this test run
+  this.testData.memoryContent = `E2E Test Memory ${Date.now()}`;
+  await this.page.fill('textarea[name="content"], [data-testid="memory-content"]', this.testData.memoryContent);
 });
 
 When('I save the memory', async function () {
   await this.page.click('button:has-text("Save")');
+  // Wait for modal to close and memory list to update
+  await this.page.waitForSelector('.fixed.inset-0', { state: 'hidden', timeout: 5000 });
 });
 
 Then('the memory should appear in the list', async function () {
-  await expect(this.page.locator('text=E2E Test Memory')).toBeVisible();
+  // Use the unique memory content from this test run
+  await expect(this.page.locator(`.memory-item:has-text("${this.testData.memoryContent}")`).first()).toBeVisible({ timeout: 5000 });
 });
 
 When('I search for {string}', async function (query) {
@@ -49,7 +54,7 @@ When('I search for {string}', async function (query) {
 });
 
 Then('I should see matching memories', async function () {
-  await expect(this.page.locator('.memory-item, [data-testid="memory"]')).toBeVisible();
+  await expect(this.page.locator('.memory-item, [data-testid^="memory-"]').first()).toBeVisible();
 });
 
 When('I click the {string} tab', async function (tabName) {
@@ -57,5 +62,19 @@ When('I click the {string} tab', async function (tabName) {
 });
 
 Then('I should see the graph visualization', async function () {
-  await expect(this.page.locator('canvas, [data-testid="graph"], .graph')).toBeVisible();
+  // Wait for the graph container to be visible (may take time to load and render)
+  await expect(this.page.locator('[data-testid="graph"]').first()).toBeVisible({ timeout: 15000 });
+});
+
+When('I delete the test memory', async function () {
+  // Find the specific memory item from this test run and click its delete button
+  const memoryItem = this.page.locator(`.memory-item:has-text("${this.testData.memoryContent}")`).first();
+  await memoryItem.locator('button[title="Delete"]').click();
+  // Wait for deletion to complete
+  await this.page.waitForTimeout(500);
+});
+
+Then('the test memory should be removed', async function () {
+  // Verify the specific memory is no longer visible
+  await expect(this.page.locator(`.memory-item:has-text("${this.testData.memoryContent}")`)).not.toBeVisible({ timeout: 5000 });
 });
