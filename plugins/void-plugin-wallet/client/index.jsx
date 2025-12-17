@@ -4,9 +4,6 @@
  * Exports all client components for dynamic loading by void-server.
  */
 
-// Page Components
-export { default as WalletPage } from './pages/WalletPage';
-
 // Route definitions
 export const routes = [
   {

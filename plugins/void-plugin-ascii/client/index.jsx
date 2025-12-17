@@ -4,9 +4,6 @@
  * Exports all client components for dynamic loading by void-server-core.
  */
 
-// Page Components
-export { default as AsciiGeneratorPage } from './pages/AsciiGeneratorPage';
-
 // Route definitions from manifest
 export const routes = [
   {

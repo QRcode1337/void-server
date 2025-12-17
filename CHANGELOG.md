@@ -19,6 +19,9 @@ Patch release with IPFS dashboard status and plugin/PM2 fixes.
 - **PM2 logs page not working** - Fixed `spawn pm2 ENOENT` error on Logs page
   - Changed `pm2` to `npx pm2` for both process list and log streaming
   - Ensures PM2 commands work in environments without global PM2 install
+- **Docker build warnings** - Fixed misleading error/warning messages during Docker builds
+  - postinstall hook script now checks if file exists before running (skips in Docker)
+  - Removed duplicate static/dynamic imports in plugin client entries to fix Vite warnings
 
 ---
 
