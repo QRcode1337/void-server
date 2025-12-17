@@ -55,64 +55,6 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
     const [dockerModal, setDockerModal] = useState({ show: false, command: '' });
     const [copied, setCopied] = useState(false);
 
-    // Check environment on mount
-    useEffect(() => {
-        const checkEnvironment = async () => {
-            const res = await fetch('/api/version/environment');
-            const data = await res.json();
-            if (data.success) {
-                setIsDocker(data.isDocker);
-            }
-        };
-        checkEnvironment();
-    }, []);
-
-    // Check for updates periodically
-    useEffect(() => {
-        const checkForUpdate = async () => {
-            const res = await fetch('/api/version/check');
-            const data = await res.json();
-            if (data.success && data.updateAvailable) {
-                setUpdateInfo(data);
-                // Show persistent toast notification
-                toast(
-                    (t) => (
-                        <div className="flex items-center gap-3">
-                            <ArrowUpCircle className="text-primary flex-shrink-0" size={20} />
-                            <div className="flex-1">
-                                <div className="font-medium">Update Available</div>
-                                <div className="text-sm text-secondary">v{data.currentVersion} → v{data.latestVersion}</div>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    toast.dismiss(t.id);
-                                    handleUpdate(data);
-                                }}
-                                className="px-3 py-1 bg-[var(--color-primary)] text-background rounded text-sm hover:bg-[var(--color-primary)]/80"
-                            >
-                                Update
-                            </button>
-                            <button
-                                onClick={() => toast.dismiss(t.id)}
-                                className="text-secondary hover:text-text-primary"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    ),
-                    { duration: Infinity, id: 'update-available' }
-                );
-            }
-        };
-
-        // Check on mount
-        checkForUpdate();
-
-        // Check every 30 minutes
-        const interval = setInterval(checkForUpdate, 30 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, []);
-
     // Poll for server to come back after update
     const pollForRestart = () => {
         const poll = setInterval(async () => {
@@ -168,6 +110,64 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
         toast.success('Update started. Reloading when ready...', { id: 'update-progress' });
         pollForRestart();
     };
+
+    // Check environment on mount
+    useEffect(() => {
+        const checkEnvironment = async () => {
+            const res = await fetch('/api/version/environment');
+            const data = await res.json();
+            if (data.success) {
+                setIsDocker(data.isDocker);
+            }
+        };
+        checkEnvironment();
+    }, []);
+
+    // Check for updates periodically
+    useEffect(() => {
+        const checkForUpdate = async () => {
+            const res = await fetch('/api/version/check');
+            const data = await res.json();
+            if (data.success && data.updateAvailable) {
+                setUpdateInfo(data);
+                // Show persistent toast notification
+                toast(
+                    (t) => (
+                        <div className="flex items-center gap-3">
+                            <ArrowUpCircle className="text-primary flex-shrink-0" size={20} />
+                            <div className="flex-1">
+                                <div className="font-medium">Update Available</div>
+                                <div className="text-sm text-secondary">v{data.currentVersion} → v{data.latestVersion}</div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    toast.dismiss(t.id);
+                                    handleUpdate();
+                                }}
+                                className="px-3 py-1 bg-[var(--color-primary)] text-background rounded text-sm hover:bg-[var(--color-primary)]/80"
+                            >
+                                Update
+                            </button>
+                            <button
+                                onClick={() => toast.dismiss(t.id)}
+                                className="text-secondary hover:text-text-primary"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    ),
+                    { duration: Infinity, id: 'update-available' }
+                );
+            }
+        };
+
+        // Check on mount
+        checkForUpdate();
+
+        // Check every 30 minutes
+        const interval = setInterval(checkForUpdate, 30 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [handleUpdate]);
 
     // Copy Docker command to clipboard
     const copyDockerCommand = async () => {

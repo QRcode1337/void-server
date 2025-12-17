@@ -13,11 +13,6 @@ export default function BrowsersPage() {
   const [editingBrowser, setEditingBrowser] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', description: '', port: '' });
 
-  useEffect(() => {
-    loadBrowsers();
-    loadPortConfig();
-  }, []);
-
   const loadBrowsers = async () => {
     setLoading(true);
     const response = await fetch('/api/browsers');
@@ -38,6 +33,11 @@ export default function BrowsersPage() {
       setPortRange(data.portRange);
     }
   };
+
+  useEffect(() => {
+    loadBrowsers();
+    loadPortConfig();
+  }, []);
 
   const handleCreate = async () => {
     if (!newBrowser.id.trim()) {

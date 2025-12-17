@@ -190,7 +190,7 @@ const SettingsPage = () => {
       } else {
         toast.error(data.error || 'Failed to save configuration');
       }
-    } catch (error) {
+    } catch {
       setSaving(prev => ({ ...prev, [providerKey]: false }));
       toast.error('Network error while saving');
     }
@@ -222,7 +222,7 @@ const SettingsPage = () => {
       } else {
         toast.error(data.error || 'Connection failed');
       }
-    } catch (error) {
+    } catch {
       setTesting(prev => ({ ...prev, [providerKey]: false }));
       toast.error('Network error during test');
     }
@@ -244,7 +244,7 @@ const SettingsPage = () => {
       } else {
         toast.error(data.error || 'Failed to switch provider');
       }
-    } catch (error) {
+    } catch {
       toast.error('Network error while switching provider');
     }
   };
@@ -770,8 +770,8 @@ const ProviderConfigContent = ({
   providerKey,
   config,
   showApiKey,
-  testResult,
-  isTesting,
+  testResult: _testResult,
+  isTesting: _isTesting,
   availableModels = [],
   loadingModels,
   openModelDropdown,
@@ -783,6 +783,9 @@ const ProviderConfigContent = ({
   onToggleApiKey,
   onRefreshModels
 }) => {
+  // Note: testResult and isTesting are passed but not currently displayed in this component
+  void _testResult;
+  void _isTesting;
   const isApiProvider = config.type === 'api';
   const isCliProvider = config.type === 'cli';
 
