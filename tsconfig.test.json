@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "./tests/e2e/dist",
+    "rootDir": "./tests/e2e",
+    "baseUrl": "./tests/e2e",
+    "paths": {
+      "@pages/*": ["pages/*"],
+      "@steps/*": ["steps/*"],
+      "@fixtures/*": ["fixtures/*"],
+      "@support/*": ["support/*"]
+    },
+    "types": ["node", "@playwright/test", "@cucumber/cucumber"]
+  },
+  "include": ["tests/e2e/**/*.ts"],
+  "exclude": ["node_modules", "tests/e2e/dist"]
+}

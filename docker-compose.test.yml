@@ -1,0 +1,109 @@
+# Docker Compose configuration for E2E testing
+# Isolated network with all services for integration testing
+
+services:
+  # Void Server - Test Instance
+  void-server-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: void-server-test
+    ports:
+      - "4420:4401"
+    environment:
+      - NODE_ENV=production
+      - PORT=4401
+      - NEO4J_URI=bolt://neo4j-test:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-testpassword}
+      - NEO4J_DATABASE=neo4j
+      - LM_STUDIO_URL=http://lmstudio-mock:1234/v1
+      - IPFS_API_URL=http://ipfs-test:5001
+      - IPFS_GATEWAY_URL=http://ipfs-test:8080
+    volumes:
+      - ./test-data:/app/data
+    depends_on:
+      neo4j-test:
+        condition: service_healthy
+      ipfs-test:
+        condition: service_healthy
+      lmstudio-mock:
+        condition: service_started
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4401/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # Neo4j - Test Instance
+  neo4j-test:
+    image: neo4j:5-community
+    container_name: void-neo4j-test
+    ports:
+      - "4421:7474"
+      - "4422:7687"
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD:-testpassword}
+      - NEO4J_PLUGINS=["apoc"]
+      - NEO4J_dbms_memory_heap_initial__size=256m
+      - NEO4J_dbms_memory_heap_max__size=512m
+      - NEO4J_dbms_memory_pagecache_size=256m
+    volumes:
+      - neo4j_test_data:/data
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # IPFS - Test Instance
+  ipfs-test:
+    image: ipfs/kubo:latest
+    container_name: void-ipfs-test
+    ports:
+      - "4423:5001"
+      - "4424:8080"
+    environment:
+      - IPFS_PROFILE=test
+    volumes:
+      - ipfs_test_data:/data/ipfs
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "ipfs id || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # LM Studio Mock Server
+  lmstudio-mock:
+    build:
+      context: ./tests/e2e/mocks/lmstudio
+      dockerfile: Dockerfile
+    container_name: void-lmstudio-mock
+    ports:
+      - "11234:1234"
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:1234/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  neo4j_test_data:
+    driver: local
+  ipfs_test_data:
+    driver: local

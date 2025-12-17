@@ -1,0 +1,39 @@
+{
+  "templates": {
+    "testTemplate": {
+      "name": "E2E Test Template",
+      "description": "Template for e2e testing",
+      "content": "Hello {{name}}, this is a test. {{message}}"
+    }
+  },
+  "variables": {
+    "testVar": {
+      "id": "e2e_test_var",
+      "name": "E2E Test Variable",
+      "value": "test_value",
+      "category": "Test"
+    }
+  },
+  "memories": {
+    "testMemory": {
+      "content": "This is a test memory for e2e testing",
+      "category": "Test",
+      "stage": 1,
+      "importance": 0.5,
+      "keywords": ["test", "e2e"]
+    }
+  },
+  "browsers": {
+    "testProfile": {
+      "id": "e2e-test-browser",
+      "name": "E2E Test Browser",
+      "description": "Browser profile for e2e testing"
+    }
+  },
+  "wallets": {
+    "testWallet": {
+      "seedPhrase": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "name": "E2E Test Wallet"
+    }
+  }
+}

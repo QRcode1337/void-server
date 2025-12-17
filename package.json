@@ -1,6 +1,6 @@
 {
   "name": "void-server",
-  "version": "0.9.5",
+  "version": "0.10.0",
   "description": "Void Server",
   "main": "server/index.js",
   "scripts": {
@@ -15,7 +15,18 @@
     "plugin:update": "./scripts/plugin-update.sh",
     "plugin:status": "./scripts/plugin-status.sh",
     "hooks:install": "bash ./.githooks/install-hooks.sh",
-    "postinstall": "[ -f ./.githooks/install-hooks.sh ] && bash ./.githooks/install-hooks.sh || true"
+    "postinstall": "[ -f ./.githooks/install-hooks.sh ] && bash ./.githooks/install-hooks.sh || true",
+    "test": "npm run test:native",
+    "test:native": "cross-env TEST_ENV=native npx cucumber-js",
+    "test:docker": "cross-env TEST_ENV=docker npx cucumber-js",
+    "test:ci": "cross-env TEST_ENV=ci npx cucumber-js --format json:tests/e2e/reports/results.json",
+    "test:e2e": "npx playwright test",
+    "test:e2e:ui": "npx playwright test --ui",
+    "test:env:start": "bash ./scripts/test-env.sh start",
+    "test:env:stop": "bash ./scripts/test-env.sh stop",
+    "test:env:status": "bash ./scripts/test-env.sh status",
+    "test:seed": "node ./scripts/seed-test-data.js seed",
+    "test:install": "npx playwright install chromium"
   },
   "dependencies": {
     "@solana/spl-token": "^0.4.0",
@@ -34,6 +45,13 @@
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "pm2": "^5.3.0"
+    "@cucumber/cucumber": "^10.9.0",
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^22.0.0",
+    "cross-env": "^7.0.3",
+    "pm2": "^5.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0",
+    "wait-on": "^8.0.0"
   }
 }
