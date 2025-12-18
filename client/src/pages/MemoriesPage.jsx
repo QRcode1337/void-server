@@ -68,6 +68,7 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
   const [expandedMemory, setExpandedMemory] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingMemory, setEditingMemory] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // Memory to confirm deletion
 
   // Form state
   const [formData, setFormData] = useState({
@@ -159,17 +160,27 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
     }
   };
 
-  // Delete memory
+  // Delete memory with confirmation and optimistic update
   const handleDelete = async id => {
+    // Store the memory being deleted for potential restoration
+    const memoryToDelete = memories.find(m => m.id === id);
+
+    // Optimistic update - remove from UI immediately
+    setMemories(prev => prev.filter(m => m.id !== id));
+    setDeleteConfirm(null);
+
     const response = await fetch(`/api/memories/${id}`, {
       method: 'DELETE',
     });
     const data = await response.json();
 
     if (data.success) {
-      await fetchMemories();
       toast.success('Memory deleted');
     } else {
+      // Restore on failure
+      setMemories(prev => [...prev, memoryToDelete].sort((a, b) =>
+        new Date(b.timestamp) - new Date(a.timestamp)
+      ));
       toast.error(data.error || 'Failed to delete memory');
     }
   };
@@ -390,10 +401,11 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
                   <button
                     onClick={e => {
                       e.stopPropagation();
-                      handleDelete(memory.id);
+                      setDeleteConfirm(memory);
                     }}
                     className="p-2 rounded hover:bg-error/20 text-error"
                     title="Delete"
+                    data-testid={`delete-memory-${memory.id}`}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -644,6 +656,69 @@ function MemoriesTab({ neo4jStatus, fetchStatus: _fetchStatus }) {
               <button onClick={handleSave} className="btn btn-primary flex items-center gap-2">
                 <Save size={16} />
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setDeleteConfirm(null)}
+          data-testid="delete-confirm-modal"
+        >
+          <div
+            className="border border-border rounded-lg max-w-md w-full"
+            style={{ backgroundColor: 'var(--color-surface-solid)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-border flex items-center gap-3">
+              <div className="p-2 rounded-full bg-error/10">
+                <Trash2 size={20} className="text-error" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-text-primary">Delete Memory</h2>
+                <p className="text-sm text-text-secondary">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <div className="p-4">
+              <p className="text-sm text-text-secondary mb-3">
+                Are you sure you want to delete this memory?
+              </p>
+              <div className="p-3 rounded bg-background border border-border">
+                <p className="text-sm text-text-primary line-clamp-3">
+                  {deleteConfirm.content?.text || deleteConfirm.content || 'No content'}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: CATEGORY_COLORS[deleteConfirm.category] || '#666' }}
+                  />
+                  <span className="text-xs text-text-tertiary capitalize">
+                    {deleteConfirm.category}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex items-center justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="btn btn-secondary"
+                data-testid="cancel-delete"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirm.id)}
+                className="btn bg-error hover:bg-error/80 text-white flex items-center gap-2"
+                data-testid="confirm-delete"
+              >
+                <Trash2 size={16} />
+                Delete
               </button>
             </div>
           </div>

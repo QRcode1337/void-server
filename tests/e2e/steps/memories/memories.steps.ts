@@ -55,3 +55,22 @@ When('I click the {string} tab', async function (this: VoidWorld, tabName: strin
 Then('I should see the graph visualization', async function (this: VoidWorld) {
   await expect(this.page.locator('canvas, [data-testid="graph"], .graph')).toBeVisible();
 });
+
+When('I delete the test memory', async function (this: VoidWorld) {
+  // Find the memory we created and click its delete button
+  const memoryRow = this.page.locator('text=E2E Test Memory').first();
+  await memoryRow.scrollIntoViewIfNeeded();
+
+  // Click the delete button for this memory
+  const deleteButton = this.page.locator('[data-testid^="delete-memory-"]').first();
+  await deleteButton.click();
+
+  // Wait for confirmation modal and confirm deletion
+  await expect(this.page.locator('[data-testid="delete-confirm-modal"]')).toBeVisible();
+  await this.page.click('[data-testid="confirm-delete"]');
+});
+
+Then('the test memory should be removed', async function (this: VoidWorld) {
+  // Wait for the memory to be removed from the list (optimistic update)
+  await expect(this.page.locator('text=E2E Test Memory')).not.toBeVisible({ timeout: 5000 });
+});

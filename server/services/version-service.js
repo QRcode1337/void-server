@@ -283,6 +283,60 @@ function triggerWatchtowerUpdate() {
 }
 
 /**
+ * Check if enabled user plugins are compiled into the client bundle
+ * Returns list of plugins that need rebuild, or empty array if in sync
+ */
+function getPluginsNeedingRebuild() {
+  const projectRoot = path.resolve(__dirname, '../..');
+  const userPluginsDir = path.join(projectRoot, 'data/plugins');
+  const pluginConfigPath = path.join(projectRoot, 'config/plugins.json');
+  const bundleManifestPath = path.join(projectRoot, 'client/dist/.plugin-manifest.json');
+
+  // Get enabled user plugins from filesystem and config
+  const enabledUserPlugins = [];
+
+  if (fs.existsSync(userPluginsDir)) {
+    const entries = fs.readdirSync(userPluginsDir, { withFileTypes: true });
+    const pluginConfig = fs.existsSync(pluginConfigPath)
+      ? JSON.parse(fs.readFileSync(pluginConfigPath, 'utf8'))
+      : {};
+
+    for (const entry of entries) {
+      if (!entry.name.startsWith('void-plugin-')) continue;
+
+      const pluginPath = path.join(userPluginsDir, entry.name);
+      const manifestPath = path.join(pluginPath, 'manifest.json');
+
+      // Must have manifest with client entry
+      if (!fs.existsSync(manifestPath)) continue;
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      if (!manifest.client?.entry) continue;
+
+      // Check if enabled (default is enabled)
+      const config = pluginConfig[entry.name] || {};
+      if (config.enabled === false) continue;
+
+      enabledUserPlugins.push(entry.name);
+    }
+  }
+
+  // No user plugins = nothing to check
+  if (enabledUserPlugins.length === 0) return [];
+
+  // Check bundle manifest
+  if (!fs.existsSync(bundleManifestPath)) {
+    // No manifest = old build, all user plugins need rebuild
+    return enabledUserPlugins;
+  }
+
+  const bundleManifest = JSON.parse(fs.readFileSync(bundleManifestPath, 'utf8'));
+  const compiledPlugins = new Set(bundleManifest.plugins.map(p => p.name));
+
+  // Find user plugins not in the compiled bundle
+  return enabledUserPlugins.filter(name => !compiledPlugins.has(name));
+}
+
+/**
  * Rebuild the client bundle (for Docker plugin installations)
  * This allows newly installed plugins to be included in the client bundle
  */
@@ -347,5 +401,6 @@ module.exports = {
   compareVersions,
   isDocker,
   triggerWatchtowerUpdate,
-  rebuildClient
+  rebuildClient,
+  getPluginsNeedingRebuild
 };

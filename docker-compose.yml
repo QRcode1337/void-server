@@ -121,10 +121,12 @@ services:
   # Monitors for new Docker images and automatically updates containers.
   # Also exposes HTTP API for on-demand update checks from the UI.
   watchtower:
-    image: containrrr/watchtower
+    image: containrrr/watchtower:latest
     container_name: void-watchtower
     restart: unless-stopped
     environment:
+      # Docker API version (1.44 minimum required by Docker Desktop 4.x)
+      - DOCKER_API_VERSION=${DOCKER_API_VERSION:-1.44}
       # Only watch void-server container (not neo4j, ipfs, etc.)
       - WATCHTOWER_SCOPE=void-server
       # Check for updates every 24 hours (86400 seconds)

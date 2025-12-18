@@ -331,9 +331,12 @@ async function launchBrowser(id, options = {}) {
     // Check if Docker is accessible
     const dockerAvailable = await dockerBrowserService.isDockerAvailable().catch(() => false);
     if (!dockerAvailable) {
+      const socketInfo = process.platform === 'win32'
+        ? 'Ensure Docker Desktop is running.'
+        : 'Ensure /var/run/docker.sock is mounted and has correct permissions.';
       return {
         success: false,
-        error: 'Docker socket not accessible. Ensure /var/run/docker.sock is mounted and has correct permissions.'
+        error: `Docker not accessible. ${socketInfo}`
       };
     }
     return dockerBrowserService.startBrowserContainer(id, { url });
@@ -404,7 +407,7 @@ async function closeBrowser(id) {
     const dockerBrowserService = require('./docker-browser-service');
     const dockerAvailable = await dockerBrowserService.isDockerAvailable().catch(() => false);
     if (!dockerAvailable) {
-      return { success: false, error: 'Docker socket not accessible' };
+      return { success: false, error: 'Docker not accessible' };
     }
     return dockerBrowserService.stopBrowserContainer(id);
   }
@@ -527,7 +530,7 @@ async function getNoVNCUrl(id) {
   const dockerBrowserService = require('./docker-browser-service');
   const dockerAvailable = await dockerBrowserService.isDockerAvailable().catch(() => false);
   if (!dockerAvailable) {
-    return { success: false, error: 'Docker socket not accessible' };
+    return { success: false, error: 'Docker not accessible' };
   }
   return dockerBrowserService.getNoVNCUrl(id);
 }

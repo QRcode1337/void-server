@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.11.2] - 2025-12-17
+
+Patch release with automatic plugin rebuild on upgrade.
+
+### Fixes
+
+- **User plugins missing after upgrade** - Installed plugins now auto-rebuild into the client on startup
+  - Server checks if enabled user plugins are compiled into the client bundle
+  - Automatically triggers rebuild if plugins are missing (e.g., after pulling new Docker image)
+  - Vite plugin now writes `.plugin-manifest.json` to track compiled plugins
+  - WebSocket notifications (`plugin:rebuild:complete`, `plugin:rebuild:failed`) for real-time feedback
+- **Watchtower Docker API version error** - Fixed "client version 1.25 is too old" error loop
+  - Set `DOCKER_API_VERSION=1.44` (minimum required by Docker Desktop 4.x)
+  - Configurable via `DOCKER_API_VERSION` env var if needed
+- **Windows Docker browser launch** - Fixed "Docker socket not accessible" error on Windows
+  - Uses Windows named pipe (`//./pipe/docker_engine`) instead of Unix socket
+  - Improved error messages to be platform-specific
+- **Memory deletion UX** - Added confirmation dialog and optimistic rendering
+  - Confirmation modal shows memory preview before deletion
+  - Optimistic update removes memory from UI immediately
+  - Restores memory if API call fails
+- **Docker PM2 integration** - Use pm2-runtime for process management in Docker
+  - Enables PM2 log streaming over WebSocket in containerized deployments
+  - Proper signal handling and graceful shutdown
+
+---
+
 ## [0.11.1] - 2025-12-17
 
 Patch release with Docker browser setup automation and bug fixes.

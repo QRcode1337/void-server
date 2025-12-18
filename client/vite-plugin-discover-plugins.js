@@ -23,6 +23,9 @@ export default function discoverPlugins(options = {}) {
       : [path.resolve(process.cwd(), '../plugins')]
   );
 
+  // Track discovered plugins for manifest generation
+  let discoveredPlugins = [];
+
   return {
     name: 'discover-plugins',
 
@@ -72,11 +75,15 @@ export default function discoverPlugins(options = {}) {
           plugins.push({
             name: entry.name,
             clientEntry: clientEntryPath,
-            manifest
+            manifest,
+            isUserPlugin: pluginsDir.includes('data/plugins') || pluginsDir.includes('data\\plugins')
           });
           seenNames.add(entry.name);
         }
       }
+
+      // Store for manifest generation
+      discoveredPlugins = plugins;
 
       // Generate the virtual module code
       const imports = plugins.map((p, i) =>
@@ -144,6 +151,22 @@ export const pluginNames = ${JSON.stringify(plugins.map(p => p.name))};
           }
         }
       });
+    },
+
+    // Write plugin manifest to dist for server-side validation
+    writeBundle(outputOptions) {
+      const outDir = outputOptions.dir || path.resolve(process.cwd(), 'dist');
+      const manifestPath = path.join(outDir, '.plugin-manifest.json');
+
+      const manifest = {
+        buildTime: new Date().toISOString(),
+        plugins: discoveredPlugins.map(p => ({
+          name: p.name,
+          isUserPlugin: p.isUserPlugin
+        }))
+      };
+
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     }
   };
 }

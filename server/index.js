@@ -749,6 +749,25 @@ server.listen(PORT, () => {
     console.log(`📋 PM2 log streaming initialized`);
   }
 
+  // Check if user plugins need to be rebuilt into client bundle (production only)
+  if (!isDev) {
+    const pluginsNeedingRebuild = versionService.getPluginsNeedingRebuild();
+    if (pluginsNeedingRebuild.length > 0) {
+      console.log(`🔧 User plugins not in client bundle: ${pluginsNeedingRebuild.join(', ')}`);
+      console.log(`🔨 Auto-rebuilding client to include user plugins...`);
+
+      versionService.rebuildClient()
+        .then(() => {
+          console.log('✅ Client rebuild complete - user plugins now available');
+          io.emit('plugin:rebuild:complete', { plugins: pluginsNeedingRebuild });
+        })
+        .catch(err => {
+          console.error('❌ Client rebuild failed:', err.message);
+          io.emit('plugin:rebuild:failed', { plugins: pluginsNeedingRebuild, error: err.message });
+        });
+    }
+  }
+
   // Send ready signal to PM2
   if (process.send) {
     process.send('ready');

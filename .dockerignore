@@ -65,9 +65,6 @@ tsconfig.test.json
 docker-compose*.yml
 Dockerfile
 
-# PM2 config (not used in Docker - we run node directly)
-ecosystem.config.js
-
 # Large assets not needed in container
 screenshot.png
 *.png

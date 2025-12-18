@@ -70,11 +70,13 @@ When('I delete the test memory', async function () {
   // Find the specific memory item from this test run and click its delete button
   const memoryItem = this.page.locator(`.memory-item:has-text("${this.testData.memoryContent}")`).first();
   await memoryItem.locator('button[title="Delete"]').click();
-  // Wait for deletion to complete
-  await this.page.waitForTimeout(500);
+
+  // Wait for confirmation modal and confirm deletion
+  await expect(this.page.locator('[data-testid="delete-confirm-modal"]')).toBeVisible({ timeout: 5000 });
+  await this.page.click('[data-testid="confirm-delete"]');
 });
 
 Then('the test memory should be removed', async function () {
-  // Verify the specific memory is no longer visible
+  // Verify the specific memory is no longer visible (optimistic update - should be immediate)
   await expect(this.page.locator(`.memory-item:has-text("${this.testData.memoryContent}")`)).not.toBeVisible({ timeout: 5000 });
 });

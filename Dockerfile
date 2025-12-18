@@ -31,8 +31,10 @@ RUN npm run build --prefix client
 FROM node:20-slim
 
 # Install ffmpeg for video processing (used by video-download plugin)
+# Install pm2 globally for process management and log streaming
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g pm2
 
 WORKDIR /app
 
@@ -48,10 +50,11 @@ COPY --from=builder /app/client/node_modules ./client/node_modules
 # Copy pre-built client dist from builder (initial build)
 COPY --from=builder /app/client/dist ./client/dist
 
-# Copy server, plugins, and data templates
+# Copy server, plugins, data templates, and PM2 config
 COPY server/ ./server/
 COPY plugins/ ./plugins/
 COPY data_template/ ./data_template/
+COPY ecosystem.config.js ./
 
 # Create directories for volume mounts
 RUN mkdir -p config backups logs data
@@ -69,5 +72,6 @@ EXPOSE 4401
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD node -e "fetch('http://localhost:4401/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
 
-# Start server directly (Docker handles process management)
-CMD ["node", "server/index.js"]
+# Start server with PM2 for process management and log streaming
+# pm2-runtime is designed for Docker: keeps foreground, handles signals, streams logs
+CMD ["pm2-runtime", "ecosystem.config.js", "--env", "production"]

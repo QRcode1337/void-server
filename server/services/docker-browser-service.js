@@ -22,12 +22,23 @@ const activeContainers = new Map();
 const containerTimeouts = new Map();
 
 /**
+ * Get Docker socket path based on platform
+ */
+function getDockerSocketOptions() {
+  // On Windows, use named pipe; on Unix, use socket file
+  if (process.platform === 'win32') {
+    return { socketPath: '//./pipe/docker_engine' };
+  }
+  return { socketPath: '/var/run/docker.sock' };
+}
+
+/**
  * Get Docker client instance (lazy loaded)
  */
 async function getDocker() {
   if (!Docker) {
     Docker = require('dockerode');
-    docker = new Docker({ socketPath: '/var/run/docker.sock' });
+    docker = new Docker(getDockerSocketOptions());
   }
   return docker;
 }
