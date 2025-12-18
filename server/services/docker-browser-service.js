@@ -202,8 +202,9 @@ async function startBrowserContainer(profileId, options = {}) {
       PortBindings: {
         '6080/tcp': [{ HostPort: String(port) }]
       },
-      // Use void-network when running in Docker (compose network), bridge when native
-      NetworkMode: isRunningInDocker() ? 'void-network' : 'bridge',
+      // Use compose network when running in Docker, bridge when native
+      // Note: Docker Compose prefixes network names with project name
+      NetworkMode: isRunningInDocker() ? (process.env.DOCKER_NETWORK || 'void-server_void-network') : 'bridge',
       ShmSize: 536870912 // 512MB shared memory for browser
     },
     Labels: {

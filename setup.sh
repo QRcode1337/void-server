@@ -102,6 +102,10 @@ run_docker_setup() {
   # Configure Docker GID for browser management
   configure_docker_gid
 
+  # Build browser sidecar image for noVNC support
+  print_step "Building browser sidecar image..."
+  docker build -t ghcr.io/clawedcode/void-server/void-browser:latest ./docker/browser
+
   print_step "Pulling latest images and starting containers..."
   docker compose pull
   docker compose up -d --build
