@@ -139,14 +139,18 @@ export default function BrowsersPage() {
     const data = await response.json();
 
     if (data.success) {
-      // If noVNC URL returned (Docker mode), show embedded viewer
-      if (data.novncUrl) {
+      // If noVNC port returned (Docker mode), show embedded viewer
+      if (data.novncPort) {
         setIsDockerEnv(true);
         const browser = browsers.find(b => b.id === id);
+        // Construct URL using current hostname (works with localhost, Tailscale IPs, etc.)
+        // Uses HTTP - the vnc-browser image serves noVNC over HTTP (no SSL cert issues)
+        // Auto-connect with credentials to skip the connect button and password prompt
+        const novncUrl = `http://${window.location.hostname}:${data.novncPort}/vnc.html?autoconnect=true&password=voidserver`;
         setActiveViewer({
           id,
           name: browser?.name || id,
-          novncUrl: data.novncUrl,
+          novncUrl,
         });
         setViewerExpanded(true);
         toast.success('Browser launched. Log in below, then close the viewer.', {

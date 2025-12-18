@@ -2,7 +2,8 @@
  * Docker Browser Service
  *
  * Manages browser sidecar containers for web-based browser access in Docker.
- * Uses kasmweb/chromium image with noVNC for browser authentication.
+ * Uses void-browser image (Chromium + noVNC) for browser authentication.
+ * This image serves noVNC over HTTP (no SSL cert required for iframe embedding).
  */
 
 const path = require('path');
@@ -13,8 +14,8 @@ let Docker = null;
 let docker = null;
 
 const CONTAINER_PREFIX = 'void-browser-';
-const DEFAULT_IMAGE = process.env.BROWSER_CONTAINER_IMAGE || 'kasmweb/chromium:1.15.0';
-const NOVNC_PORT = parseInt(process.env.BROWSER_NOVNC_PORT || '6901', 10);
+const DEFAULT_IMAGE = process.env.BROWSER_CONTAINER_IMAGE || 'void-browser:latest';
+const NOVNC_PORT = parseInt(process.env.BROWSER_NOVNC_PORT || '6080', 10);
 const IDLE_TIMEOUT_MS = parseInt(process.env.BROWSER_IDLE_TIMEOUT || '900000', 10); // 15 min
 
 // Track active containers and their timeouts
@@ -157,7 +158,7 @@ async function startBrowserContainer(profileId, options = {}) {
       scheduleTimeout(profileId);
       return {
         success: true,
-        novncUrl: `http://localhost:${tracked?.port || NOVNC_PORT}`,
+        novncPort: tracked?.port || NOVNC_PORT,
         message: 'Browser already running',
         containerId: existing.id
       };
@@ -186,24 +187,20 @@ async function startBrowserContainer(profileId, options = {}) {
     console.log(`✅ Browser image pulled`);
   }
 
-  // Create container with kasmweb configuration
+  // Create container with void-browser configuration
+  // This image serves noVNC over HTTP on port 6080 (no SSL cert issues)
   const container = await docker.createContainer({
     Image: DEFAULT_IMAGE,
     name: containerName,
     Env: [
-      'VNC_PW=voidserver',
-      'VNC_RESOLUTION=1280x800',
-      `LAUNCH_URL=${url || 'about:blank'}`
+      'VNC_PASSWORD=voidserver',
+      'RESOLUTION=1280x800x24',
+      // Open URL on startup if provided
+      ...(url ? [`LAUNCH_URL=${url}`] : [])
     ],
     HostConfig: {
-      // Mount browsers data for profile persistence when running in Docker
-      // Note: kasmweb stores profile in /home/kasm-user/.config/chromium
-      // Skip mount in native mode - kasmweb conflicts with existing Playwright profiles
-      Binds: isRunningInDocker() ? [
-        `${getDataDir()}/${profileId}:/home/kasm-user/.config/chromium`
-      ] : [],
       PortBindings: {
-        '6901/tcp': [{ HostPort: String(port) }]
+        '6080/tcp': [{ HostPort: String(port) }]
       },
       // Use void-network when running in Docker (compose network), bridge when native
       NetworkMode: isRunningInDocker() ? 'void-network' : 'bridge',
@@ -231,9 +228,8 @@ async function startBrowserContainer(profileId, options = {}) {
 
   return {
     success: true,
-    novncUrl: `http://localhost:${port}`,
-    containerId: container.id,
-    port
+    novncPort: port,
+    containerId: container.id
   };
 }
 
@@ -301,7 +297,7 @@ async function getNoVNCUrl(profileId) {
   }
   return {
     success: true,
-    novncUrl: `http://localhost:${status.port}`
+    novncPort: status.port
   };
 }
 

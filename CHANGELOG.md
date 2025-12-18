@@ -28,6 +28,11 @@ Patch release with automatic plugin rebuild on upgrade.
   - Previously only used Docker containers when void-server ran inside Docker
   - Now auto-detects Docker socket and uses noVNC containers when available
   - Set `BROWSER_MODE=native` to force Playwright, `BROWSER_MODE=docker` to force containers
+- **Custom browser container image** - Replaced third-party VNC image with our own
+  - New `void-browser` Docker image (Debian + Chromium + noVNC) for security and control
+  - Serves noVNC over HTTP (no SSL cert issues in iframe embedding)
+  - Auto-built and published to ghcr.io on version releases
+  - Build locally with `docker build -t void-browser:latest ./docker/browser`
 
 ---
 
