@@ -15,23 +15,11 @@ const TEMPLATE_AI_PROVIDERS_CONFIG_PATH = path.join(TEMPLATE_DIR, 'ai-providers.
 
 // Default configuration - all providers disabled by default
 // Users must configure a provider in Settings before using Chat
+// Note: CLI providers (claude, gemini-cli, codex-cli) are disabled in Docker mode
+// since they require shell access to CLI tools not available in the container
 const DEFAULT_CONFIG = {
   activeProvider: null,
   providers: {
-    claude: {
-      name: 'Claude',
-      type: 'cli',
-      enabled: false,
-      command: 'claude',
-      description: 'Use the Claude CLI for local Anthropic-powered responses.',
-      link: 'https://www.anthropic.com/claude',
-      models: {
-        light: 'haiku',
-        medium: 'sonnet',
-        deep: 'opus'
-      },
-      timeout: 300000
-    },
     openai: {
       name: 'OpenAI',
       type: 'api',
@@ -89,34 +77,6 @@ const DEFAULT_CONFIG = {
       },
       timeout: 120000
     },
-    'gemini-cli': {
-      name: 'Gemini CLI',
-      type: 'cli',
-      enabled: false,
-      command: 'gemini',
-      description: 'Run prompts through the local `gemini` command-line client.',
-      link: 'https://ai.google.dev/gemini-api/docs/get-started',
-      models: {
-        light: 'gemini-1.5-flash',
-        medium: 'gemini-1.5-pro',
-        deep: 'gemini-1.5-pro'
-      },
-      timeout: 300000
-    },
-    'codex-cli': {
-      name: 'Codex CLI',
-      type: 'cli',
-      enabled: false,
-      command: 'codex',
-      description: 'Send prompts to a local `codex` CLI binary or script.',
-      link: 'https://openai.com/codex/',
-      models: {
-        light: 'default',
-        medium: 'default',
-        deep: 'default'
-      },
-      timeout: 300000
-    },
     lmstudio: {
       name: 'LM Studio',
       type: 'api',
@@ -132,6 +92,25 @@ const DEFAULT_CONFIG = {
       },
       settings: {
         temperature: 0.8,
+        max_tokens: 8192
+      },
+      timeout: 300000
+    },
+    ollama: {
+      name: 'Ollama',
+      type: 'api',
+      enabled: false,
+      endpoint: 'http://localhost:11434/v1',
+      apiKey: 'ollama',
+      description: 'Run open-source models locally with Ollama. Models download automatically on first use.',
+      link: 'https://ollama.ai/',
+      models: {
+        light: 'llama3.2:3b',
+        medium: 'llama3.2:8b',
+        deep: 'llama3.1:70b'
+      },
+      settings: {
+        temperature: 0.7,
         max_tokens: 8192
       },
       timeout: 300000
@@ -180,6 +159,9 @@ function loadConfig() {
     ]);
 
     const orderedKeys = [...providerKeys].sort((a, b) => {
+      // Prioritize local AI providers: Ollama first, then LM Studio
+      if (a === 'ollama') return -1;
+      if (b === 'ollama') return 1;
       if (a === 'lmstudio') return -1;
       if (b === 'lmstudio') return 1;
       return 0;
@@ -204,10 +186,15 @@ function loadConfig() {
     };
   }
 
-  // Allow environment variable override for LM Studio endpoint (useful for Docker)
+  // Allow environment variable overrides for local AI providers (useful for Docker)
   if (process.env.LM_STUDIO_URL && config.providers.lmstudio) {
     config.providers.lmstudio.endpoint = process.env.LM_STUDIO_URL;
-    console.log(`🔧 LM Studio endpoint overridden by LM_STUDIO_URL: ${process.env.LM_STUDIO_URL}`);
+    console.log(`🔧 LM Studio endpoint overridden: ${process.env.LM_STUDIO_URL}`);
+  }
+
+  if (process.env.OLLAMA_URL && config.providers.ollama) {
+    config.providers.ollama.endpoint = process.env.OLLAMA_URL;
+    console.log(`🔧 Ollama endpoint overridden: ${process.env.OLLAMA_URL}`);
   }
 
   return config;
@@ -337,11 +324,9 @@ function registerProvider(providerKey) {
   let ProviderClass;
 
   switch (providerKey) {
-    case 'claude':
-      ProviderClass = require('./providers/claude-provider');
-      break;
     case 'openai':
     case 'lmstudio':
+    case 'ollama':
       ProviderClass = require('./providers/openai-provider');
       break;
     case 'anthropic':
@@ -349,12 +334,6 @@ function registerProvider(providerKey) {
       break;
     case 'gemini':
       ProviderClass = require('./providers/gemini-provider');
-      break;
-    case 'gemini-cli':
-      ProviderClass = require('./providers/gemini-cli-provider');
-      break;
-    case 'codex-cli':
-      ProviderClass = require('./providers/codex-cli-provider');
       break;
     default:
       console.log(`⚠️ Unknown provider type: ${providerKey}`);

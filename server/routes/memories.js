@@ -368,6 +368,38 @@ router.get('/embedding/models', (req, res) => {
   });
 });
 
+// PUT /api/memories/embedding/provider - Switch embedding provider
+router.put('/embedding/provider', async (req, res) => {
+  const { provider } = req.body;
+  console.log(`🔄 PUT /api/memories/embedding/provider provider=${provider}`);
+
+  if (!['ollama', 'lmstudio', 'auto'].includes(provider)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid provider. Use "ollama", "lmstudio", or "auto"'
+    });
+  }
+
+  const embeddingService = getEmbeddingService();
+
+  if (provider === 'auto') {
+    await embeddingService.initialize();
+  } else {
+    embeddingService.setProvider(provider);
+  }
+
+  const available = await embeddingService.isAvailable();
+
+  res.json({
+    success: true,
+    provider: embeddingService.activeProvider,
+    available,
+    message: available
+      ? `Switched to ${embeddingService.activeProvider}`
+      : `Switched to ${embeddingService.activeProvider} but service not available`
+  });
+});
+
 // GET /api/memories/lmstudio/models - List all LM Studio models (LLM + embedding)
 router.get('/lmstudio/models', (req, res) => {
   console.log(`📊 GET /api/memories/lmstudio/models`);

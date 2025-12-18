@@ -46,6 +46,10 @@ services:
       - BROWSER_NOVNC_PORT=${BROWSER_NOVNC_PORT:-6080}
       - BROWSER_IDLE_TIMEOUT=${BROWSER_IDLE_TIMEOUT:-900000}
       - BROWSER_DATA_PATH=${PWD}/data/browsers
+      # Ollama AI provider (uses service name as hostname)
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434/v1}
+      - OLLAMA_MODELS=${OLLAMA_MODELS:-}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-auto}
     volumes:
       # Persistent data directories
       - ./config:/app/config
@@ -120,6 +124,28 @@ services:
       start_period: 30s
 
   # ==========================================================================
+  # Ollama - Local AI Inference Engine
+  # ==========================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: void-ollama
+    restart: unless-stopped
+    ports:
+      - "4425:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - void-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==========================================================================
   # Watchtower - Automatic Container Updates
   # ==========================================================================
   # Monitors for new Docker images and automatically updates containers.
@@ -159,4 +185,6 @@ volumes:
   neo4j_logs:
     driver: local
   ipfs_data:
+    driver: local
+  ollama_data:
     driver: local

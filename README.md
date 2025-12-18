@@ -10,11 +10,11 @@ A modular, plugin-based creative platform for building and running your own sove
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Run the app + Neo4j database | Required |
-| [LM Studio](https://lmstudio.ai/) | Local AI for chat & embeddings | Required |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Run the app + all services | Required |
+| [LM Studio](https://lmstudio.ai/) | GPU-accelerated local AI | Optional* |
 | [Tailscale](https://tailscale.com/download) | Access from phone/anywhere | Optional |
 
-After installing LM Studio, download an embedding model (e.g., `text-embedding-nomic-embed-text-v1.5`) and a chat model, then start the local server.
+*Ollama runs inside Docker for local AI. LM Studio is optional but recommended for better GPU inference on the host machine. If using LM Studio, download an embedding model (e.g., `nomic-embed-text`) and a chat model, then start the local server.
 
 ### 2. Run
 
@@ -107,8 +107,13 @@ docker-compose up -d
 |----------|---------|-------------|
 | `NEO4J_PASSWORD` | `voidserver` | Neo4j database password |
 | `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j connection URI |
-| `LM_STUDIO_URL` | `http://host.docker.internal:1234/v1` | LM Studio API endpoint |
-| `DOCKER_GID` | `999` | Docker group ID for socket access (run `stat -c '%g' /var/run/docker.sock`) |
+| `OLLAMA_URL` | `http://ollama:11434/v1` | Ollama API endpoint |
+| `OLLAMA_MODELS` | — | Comma-separated models to auto-pull |
+| `EMBEDDING_PROVIDER` | `auto` | Embedding provider (`ollama`, `lmstudio`, `auto`) |
+| `LM_STUDIO_URL` | `http://host.docker.internal:1234/v1` | LM Studio API endpoint (optional) |
+| `BROWSER_NOVNC_PORT` | `6080` | Starting port for browser noVNC |
+| `BROWSER_IDLE_TIMEOUT` | `900000` | Browser container idle timeout (ms) |
+| `DOCKER_GID` | `0` | Docker group ID for socket access |
 
 ### Using External Services
 
@@ -176,6 +181,10 @@ See [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md) for detailed setup instructio
 | App | 4420 | 4401 |
 | Neo4j Browser | 4421 | 7474 |
 | Neo4j Bolt | 4422 | 7687 |
+| IPFS API | 4423 | 5001 |
+| IPFS Gateway | 4424 | 8080 |
+| Ollama | 4425 | 11434 |
+| Browser (noVNC) | 6080+ | — |
 | Client (dev) | — | 4480 |
 
 ## Commands
@@ -269,46 +278,61 @@ All user data and configuration is stored in `./data/`. See [docs/DATA.md](docs/
 │  │  │   API       │  │   Client    │  │   System    │  │  Logs     │   │    │
 │  │  └──────┬──────┘  └─────────────┘  └─────────────┘  └───────────┘   │    │
 │  │         │                                                           │    │
-│  │         ├────── Chat Service ──────┬────── Memory Service ─────┐    │    │
-│  │         │                          │                           │    │    │
-│  │         ▼                          ▼                           ▼    │    │
-│  │  ┌─────────────┐            ┌─────────────┐            ┌──────────┐ │    │
-│  │  │    IPFS     │            │  Embeddings │            │  Graph   │ │    │
-│  │  │   Service   │            │   (LLM)     │            │  Queries │ │    │
-│  │  └──────┬──────┘            └──────┬──────┘            └────┬─────┘ │    │
-│  └─────────┼──────────────────────────┼────────────────────────┼───────┘    │
-│            │                          │                        │            │
-│            ▼                          │                        ▼            │
-│  ┌─────────────────┐                  │              ┌─────────────────┐    │
-│  │   ipfs (:4423)  │                  │              │ neo4j (:4421)   │    │
-│  │  ┌───────────┐  │                  │              │  ┌───────────┐  │    │
-│  │  │   Kubo    │  │                  │              │  │   Graph   │  │    │
-│  │  │   Node    │  │                  │              │  │  Database │  │    │
-│  │  ├───────────┤  │                  │              │  ├───────────┤  │    │
-│  │  │  Gateway  │  │                  │              │  │  Browser  │  │    │
-│  │  │  (:4424)  │  │                  │              │  │  Bolt     │  │    │
-│  │  └───────────┘  │                  │              │  │  (:4422)  │  │    │
-│  │                 │                  │              │  └───────────┘  │    │
-│  │  ipfs_data vol  │                  │              │  neo4j_data vol │    │
-│  └─────────────────┘                  │              └─────────────────┘    │
-│                                       │                                     │
-└───────────────────────────────────────┼─────────────────────────────────────┘
-                                        │
-                          host.docker.internal
-                                        │
-                                        ▼
-                          ┌─────────────────────────┐
-                          │   LM Studio (:1234)     │
-                          │  ┌───────────────────┐  │
-                          │  │   Chat Model      │  │
-                          │  │   (Qwen, Llama)   │  │
-                          │  ├───────────────────┤  │
-                          │  │  Embedding Model  │  │
-                          │  │  (nomic-embed)    │  │
-                          │  └───────────────────┘  │
-                          │                         │
-                          │   Runs on Host Machine  │
-                          └─────────────────────────┘
+│  │         ├── Chat Service ──┬── Memory Service ──┬── Browser Mgr ─┐  │    │
+│  │         │                  │                    │                │  │    │
+│  │         ▼                  ▼                    ▼                │  │    │
+│  │  ┌───────────┐      ┌───────────┐        ┌──────────┐       Docker  │    │
+│  │  │   IPFS    │      │ Embeddings│        │  Graph   │       Socket  │    │
+│  │  │  Service  │      │   (LLM)   │        │ Queries  │         │     │    │
+│  │  └─────┬─────┘      └─────┬─────┘        └────┬─────┘         │     │    │
+│  └────────┼──────────────────┼───────────────────┼───────────────┼─────┘    │
+│           │                  │                   │               │          │
+│           ▼                  │                   ▼               │          │
+│  ┌─────────────────┐         │         ┌─────────────────┐       │          │
+│  │   ipfs (:4423)  │         │         │ neo4j (:4421)   │       │          │
+│  │  ┌───────────┐  │         │         │  ┌───────────┐  │       │          │
+│  │  │   Kubo    │  │         │         │  │   Graph   │  │       │          │
+│  │  │   Node    │  │         │         │  │  Database │  │       │          │
+│  │  ├───────────┤  │         │         │  ├───────────┤  │       │          │
+│  │  │  Gateway  │  │         │         │  │  Bolt     │  │       │          │
+│  │  │  (:4424)  │  │         │         │  │  (:4422)  │  │       │          │
+│  │  └───────────┘  │         │         │  └───────────┘  │       │          │
+│  │  ipfs_data vol  │         │         │  neo4j_data vol │       │          │
+│  └─────────────────┘         │         └─────────────────┘       │          │
+│           ┌──────────────────┤                                   │          │
+│           │                  ▼                                   ▼          │
+│  ┌────────▼────────┐  ┌─────────────────┐  ┌───────────────────────────┐    │
+│  │ ollama (:4425)  │  │ LM Studio       │  │    Browser Containers     │    │
+│  │  ┌───────────┐  │  │ (optional)      │  │  ┌─────────────────────┐  │    │
+│  │  │ Chat Model│  │  │                 │  │  │   void-browser-1    │  │    │
+│  │  │ (llama3,  │  │  │ via host.docker │  │  │     noVNC:6080      │  │    │
+│  │  │  qwen2)   │  │  │ .internal:1234  │  │  ├─────────────────────┤  │    │
+│  │  ├───────────┤  │  │                 │  │  │   void-browser-2    │  │    │
+│  │  │ Embedding │  │  │ Preferred for   │  │  │     noVNC:6081      │  │    │
+│  │  │ (nomic,   │  │  │ GPU inference   │  │  ├─────────────────────┤  │    │
+│  │  │  mxbai)   │  │  │                 │  │  │        ...          │  │    │
+│  │  └───────────┘  │  └────────┬────────┘  │  └─────────────────────┘  │    │
+│  │ ollama_data vol │           │           │  Spawned via Docker API   │    │
+│  └─────────────────┘           │           └───────────────────────────┘    │
+│                                │                                            │
+└────────────────────────────────┼────────────────────────────────────────────┘
+                                 │
+                   host.docker.internal
+                                 │
+                                 ▼
+                   ┌─────────────────────────┐
+                   │   LM Studio (:1234)     │
+                   │  ┌───────────────────┐  │
+                   │  │   Chat Model      │  │
+                   │  │   (Qwen, Llama)   │  │
+                   │  ├───────────────────┤  │
+                   │  │  Embedding Model  │  │
+                   │  │  (nomic-embed)    │  │
+                   │  └───────────────────┘  │
+                   │                         │
+                   │   Runs on Host Machine  │
+                   │   (Optional - for GPU)  │
+                   └─────────────────────────┘
 ```
 
 ### Port Reference
@@ -320,14 +344,17 @@ All user data and configuration is stored in `./data/`. See [docs/DATA.md](docs/
 | Neo4j Bolt | 4422 | 7687 | Database connection |
 | IPFS API | 4423 | 5001 | IPFS node API |
 | IPFS Gateway | 4424 | 8080 | Content gateway |
+| Ollama | 4425 | 11434 | Local AI inference |
+| Browser (noVNC) | 6080+ | — | Remote browser access |
 | Vite (dev) | — | 4480 | HMR dev server |
-| LM Studio | 1234 | 1234 | AI inference |
+| LM Studio | 1234 | 1234 | AI inference (optional) |
 
 ### Data Flow
 
-1. **Chat** → User message → Prompt template + Memory context → LM Studio → Response
+1. **Chat** → User message → Prompt template + Memory context → Ollama/LM Studio → Response
 2. **Memory** → Extract entities → Generate embeddings → Store in Neo4j graph
 3. **IPFS** → Pin content locally → Announce to DHT → Optionally replicate to Pinata
+4. **Browser** → Plugin requests browser → Spawn container via Docker API → noVNC stream to UI
 
 ## Project Structure
 

@@ -38,6 +38,10 @@ const versionService = require('./services/version-service');
 // IPFS management
 const ipfsRoutes = require('./routes/ipfs');
 
+// Ollama management
+const ollamaRoutes = require('./routes/ollama');
+const ollamaService = require('./services/ollama-service');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -190,8 +194,19 @@ app.use('/api/version', versionRoutes);
 // IPFS API
 app.use('/api/ipfs', ipfsRoutes);
 
+// Ollama API
+app.use('/api/ollama', ollamaRoutes);
+
 // Initialize Provider system
 aiProvider.initialize();
+
+// Pull configured Ollama models on startup (non-blocking)
+if (process.env.OLLAMA_MODELS) {
+  ollamaService.pullConfiguredModels().then(results => {
+    const success = results.filter(r => r.success).length;
+    console.log(`🦙 Ollama: pulled ${success}/${results.length} models`);
+  }).catch(() => {});
+}
 
 // Initialize Prompt Executor (which initializes prompt and chat services)
 promptExecutor.initialize();

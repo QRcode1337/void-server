@@ -18,6 +18,8 @@ services:
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-testpassword}
       - NEO4J_DATABASE=neo4j
       - LM_STUDIO_URL=http://lmstudio-mock:1234/v1
+      - OLLAMA_URL=http://ollama-test:11434/v1
+      - EMBEDDING_PROVIDER=auto
       - IPFS_API_URL=http://ipfs-test:5001
       - IPFS_GATEWAY_URL=http://ipfs-test:8080
     volumes:
@@ -29,6 +31,8 @@ services:
         condition: service_healthy
       lmstudio-mock:
         condition: service_started
+      ollama-test:
+        condition: service_healthy
     networks:
       - test-network
     healthcheck:
@@ -98,6 +102,25 @@ services:
       timeout: 3s
       retries: 5
 
+  # Ollama - Test Instance
+  ollama-test:
+    image: ollama/ollama:latest
+    container_name: void-ollama-test
+    ports:
+      - "4425:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    volumes:
+      - ollama_test_data:/root/.ollama
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
 networks:
   test-network:
     driver: bridge
@@ -106,4 +129,6 @@ volumes:
   neo4j_test_data:
     driver: local
   ipfs_test_data:
+    driver: local
+  ollama_test_data:
     driver: local

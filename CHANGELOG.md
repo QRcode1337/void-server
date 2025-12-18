@@ -14,6 +14,20 @@ Major release making Docker the only supported deployment method.
 
 ### New Features
 
+- **Ollama AI Provider** - Run open-source models locally with Ollama Docker container
+  - Ollama service added to docker-compose.yml on port 4425
+  - OpenAI-compatible API integration (uses existing provider infrastructure)
+  - Model pulling via Settings UI or `/api/ollama/pull` endpoint
+  - Default models: llama3.2:3b (light), llama3.2:8b (medium), llama3.1:70b (deep)
+  - Optional GPU support via NVIDIA Container Toolkit
+  - Configurable model pre-pulling via `OLLAMA_MODELS` environment variable
+
+- **Multi-backend Embedding Service** - Choose between Ollama and LM Studio for embeddings
+  - Auto-detection of available providers (prefers Ollama)
+  - Manual selection via `EMBEDDING_PROVIDER` env var (auto, ollama, lmstudio)
+  - New endpoint `PUT /api/memories/embedding/provider` to switch providers
+  - Ollama uses nomic-embed-text model by default
+
 - **docker-compose.dev.yml** - Development configuration with volume mounts for live code changes
   - Mount server/ and client/src/ as read-only volumes
   - Restart container to apply server changes

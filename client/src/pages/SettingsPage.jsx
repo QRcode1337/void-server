@@ -20,6 +20,7 @@ import {
   Palette,
   ChevronDown,
   PanelLeftClose,
+  Download,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '../contexts/ThemeContext';
@@ -60,6 +61,10 @@ const SettingsPage = () => {
   const [availableModels, setAvailableModels] = useState({});
   const [loadingModels, setLoadingModels] = useState({});
   const [openModelDropdown, setOpenModelDropdown] = useState(null); // e.g., "lmstudio-light"
+
+  // Ollama model pull state
+  const [ollamaModelToPull, setOllamaModelToPull] = useState('');
+  const [pullingOllamaModel, setPullingOllamaModel] = useState(false);
 
   // Navigation state initialized from URL param
   const [activeTab, setActiveTab] = useState(tab === 'providers' ? 'providers' : 'general');
@@ -261,6 +266,63 @@ const SettingsPage = () => {
     }));
   };
 
+  // Pull Ollama model
+  const pullOllamaModel = async modelName => {
+    if (!modelName.trim()) {
+      toast.error('Please enter a model name');
+      return;
+    }
+
+    setPullingOllamaModel(true);
+    const toastId = toast.loading(`Pulling ${modelName}...`);
+
+    const eventSource = new EventSource(
+      `/api/ollama/pull?model=${encodeURIComponent(modelName.trim())}`,
+      { withCredentials: true }
+    );
+
+    // Use POST with fetch for model pull (SSE doesn't support POST body directly)
+    const response = await fetch('/api/ollama/pull', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: modelName.trim() }),
+    });
+
+    if (!response.ok) {
+      toast.error(`Failed to pull ${modelName}`, { id: toastId });
+      setPullingOllamaModel(false);
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let lastStatus = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const text = decoder.decode(value);
+      const lines = text.split('\n').filter(line => line.startsWith('data: '));
+
+      for (const line of lines) {
+        const data = JSON.parse(line.slice(6));
+        if (data.done) {
+          toast.success(`Successfully pulled ${modelName}`, { id: toastId });
+          setOllamaModelToPull('');
+          // Refresh available models
+          fetchModelsForProvider('ollama');
+        } else if (data.status && data.status !== lastStatus) {
+          lastStatus = data.status;
+          toast.loading(`${modelName}: ${data.status}`, { id: toastId });
+        }
+      }
+    }
+
+    setPullingOllamaModel(false);
+    eventSource.close();
+  };
+
   // Get list of providers
   const providerList = Object.entries(editedConfigs)
     .map(([key, config]) => ({
@@ -268,6 +330,9 @@ const SettingsPage = () => {
       ...config,
     }))
     .sort((a, b) => {
+      // Prioritize local AI providers: Ollama first, then LM Studio
+      if (a.key === 'ollama') return -1;
+      if (b.key === 'ollama') return 1;
       if (a.key === 'lmstudio') return -1;
       if (b.key === 'lmstudio') return 1;
       return 0;
@@ -692,6 +757,43 @@ const SettingsPage = () => {
                     );
                   })}
                 </div>
+
+                {/* Ollama Model Pull UI */}
+                {provider.key === 'ollama' && provider.enabled && (
+                  <div className="mt-3 p-3 bg-[var(--color-surface)] rounded-lg border border-[var(--color-border)]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-[var(--color-text-secondary)] uppercase tracking-wider">
+                        Pull Model
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g., llama3.2:3b"
+                        value={ollamaModelToPull}
+                        onChange={e => setOllamaModelToPull(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && pullOllamaModel(ollamaModelToPull)}
+                        className="flex-1 bg-[var(--color-background)] border border-[var(--color-border)] text-[var(--color-text-primary)] text-xs px-2 py-1.5 rounded focus:outline-none focus:border-[var(--color-primary)] font-mono"
+                        disabled={pullingOllamaModel}
+                      />
+                      <button
+                        onClick={() => pullOllamaModel(ollamaModelToPull)}
+                        disabled={pullingOllamaModel || !ollamaModelToPull.trim()}
+                        className="px-3 py-1.5 rounded text-xs font-medium bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                      >
+                        {pullingOllamaModel ? (
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Download className="w-3 h-3" />
+                        )}
+                        Pull
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-[var(--color-text-secondary)] mt-1.5">
+                      Download models from ollama.ai/library
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Card Footer Actions */}

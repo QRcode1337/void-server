@@ -1,45 +1,116 @@
 /**
  * Embedding Service
  *
- * Generates semantic embeddings using local LM Studio with nomic-embed-text-v1.5
+ * Generates semantic embeddings using local AI providers (Ollama or LM Studio)
  *
- * Requirements:
- * - LM Studio running on localhost:1234
- * - nomic-embed-text-v1.5-GGUF model loaded
+ * Supported providers:
+ * - Ollama: http://localhost:11434/v1 (default)
+ * - LM Studio: http://localhost:1234/v1
  *
- * Model detection:
- * - Uses lms CLI if available to detect downloaded/loaded models
- * - Falls back to API endpoint check
+ * Provider selection:
+ * - EMBEDDING_PROVIDER=auto (default): Try Ollama first, then LM Studio
+ * - EMBEDDING_PROVIDER=ollama: Use Ollama only
+ * - EMBEDDING_PROVIDER=lmstudio: Use LM Studio only
  */
 
 const lmstudioCli = require('./lmstudio-cli');
 
 class EmbeddingService {
   constructor() {
-    this.apiUrl = process.env.LM_STUDIO_URL || 'http://localhost:1234/v1';
-    this.model = process.env.EMBEDDING_MODEL || 'text-embedding-nomic-embed-text-v1.5';
-    this.dimensions = 768; // nomic-embed-text-v1.5 output dimension
+    // Provider selection: auto, ollama, or lmstudio
+    this.providerConfig = process.env.EMBEDDING_PROVIDER || 'auto';
+
+    // LM Studio configuration
+    this.lmstudioUrl = process.env.LM_STUDIO_URL || 'http://localhost:1234/v1';
+    this.lmstudioModel = process.env.LM_STUDIO_EMBEDDING_MODEL || 'text-embedding-nomic-embed-text-v1.5';
+
+    // Ollama configuration
+    this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434/v1';
+    this.ollamaModel = process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text';
+
+    // Active provider state (set during initialization)
+    this.activeProvider = null;
+    this.apiUrl = null;
+    this.model = null;
+    this.dimensions = 768; // nomic-embed-text output dimension
     this.available = null;
     this.cliStatus = null;
+  }
+
+  /**
+   * Initialize embedding service and auto-detect provider
+   */
+  async initialize() {
+    if (this.providerConfig === 'auto') {
+      // Try Ollama first (default), then LM Studio
+      if (await this.checkProvider('ollama')) {
+        this.setProvider('ollama');
+        console.log('📊 Embedding service: using Ollama');
+      } else if (await this.checkProvider('lmstudio')) {
+        this.setProvider('lmstudio');
+        console.log('📊 Embedding service: using LM Studio');
+      } else {
+        console.log('📊 Embedding service: no provider available');
+      }
+    } else {
+      this.setProvider(this.providerConfig);
+      console.log(`📊 Embedding service: configured for ${this.providerConfig}`);
+    }
+    return this.activeProvider;
+  }
+
+  /**
+   * Set the active embedding provider
+   */
+  setProvider(provider) {
+    this.activeProvider = provider;
+    if (provider === 'ollama') {
+      this.apiUrl = this.ollamaUrl;
+      this.model = this.ollamaModel;
+    } else {
+      this.apiUrl = this.lmstudioUrl;
+      this.model = this.lmstudioModel;
+    }
+    this.available = null; // Reset availability check
+  }
+
+  /**
+   * Check if a specific provider is available
+   */
+  async checkProvider(provider) {
+    const url = provider === 'ollama' ? this.ollamaUrl : this.lmstudioUrl;
+    const response = await fetch(`${url}/models`, {
+      signal: AbortSignal.timeout(3000)
+    }).catch(() => null);
+    return response?.ok || false;
   }
 
   /**
    * Check if embedding service is available (non-throwing)
    */
   async isAvailable() {
+    if (!this.apiUrl) {
+      await this.initialize();
+    }
+
+    if (!this.apiUrl) {
+      this.available = false;
+      return false;
+    }
+
     const response = await fetch(`${this.apiUrl}/models`, {
       signal: AbortSignal.timeout(3000)
-    });
+    }).catch(() => null);
 
-    if (!response.ok) {
+    if (!response?.ok) {
       this.available = false;
       return false;
     }
 
     const data = await response.json();
-    this.available = data.data.some(model =>
-      model.id.includes('nomic-embed') || model.id.includes('embedding')
-    );
+    this.available = data.data?.some(model =>
+      model.id.includes('nomic-embed') || model.id.includes('embed')
+    ) || false;
 
     return this.available;
   }
@@ -184,6 +255,7 @@ class EmbeddingService {
    */
   getStatus() {
     return {
+      provider: this.activeProvider,
       apiUrl: this.apiUrl,
       model: this.model,
       dimensions: this.dimensions,
@@ -193,24 +265,42 @@ class EmbeddingService {
   }
 
   /**
-   * Get comprehensive status including CLI detection
+   * Get comprehensive status including CLI detection and alternative providers
    */
-  getFullStatus() {
-    // Get CLI-based detection
+  async getFullStatus() {
+    // Get CLI-based detection for LM Studio
     this.cliStatus = lmstudioCli.getEmbeddingStatus();
 
+    // Check both providers
+    const ollamaAvailable = await this.checkProvider('ollama');
+    const lmstudioAvailable = await this.checkProvider('lmstudio');
+
     return {
+      provider: this.activeProvider,
+      providerConfig: this.providerConfig,
       apiUrl: this.apiUrl,
       model: this.model,
       dimensions: this.dimensions,
       available: this.available,
-      cli: this.cliStatus,
-      recommendation: this.cliStatus.recommendation
+      providers: {
+        ollama: {
+          available: ollamaAvailable,
+          url: this.ollamaUrl,
+          model: this.ollamaModel
+        },
+        lmstudio: {
+          available: lmstudioAvailable,
+          url: this.lmstudioUrl,
+          model: this.lmstudioModel,
+          cli: this.cliStatus
+        }
+      },
+      recommendation: this.cliStatus?.recommendation
     };
   }
 
   /**
-   * Get available embedding models from CLI
+   * Get available embedding models from CLI (LM Studio only)
    */
   getAvailableModels() {
     const models = lmstudioCli.getAvailableModels();
@@ -222,34 +312,48 @@ class EmbeddingService {
   }
 
   /**
-   * Test connection to LM Studio
+   * Test connection to the active provider
    */
   async testConnection() {
-    // First check CLI status
+    if (!this.apiUrl) {
+      await this.initialize();
+    }
+
+    // Get CLI status for LM Studio
     this.cliStatus = lmstudioCli.getEmbeddingStatus();
 
-    const response = await fetch(`${this.apiUrl}/models`);
-
-    if (!response.ok) {
+    if (!this.apiUrl) {
       return {
         connected: false,
-        error: 'Cannot connect to LM Studio. Make sure it is running on port 1234.',
-        cli: this.cliStatus
+        provider: null,
+        error: 'No embedding provider configured'
+      };
+    }
+
+    const response = await fetch(`${this.apiUrl}/models`).catch(() => null);
+
+    if (!response?.ok) {
+      return {
+        connected: false,
+        provider: this.activeProvider,
+        error: `Cannot connect to ${this.activeProvider}. Make sure it is running.`,
+        cli: this.activeProvider === 'lmstudio' ? this.cliStatus : undefined
       };
     }
 
     const data = await response.json();
-    const hasEmbeddingModel = data.data.some(model =>
-      model.id.includes('nomic-embed') || model.id.includes('embedding')
-    );
+    const hasEmbeddingModel = data.data?.some(model =>
+      model.id.includes('nomic-embed') || model.id.includes('embed')
+    ) || false;
 
     this.available = hasEmbeddingModel;
 
     return {
       connected: true,
-      models: data.data.map(m => m.id),
+      provider: this.activeProvider,
+      models: data.data?.map(m => m.id) || [],
       hasEmbeddingModel,
-      cli: this.cliStatus
+      cli: this.activeProvider === 'lmstudio' ? this.cliStatus : undefined
     };
   }
 
