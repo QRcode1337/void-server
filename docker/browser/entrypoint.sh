@@ -34,7 +34,9 @@ websockify --web=/usr/share/novnc $NOVNC_PORT localhost:$VNC_PORT &
 echo "noVNC ready at http://localhost:${NOVNC_PORT}/vnc.html"
 
 # Launch Chromium with optional URL
-CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=${WIDTH},${HEIGHT}"
+# --no-sandbox is required in Docker (no user namespaces)
+# --test-type suppresses the "unsupported flag" warning banner
+CHROME_FLAGS="--no-sandbox --disable-dev-shm-usage --disable-gpu --test-type --window-size=${WIDTH},${HEIGHT}"
 
 if [ -n "$LAUNCH_URL" ]; then
     echo "Opening URL: $LAUNCH_URL"
