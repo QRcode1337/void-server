@@ -38,9 +38,8 @@ router.get('/:id', async (req, res) => {
   res.json({ success: true, browser });
 });
 
-// Get browser status
+// Get browser status (no log - polled frequently by client)
 router.get('/:id/status', async (req, res) => {
-  console.log(`🌐 GET /api/browsers/${req.params.id}/status`);
   const result = await browserService.getBrowserStatus(req.params.id);
 
   if (!result.success) {
