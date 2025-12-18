@@ -16,7 +16,7 @@ const PACKAGE_JSON = path.resolve(__dirname, '../../package.json');
 // Cache the latest version check (don't spam GitHub API)
 let cachedLatestVersion = null;
 let lastCheckTime = 0;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour (GitHub rate limit is 60 req/hour)
 
 /**
  * Get current version from package.json
@@ -57,6 +57,10 @@ function fetchLatestRelease() {
           });
         } else if (res.statusCode === 404) {
           resolve(null); // No releases yet
+        } else if (res.statusCode === 403) {
+          // Rate limited - return null gracefully, will use cached data if available
+          console.log('⚠️ GitHub API rate limited (403). Using cached version data if available.');
+          resolve(null);
         } else {
           reject(new Error(`GitHub API returned ${res.statusCode}`));
         }
@@ -103,11 +107,23 @@ async function checkForUpdate() {
   const latest = await fetchLatestRelease();
 
   if (!latest) {
+    // API failed or rate limited - use stale cache if available
+    if (cachedLatestVersion) {
+      return {
+        currentVersion,
+        latestVersion: cachedLatestVersion.version,
+        updateAvailable: compareVersions(currentVersion, cachedLatestVersion.version) > 0,
+        releaseUrl: cachedLatestVersion.url,
+        releaseName: cachedLatestVersion.name,
+        cached: true,
+        stale: true
+      };
+    }
     return {
       currentVersion,
       latestVersion: null,
       updateAvailable: false,
-      error: 'No releases found'
+      error: 'No releases found or API unavailable'
     };
   }
 
