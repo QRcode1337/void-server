@@ -38,6 +38,7 @@ Major release making Docker the only supported deployment method.
 - **IPFS telemetry disabled** - Set `IPFS_TELEMETRY=off` in docker-compose.yml for privacy
 - **Simplified browser service** - Removed native Playwright fallback, always uses Docker browser sidecars
 - **Simplified version service** - Updates always handled via Docker (Watchtower or manual)
+- **Persistent browser containers** - Removed auto-timeout; browser containers stay running until explicitly stopped via UI
 
 ### Removed
 

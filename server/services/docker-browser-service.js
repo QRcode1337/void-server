@@ -15,11 +15,9 @@ let docker = null;
 const CONTAINER_PREFIX = 'void-browser-';
 const DEFAULT_IMAGE = process.env.BROWSER_CONTAINER_IMAGE || 'void-browser:latest';
 const NOVNC_PORT = parseInt(process.env.BROWSER_NOVNC_PORT || '6080', 10);
-const IDLE_TIMEOUT_MS = parseInt(process.env.BROWSER_IDLE_TIMEOUT || '900000', 10); // 15 min
 
-// Track active containers and their timeouts
+// Track active containers
 const activeContainers = new Map();
-const containerTimeouts = new Map();
 
 /**
  * Get Docker socket path based on platform
@@ -129,23 +127,6 @@ function getDataDir() {
 }
 
 /**
- * Schedule auto-timeout for container
- */
-function scheduleTimeout(profileId) {
-  // Clear any existing timeout
-  if (containerTimeouts.has(profileId)) {
-    clearTimeout(containerTimeouts.get(profileId));
-  }
-
-  const timeout = setTimeout(async () => {
-    console.log(`⏱️ Auto-stopping idle browser: ${profileId}`);
-    await stopBrowserContainer(profileId);
-  }, IDLE_TIMEOUT_MS);
-
-  containerTimeouts.set(profileId, timeout);
-}
-
-/**
  * Start a browser container for a specific profile
  */
 async function startBrowserContainer(profileId, options = {}) {
@@ -159,8 +140,6 @@ async function startBrowserContainer(profileId, options = {}) {
     const info = await existing.inspect();
     if (info.State.Running) {
       const tracked = activeContainers.get(profileId);
-      // Reset the idle timeout
-      scheduleTimeout(profileId);
       return {
         success: true,
         novncPort: tracked?.port || NOVNC_PORT,
@@ -227,9 +206,6 @@ async function startBrowserContainer(profileId, options = {}) {
     startedAt: Date.now()
   });
 
-  // Set up idle timeout
-  scheduleTimeout(profileId);
-
   console.log(`🌐 Started browser container for ${profileId} on port ${port}`);
 
   return {
@@ -245,12 +221,6 @@ async function startBrowserContainer(profileId, options = {}) {
 async function stopBrowserContainer(profileId) {
   const docker = await getDocker();
   const containerName = `${CONTAINER_PREFIX}${profileId}`;
-
-  // Clear timeout
-  if (containerTimeouts.has(profileId)) {
-    clearTimeout(containerTimeouts.get(profileId));
-    containerTimeouts.delete(profileId);
-  }
 
   const container = await getContainerByName(containerName);
   if (!container) {

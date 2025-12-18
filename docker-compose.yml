@@ -44,7 +44,6 @@ services:
       # Build locally: docker build -t ghcr.io/clawedcode/void-server/void-browser:latest ./docker/browser
       - BROWSER_CONTAINER_IMAGE=${BROWSER_CONTAINER_IMAGE:-ghcr.io/clawedcode/void-server/void-browser:latest}
       - BROWSER_NOVNC_PORT=${BROWSER_NOVNC_PORT:-6080}
-      - BROWSER_IDLE_TIMEOUT=${BROWSER_IDLE_TIMEOUT:-900000}
       - BROWSER_DATA_PATH=${PWD}/data/browsers
       # Ollama AI provider (uses service name as hostname)
       - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434/v1}

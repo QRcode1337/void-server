@@ -112,7 +112,6 @@ docker-compose up -d
 | `EMBEDDING_PROVIDER` | `auto` | Embedding provider (`ollama`, `lmstudio`, `auto`) |
 | `LM_STUDIO_URL` | `http://host.docker.internal:1234/v1` | LM Studio API endpoint (optional) |
 | `BROWSER_NOVNC_PORT` | `6080` | Starting port for browser noVNC |
-| `BROWSER_IDLE_TIMEOUT` | `900000` | Browser container idle timeout (ms) |
 | `DOCKER_GID` | `0` | Docker group ID for socket access |
 
 ### Using External Services
