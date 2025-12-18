@@ -82,7 +82,7 @@ run_docker_setup() {
 
   # Clean up unused Docker resources
   print_step "Cleaning up unused Docker resources..."
-  docker system prune -y
+  docker system prune --force
 
   # Build browser sidecar image for noVNC support
   print_step "Building browser sidecar image..."
