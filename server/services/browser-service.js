@@ -23,18 +23,37 @@ const LEGACY_CONFIG_FILE = path.join(LEGACY_DATA_DIR, 'browsers.json');
 const DEFAULT_PORT_START = 9111;
 const DEFAULT_PORT_END = 9199;
 
-// Detect if running in Docker
-// Override with BROWSER_MODE=native to force Playwright even in Docker
-const isDocker = () => {
+// Determine browser mode: 'docker' (container with noVNC) or 'native' (Playwright)
+// BROWSER_MODE env var overrides auto-detection
+// Default: use Docker containers if Docker is available, otherwise Playwright
+let browserModeCache = null;
+
+const useDockerBrowser = () => {
+  // Check env override first
   if (process.env.BROWSER_MODE === 'native') return false;
   if (process.env.BROWSER_MODE === 'docker') return true;
+
+  // Auto-detect: prefer Docker if available (enables noVNC iframe)
+  // Cache the result to avoid repeated checks
+  if (browserModeCache !== null) return browserModeCache;
+
+  // Check if Docker socket is accessible
+  const socketPath = process.platform === 'win32'
+    ? '//./pipe/docker_engine'
+    : '/var/run/docker.sock';
+
   try {
-    require('fs').accessSync('/.dockerenv');
+    require('fs').accessSync(socketPath);
+    browserModeCache = true;
     return true;
   } catch {
-    return process.env.DOCKER === 'true';
+    browserModeCache = false;
+    return false;
   }
 };
+
+// Legacy alias for compatibility
+const isDocker = useDockerBrowser;
 
 // Track active browser instances
 const activeBrowsers = new Map();

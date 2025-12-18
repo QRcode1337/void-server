@@ -24,6 +24,10 @@ Patch release with automatic plugin rebuild on upgrade.
 - **Docker PM2 integration** - Use pm2-runtime for process management in Docker
   - Enables PM2 log streaming over WebSocket in containerized deployments
   - Proper signal handling and graceful shutdown
+- **Browser service Docker detection** - Use Docker containers when Docker is available
+  - Previously only used Docker containers when void-server ran inside Docker
+  - Now auto-detects Docker socket and uses noVNC containers when available
+  - Set `BROWSER_MODE=native` to force Playwright, `BROWSER_MODE=docker` to force containers
 
 ---
 
