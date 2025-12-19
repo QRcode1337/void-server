@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.13.4] - 2025-12-19
+
+### New Features
+
+- **FFmpeg auto-download** - FFmpeg is automatically downloaded on first use if not installed
+  - Cross-platform support: Windows, macOS, Linux
+  - Downloads static builds from trusted sources (BtbN, evermeet, johnvansickle)
+  - Binaries stored in `data/bin/` for reuse
+  - Plugins can use `ffmpegService` from core for video processing
+
+### Fixed
+
+- **Windows compatibility for video downloads** - Fixed multiple Unix-only commands
+  - Replaced `which` with `where` for ffmpeg detection on Windows
+  - Replaced `curl` with Node.js https for MP4 downloads
+  - Added `windowsHide: true` to all spawn calls to prevent console windows
+- **Windows log streaming** - Fixed `tail` command not available on Windows
+  - Replaced Unix `tail -F` with cross-platform `fs.watch` + file reading
+  - Log streaming now works natively on all platforms
+
+---
+
 ## [0.13.3] - 2025-12-19
 
 ### New Features

@@ -31,6 +31,9 @@ const { setIO } = require('./utils/broadcast');
 const browsersRoutes = require('./routes/browsers');
 const browserService = require('./services/browser-service');
 
+// FFmpeg service (for plugins that need video processing)
+const ffmpegService = require('./services/ffmpeg-service');
+
 // Version management
 const versionRoutes = require('./routes/version');
 const versionService = require('./services/version-service');
@@ -128,7 +131,7 @@ console.error = function (...args) {
   }
 };
 
-// PM2 log streaming setup
+// PM2 log streaming setup (cross-platform, works on Windows)
 let logStreamer = null;
 
 const setupLogStreaming = () => {
@@ -143,25 +146,47 @@ const setupLogStreaming = () => {
     fs.writeFileSync(logPath, '');
   }
 
-  // Use tail to stream logs
-  const tail = spawn('tail', ['-F', '-n', '50', logPath]);
+  // Cross-platform log streaming using fs.watch + file reading
+  let lastSize = 0;
+  let lastLines = [];
 
-  tail.stdout.on('data', (data) => {
-    const lines = data.toString().split('\n').filter(line => line.trim());
-    lines.forEach(line => {
-      broadcastLog('info', line);
-    });
+  // Initial read of last 50 lines
+  const content = fs.readFileSync(logPath, 'utf8');
+  lastLines = content.split('\n').slice(-50).filter(line => line.trim());
+  lastSize = fs.statSync(logPath).size;
+
+  // Broadcast initial lines
+  lastLines.forEach(line => broadcastLog('info', line));
+
+  // Watch for file changes
+  const watcher = fs.watch(logPath, (eventType) => {
+    if (eventType !== 'change') return;
+
+    const stats = fs.statSync(logPath);
+    if (stats.size <= lastSize) {
+      // File was truncated, reset
+      lastSize = stats.size;
+      return;
+    }
+
+    // Read only new content
+    const fd = fs.openSync(logPath, 'r');
+    const buffer = Buffer.alloc(stats.size - lastSize);
+    fs.readSync(fd, buffer, 0, buffer.length, lastSize);
+    fs.closeSync(fd);
+
+    const newContent = buffer.toString('utf8');
+    const lines = newContent.split('\n').filter(line => line.trim());
+    lines.forEach(line => broadcastLog('info', line));
+
+    lastSize = stats.size;
   });
 
-  tail.stderr.on('data', (data) => {
-    console.error(`Log streaming error: ${data}`);
+  watcher.on('error', (error) => {
+    console.error(`Log streaming error: ${error.message}`);
   });
 
-  tail.on('error', (error) => {
-    console.error(`Failed to start log streaming: ${error.message}`);
-  });
-
-  return tail;
+  return { close: () => watcher.close() };
 };
 
 app.use(cors());
@@ -342,7 +367,7 @@ function loadPlugins() {
       enabled: routeOverrides[route.path]?.enabled !== false
     }));
 
-    plugin(app, { mountPath, services: { browserService, express } });
+    plugin(app, { mountPath, services: { browserService, ffmpegService, express } });
 
     // Serve static assets from plugin's assets folder if it exists
     const assetsPath = path.join(pluginPath, 'assets');
