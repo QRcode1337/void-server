@@ -38,6 +38,7 @@ function fetchLatestRelease() {
       }
     };
 
+    console.log(`🔍 Checking for updates: ${GITHUB_API}`);
     https.get(GITHUB_API, options, (res) => {
       let data = '';
 

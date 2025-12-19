@@ -819,9 +819,13 @@ const fetchLatestVersion = (repoUrl) => {
       }
     };
 
+    const apiUrl = `https://api.github.com/repos/${apiPath}/releases/latest`;
+    console.log(`🔍 Checking plugin version: ${apiUrl}`);
+
     https.get(options, (response) => {
       // Handle rate limiting
       if (response.statusCode === 403) {
+        console.log(`⚠️ Rate limited (403) for: ${apiUrl}`);
         return resolve({ success: false, error: 'GitHub API rate limit exceeded' });
       }
 
