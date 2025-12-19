@@ -65,12 +65,16 @@ fi
 print_step "Stopping services..."
 pm2 stop void-server void-client 2>/dev/null || true
 
+# Stop old Docker containers (migration from Docker-only to hybrid)
+print_step "Stopping old Docker containers..."
+docker compose down 2>/dev/null || true
+
 # Pull latest code
 print_step "Pulling latest code..."
 git pull --rebase
 
-# Update infrastructure containers
-print_step "Updating infrastructure containers..."
+# Start fresh infrastructure containers
+print_step "Starting infrastructure containers..."
 docker compose pull
 docker compose up -d
 

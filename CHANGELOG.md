@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.13.2] - 2025-12-19
+
+### Fixed
+
+- **Update scripts stop old Docker containers** - `docker compose down` before starting fresh infrastructure
+  - Fixes migration from Docker-only to hybrid architecture
+  - Prevents old void-server container from blocking port 4420
+
+---
+
 ## [0.13.1] - 2025-12-19
 
 ### Changed

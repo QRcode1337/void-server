@@ -70,6 +70,10 @@ if ($gitStatus) {
 Write-Step "Stopping services..."
 pm2 stop void-server void-client 2>$null
 
+# Stop old Docker containers (migration from Docker-only to hybrid)
+Write-Step "Stopping old Docker containers..."
+docker compose down 2>$null
+
 # Pull latest code
 Write-Step "Pulling latest code..."
 git pull --rebase
@@ -78,8 +82,8 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Update infrastructure containers
-Write-Step "Updating infrastructure containers..."
+# Start fresh infrastructure containers
+Write-Step "Starting infrastructure containers..."
 docker compose pull
 docker compose up -d
 
