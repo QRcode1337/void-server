@@ -66,9 +66,9 @@ if ($gitStatus) {
     }
 }
 
-# Stop PM2 services
+# Stop and delete PM2 services (ensures fresh config on restart)
 Write-Step "Stopping services..."
-pm2 stop void-server void-client 2>$null
+pm2 delete void-server void-client 2>$null
 
 # Stop old Docker containers (migration from Docker-only to hybrid)
 Write-Step "Stopping old Docker containers..."
@@ -99,12 +99,9 @@ Pop-Location
 Write-Step "Rebuilding client..."
 npm run build --prefix client
 
-# Restart PM2
-Write-Step "Restarting services..."
-pm2 restart void-server void-client 2>$null
-if ($LASTEXITCODE -ne 0) {
-    pm2 start ecosystem.config.js
-}
+# Start PM2 with fresh config
+Write-Step "Starting services..."
+pm2 start ecosystem.config.js
 
 Write-Host ""
 pm2 status

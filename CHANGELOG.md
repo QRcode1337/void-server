@@ -7,6 +7,9 @@
 - **Update scripts stop old Docker containers** - `docker compose down` before starting fresh infrastructure
   - Fixes migration from Docker-only to hybrid architecture
   - Prevents old void-server container from blocking port 4420
+- **Update scripts use fresh PM2 config** - `pm2 delete` then `pm2 start` instead of `pm2 restart`
+  - Ensures updated ecosystem.config.js settings are used (including PORT)
+  - Fixes issue where PM2 cached old port 4480 instead of 4420
 
 ---
 

@@ -61,9 +61,9 @@ if [[ -n $(git status --porcelain) ]]; then
   fi
 fi
 
-# Stop PM2 services
+# Stop and delete PM2 services (ensures fresh config on restart)
 print_step "Stopping services..."
-pm2 stop void-server void-client 2>/dev/null || true
+pm2 delete void-server void-client 2>/dev/null || true
 
 # Stop old Docker containers (migration from Docker-only to hybrid)
 print_step "Stopping old Docker containers..."
@@ -88,9 +88,9 @@ npm install --prefix client
 print_step "Rebuilding client..."
 npm run build --prefix client
 
-# Restart PM2
-print_step "Restarting services..."
-pm2 restart void-server void-client 2>/dev/null || pm2 start ecosystem.config.js
+# Start PM2 with fresh config
+print_step "Starting services..."
+pm2 start ecosystem.config.js
 
 echo ""
 pm2 status
