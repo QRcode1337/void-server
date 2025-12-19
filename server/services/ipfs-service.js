@@ -65,6 +65,26 @@ async function initialize() {
       await fs.writeFile(CONFIG_PATH, JSON.stringify(DEFAULT_CONFIG, null, 2));
       console.log('📋 IPFS config initialized with defaults');
     }
+  } else {
+    // Migrate old Docker hostnames to localhost (v0.13.5+)
+    const content = await fs.readFile(CONFIG_PATH, 'utf8');
+    const config = JSON.parse(content);
+    let needsSave = false;
+
+    // Fix Docker hostnames (from when running in Docker mode)
+    if (config.apiUrl && !config.apiUrl.includes('localhost') && !config.apiUrl.includes('127.0.0.1')) {
+      config.apiUrl = 'http://localhost:5001';
+      needsSave = true;
+    }
+    if (config.gateway && !config.gateway.includes('localhost') && !config.gateway.includes('127.0.0.1') && !config.gateway.includes('pinata')) {
+      config.gateway = 'http://localhost:8080/ipfs';
+      needsSave = true;
+    }
+
+    if (needsSave) {
+      await fs.writeFile(CONFIG_PATH, JSON.stringify(config, null, 2));
+      console.log('📋 IPFS config migrated to localhost (from Docker hostnames)');
+    }
   }
 
   // Initialize pins registry if needed

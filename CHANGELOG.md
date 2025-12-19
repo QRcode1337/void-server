@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.13.5] - 2025-12-19
+
+### Fixed
+
+- **Windows log streaming errors** - Fixed "The system cannot find the path specified" errors
+  - Wrapped fs.watch in try/catch to handle Windows-specific file access issues
+  - Log streaming now fails gracefully without crashing or spamming console
+- **IPFS Docker hostname migration** - Fixed "ENOTFOUND ipfs" error after switching to native mode
+  - Automatically migrates old Docker hostnames (`ipfs`, `neo4j`) to `localhost`
+  - Runs on startup, updates `data/ipfs.json` if needed
+  - Preserves Pinata gateway URLs (external service)
+
+---
+
 ## [0.13.4] - 2025-12-19
 
 ### New Features

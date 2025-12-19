@@ -158,35 +158,48 @@ const setupLogStreaming = () => {
   // Broadcast initial lines
   lastLines.forEach(line => broadcastLog('info', line));
 
-  // Watch for file changes
-  const watcher = fs.watch(logPath, (eventType) => {
-    if (eventType !== 'change') return;
+  // Watch for file changes (with Windows error handling)
+  let watcher;
+  try {
+    watcher = fs.watch(logPath, (eventType) => {
+      if (eventType !== 'change') return;
 
-    const stats = fs.statSync(logPath);
-    if (stats.size <= lastSize) {
-      // File was truncated, reset
-      lastSize = stats.size;
-      return;
-    }
+      try {
+        // Check if file still exists
+        if (!fs.existsSync(logPath)) return;
 
-    // Read only new content
-    const fd = fs.openSync(logPath, 'r');
-    const buffer = Buffer.alloc(stats.size - lastSize);
-    fs.readSync(fd, buffer, 0, buffer.length, lastSize);
-    fs.closeSync(fd);
+        const stats = fs.statSync(logPath);
+        if (stats.size <= lastSize) {
+          // File was truncated, reset
+          lastSize = stats.size;
+          return;
+        }
 
-    const newContent = buffer.toString('utf8');
-    const lines = newContent.split('\n').filter(line => line.trim());
-    lines.forEach(line => broadcastLog('info', line));
+        // Read only new content
+        const fd = fs.openSync(logPath, 'r');
+        const buffer = Buffer.alloc(stats.size - lastSize);
+        fs.readSync(fd, buffer, 0, buffer.length, lastSize);
+        fs.closeSync(fd);
 
-    lastSize = stats.size;
-  });
+        const newContent = buffer.toString('utf8');
+        const lines = newContent.split('\n').filter(line => line.trim());
+        lines.forEach(line => broadcastLog('info', line));
 
-  watcher.on('error', (error) => {
-    console.error(`Log streaming error: ${error.message}`);
-  });
+        lastSize = stats.size;
+      } catch (err) {
+        // Silently ignore file access errors (common on Windows)
+      }
+    });
 
-  return { close: () => watcher.close() };
+    watcher.on('error', (error) => {
+      // Silently ignore - log streaming is non-critical
+    });
+  } catch (err) {
+    console.log('📋 Log streaming not available (non-critical)');
+    return { close: () => {} };
+  }
+
+  return { close: () => watcher?.close() };
 };
 
 app.use(cors());
