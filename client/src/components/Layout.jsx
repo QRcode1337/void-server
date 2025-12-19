@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Navigation from './Navigation';
 import MobileHeader from './MobileHeader';
@@ -7,25 +7,14 @@ import ServerLogsViewer from './ServerLogsViewer';
 import { WebSocketProvider } from '../contexts/WebSocketContext';
 
 const Layout = () => {
-  const location = useLocation();
   const [plugins, setPlugins] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // Auto-collapse setting (default: true = enabled)
-  const [autoCollapseNav, setAutoCollapseNav] = useState(() => {
-    const saved = localStorage.getItem('autoCollapseNav');
-    return saved === null ? true : saved === 'true';
-  });
-
-  // Sidebar open state - depends on auto-collapse setting
+  // Sidebar open state - persisted in localStorage
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (window.innerWidth < 768) return false; // Always collapsed on mobile
-    const autoCollapse = localStorage.getItem('autoCollapseNav');
-    const isAutoCollapse = autoCollapse === null ? true : autoCollapse === 'true';
-    if (isAutoCollapse) return false; // Start collapsed when auto-collapse enabled
-    // When auto-collapse disabled, restore previous state
     const savedState = localStorage.getItem('sidebarOpen');
-    return savedState === 'true';
+    return savedState === null ? true : savedState === 'true'; // Default to open on desktop
   });
 
   useEffect(() => {
@@ -48,36 +37,12 @@ const Layout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Auto-collapse sidebar on route change (desktop only, when enabled)
-  // Intentionally only depends on pathname - we collapse on navigation, not state changes
+  // Persist sidebar state to localStorage (desktop only)
   useEffect(() => {
-    if (!isMobile && autoCollapseNav && sidebarOpen) {
-      setSidebarOpen(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-
-  // Persist sidebar state when auto-collapse is disabled
-  useEffect(() => {
-    if (!autoCollapseNav && !isMobile) {
+    if (!isMobile) {
       localStorage.setItem('sidebarOpen', sidebarOpen.toString());
     }
-  }, [sidebarOpen, autoCollapseNav, isMobile]);
-
-  // Listen for auto-collapse setting changes from other components
-  useEffect(() => {
-    const handleStorageChange = e => {
-      if (e.key === 'autoCollapseNav') {
-        const newValue = e.newValue === 'true';
-        setAutoCollapseNav(newValue);
-        if (newValue && !isMobile) {
-          setSidebarOpen(false);
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [isMobile]);
+  }, [sidebarOpen, isMobile]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen(prev => !prev);
