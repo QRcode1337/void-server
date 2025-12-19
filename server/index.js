@@ -222,6 +222,10 @@ app.use('/api/ipfs', ipfsRoutes);
 // Ollama API
 app.use('/api/ollama', ollamaRoutes);
 
+// Plugins API
+const pluginsRoutes = require('./routes/plugins');
+app.use('/api/plugins', pluginsRoutes);
+
 // Initialize Provider system
 aiProvider.initialize();
 

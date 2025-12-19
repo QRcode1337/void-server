@@ -745,6 +745,263 @@ const setPluginEnabled = (pluginName, enabled) => {
 };
 
 // ============================================================================
+// Plugin Version Checking
+// ============================================================================
+
+/**
+ * Fetch latest release version from GitHub API
+ * @param {string} repoUrl - GitHub repository URL (git@ or https://)
+ * @returns {Promise<{success: boolean, version?: string, releaseUrl?: string, error?: string}>}
+ */
+const fetchLatestVersion = (repoUrl) => {
+  return new Promise((resolve) => {
+    // Convert git URL to API URL
+    // git@github.com:user/repo.git -> api.github.com/repos/user/repo/releases/latest
+    // https://github.com/user/repo -> api.github.com/repos/user/repo/releases/latest
+    let apiPath;
+    if (repoUrl.startsWith('git@github.com:')) {
+      apiPath = repoUrl.replace('git@github.com:', '').replace(/\.git$/, '');
+    } else if (repoUrl.includes('github.com/')) {
+      const match = repoUrl.match(/github\.com\/([^/]+\/[^/.]+)/);
+      apiPath = match ? match[1] : null;
+    }
+
+    if (!apiPath) {
+      return resolve({ success: false, error: 'Could not parse GitHub URL' });
+    }
+
+    const options = {
+      hostname: 'api.github.com',
+      path: `/repos/${apiPath}/releases/latest`,
+      headers: {
+        'User-Agent': 'void-server',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    };
+
+    https.get(options, (response) => {
+      // Handle rate limiting
+      if (response.statusCode === 403) {
+        return resolve({ success: false, error: 'GitHub API rate limit exceeded' });
+      }
+
+      // Handle no releases
+      if (response.statusCode === 404) {
+        return resolve({ success: false, error: 'No releases found' });
+      }
+
+      if (response.statusCode !== 200) {
+        return resolve({ success: false, error: `GitHub API returned ${response.statusCode}` });
+      }
+
+      let data = '';
+      response.on('data', chunk => { data += chunk; });
+      response.on('end', () => {
+        const release = JSON.parse(data);
+        const version = release.tag_name?.replace(/^v/, '') || null;
+        resolve({
+          success: true,
+          version,
+          releaseUrl: release.html_url,
+          zipUrl: release.zipball_url
+        });
+      });
+    }).on('error', (err) => {
+      resolve({ success: false, error: err.message });
+    });
+  });
+};
+
+/**
+ * Compare semantic versions
+ * @param {string} v1 - First version
+ * @param {string} v2 - Second version
+ * @returns {number} -1 if v1 < v2, 0 if equal, 1 if v1 > v2
+ */
+const compareVersions = (v1, v2) => {
+  if (!v1 || !v2) return 0;
+
+  const parts1 = v1.replace(/^v/, '').split('.').map(Number);
+  const parts2 = v2.replace(/^v/, '').split('.').map(Number);
+
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const p1 = parts1[i] || 0;
+    const p2 = parts2[i] || 0;
+    if (p1 > p2) return 1;
+    if (p1 < p2) return -1;
+  }
+  return 0;
+};
+
+/**
+ * Check a single plugin for updates
+ * @param {string} pluginName - Plugin name
+ * @returns {Promise<{success: boolean, hasUpdate?: boolean, currentVersion?: string, latestVersion?: string, error?: string}>}
+ */
+const checkPluginUpdate = async (pluginName) => {
+  const pluginPath = getPluginPath(pluginName);
+  if (!pluginPath) {
+    return { success: false, error: 'Plugin not found' };
+  }
+
+  const pluginManifest = loadPluginManifest(pluginPath);
+  if (!pluginManifest) {
+    return { success: false, error: 'Plugin manifest not found' };
+  }
+
+  const currentVersion = pluginManifest.version;
+
+  // Get repository URL from config or manifest
+  const config = loadConfig();
+  const pluginConfig = config[pluginName] || {};
+  let repoUrl = pluginConfig.installedFrom;
+
+  // If no repo URL in config, try to find it in global manifest
+  if (!repoUrl) {
+    const globalManifest = loadManifest();
+    repoUrl = globalManifest.plugins?.[pluginName]?.repository;
+  }
+
+  if (!repoUrl || (!repoUrl.includes('github.com') && !repoUrl.startsWith('git@github.com:'))) {
+    return { success: false, error: 'No GitHub repository URL found for plugin' };
+  }
+
+  const latestResult = await fetchLatestVersion(repoUrl);
+  if (!latestResult.success) {
+    return { success: false, error: latestResult.error };
+  }
+
+  const hasUpdate = compareVersions(latestResult.version, currentVersion) > 0;
+
+  return {
+    success: true,
+    hasUpdate,
+    currentVersion,
+    latestVersion: latestResult.version,
+    releaseUrl: latestResult.releaseUrl
+  };
+};
+
+/**
+ * Check all installed plugins for updates
+ * @returns {Promise<Array<{name: string, hasUpdate: boolean, currentVersion: string, latestVersion?: string, error?: string}>>}
+ */
+const checkAllPluginUpdates = async () => {
+  const plugins = listInstalledPlugins();
+  const results = [];
+
+  for (const plugin of plugins) {
+    // Skip built-in plugins (they update with void-server)
+    if (plugin.builtIn) continue;
+
+    const check = await checkPluginUpdate(plugin.name);
+    results.push({
+      name: plugin.name,
+      hasUpdate: check.hasUpdate || false,
+      currentVersion: check.currentVersion || plugin.version,
+      latestVersion: check.latestVersion,
+      releaseUrl: check.releaseUrl,
+      error: check.error
+    });
+  }
+
+  return results;
+};
+
+/**
+ * Update a plugin to the latest version
+ * @param {string} pluginName - Plugin name to update
+ * @returns {Promise<{success: boolean, plugin?: string, oldVersion?: string, newVersion?: string, requiresRestart?: boolean, message?: string, error?: string}>}
+ */
+const updatePlugin = async (pluginName) => {
+  const pluginPath = getPluginPath(pluginName);
+  if (!pluginPath) {
+    return { success: false, error: 'Plugin not found' };
+  }
+
+  // Block update of built-in plugins
+  if (BUILT_IN_PLUGINS.includes(pluginName)) {
+    return { success: false, error: 'Built-in plugins update with void-server' };
+  }
+
+  const pluginManifest = loadPluginManifest(pluginPath);
+  const oldVersion = pluginManifest?.version || 'unknown';
+
+  // Get repository URL
+  const config = loadConfig();
+  const pluginConfig = config[pluginName] || {};
+  let repoUrl = pluginConfig.installedFrom;
+
+  if (!repoUrl) {
+    const globalManifest = loadManifest();
+    repoUrl = globalManifest.plugins?.[pluginName]?.repository;
+  }
+
+  if (!repoUrl) {
+    return { success: false, error: 'No repository URL found for plugin' };
+  }
+
+  // Fetch latest version
+  const latestResult = await fetchLatestVersion(repoUrl);
+  if (!latestResult.success) {
+    return { success: false, error: `Could not fetch latest version: ${latestResult.error}` };
+  }
+
+  // Build release URL
+  const releaseUrl = buildReleaseUrl(repoUrl, latestResult.version);
+
+  // Backup old plugin data directory if it exists
+  const pluginDataDir = path.join(pluginPath, 'data');
+  const hasData = fs.existsSync(pluginDataDir);
+  const tempDataBackup = hasData ? path.join(USER_PLUGINS_DIR, '.temp-data-backup') : null;
+
+  if (hasData) {
+    console.log(`📦 Backing up plugin data...`);
+    if (fs.existsSync(tempDataBackup)) {
+      fs.rmSync(tempDataBackup, { recursive: true, force: true });
+    }
+    fs.cpSync(pluginDataDir, tempDataBackup, { recursive: true });
+  }
+
+  // Remove old plugin
+  console.log(`🗑️ Removing old version...`);
+  fs.rmSync(pluginPath, { recursive: true, force: true });
+
+  // Install new version
+  console.log(`📥 Installing ${pluginName} v${latestResult.version}...`);
+  const installResult = await installFromZip(releaseUrl, pluginName, pluginPath);
+
+  if (!installResult.success) {
+    // Attempt to restore on failure
+    return { success: false, error: `Update failed: ${installResult.error}` };
+  }
+
+  // Restore data directory
+  if (tempDataBackup && fs.existsSync(tempDataBackup)) {
+    console.log(`📦 Restoring plugin data...`);
+    fs.cpSync(tempDataBackup, pluginDataDir, { recursive: true });
+    fs.rmSync(tempDataBackup, { recursive: true, force: true });
+  }
+
+  // Update config with new version
+  config[pluginName] = config[pluginName] || {};
+  config[pluginName].installedVersion = latestResult.version;
+  config[pluginName].updatedAt = new Date().toISOString();
+  saveConfig(config);
+
+  console.log(`✅ Plugin "${pluginName}" updated to v${latestResult.version}`);
+
+  return {
+    success: true,
+    plugin: pluginName,
+    oldVersion,
+    newVersion: latestResult.version,
+    requiresRestart: true,
+    message: `Plugin "${pluginName}" updated from v${oldVersion} to v${latestResult.version}. Restart required.`
+  };
+};
+
+// ============================================================================
 // Exports
 // ============================================================================
 
@@ -784,5 +1041,11 @@ module.exports = {
   // Operations
   installPlugin,
   uninstallPlugin,
-  setPluginEnabled
+  setPluginEnabled,
+
+  // Version checking
+  checkPluginUpdate,
+  checkAllPluginUpdates,
+  updatePlugin,
+  compareVersions
 };

@@ -10,6 +10,12 @@
   - Binaries stored in `data/bin/` for reuse
   - Plugins can use `ffmpegService` from core for video processing
 
+- **Plugin update system** - Check for and update user-installed plugins
+  - New API endpoints: `GET /api/plugins/updates`, `POST /api/plugins/:name/update`
+  - Fetches latest release version from GitHub API
+  - Preserves plugin data directory during updates
+  - Built-in plugins update with void-server core
+
 ### Fixed
 
 - **Windows compatibility for video downloads** - Fixed multiple Unix-only commands
