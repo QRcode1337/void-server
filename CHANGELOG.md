@@ -21,12 +21,22 @@
 - **Plugin API response format** - Fixed plugins not appearing in UI
   - Removed duplicate route registration returning wrong format
   - Client now receives correct `{installed, available}` structure
+- **Plugin update URL construction** - Fixed malformed download URLs during plugin updates
+  - Extracts base repo from any GitHub URL format (including zip URLs)
+  - Prevents double `/archive/refs/tags/` path in download URLs
+- **Server restart via UI** - Fixed restart button killing PM2 instead of restarting
+  - Now uses `pm2 restart void-server void-client` instead of `process.exit(0)`
+- **GitHub API rate limiting** - Added caching and backoff to prevent 403 errors
+  - 5-minute cache for plugin version checks
+  - 1-minute backoff after hitting rate limit
+  - Gracefully returns cached/stale data when rate limited
 
 ### Changed
 
 - **Update scripts** - Added `npx pm2 update` before starting services
   - Prevents "In-memory PM2 is out of date" warnings
 - **Removed obsolete files** - Deleted `docker-start.sh` and duplicate `server/routes/plugins.js`
+- **Plugin manifests** - Added `minServerVersion: "0.14.0"` to core plugins
 
 ---
 
