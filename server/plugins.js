@@ -89,8 +89,12 @@ const loadPluginManifest = (pluginPath) => {
  * @returns {boolean}
  */
 const isSymlink = (pluginPath) => {
-  if (!fs.existsSync(pluginPath)) return false;
-  return fs.lstatSync(pluginPath).isSymbolicLink();
+  try {
+    if (!fs.existsSync(pluginPath)) return false;
+    return fs.lstatSync(pluginPath).isSymbolicLink();
+  } catch {
+    return false;
+  }
 };
 
 /**
@@ -150,12 +154,20 @@ const getInstallationType = (pluginName) => {
  * @returns {boolean}
  */
 const isDevMode = () => {
-  if (!fs.existsSync(PLUGINS_DIR)) return false;
-  const entries = fs.readdirSync(PLUGINS_DIR, { withFileTypes: true });
-  return entries.some(entry =>
-    entry.name.startsWith('void-plugin-') &&
-    fs.lstatSync(path.join(PLUGINS_DIR, entry.name)).isSymbolicLink()
-  );
+  try {
+    if (!fs.existsSync(PLUGINS_DIR)) return false;
+    const entries = fs.readdirSync(PLUGINS_DIR, { withFileTypes: true });
+    return entries.some(entry => {
+      if (!entry.name.startsWith('void-plugin-')) return false;
+      try {
+        return fs.lstatSync(path.join(PLUGINS_DIR, entry.name)).isSymbolicLink();
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return false;
+  }
 };
 
 // ============================================================================
@@ -232,36 +244,52 @@ const scanPluginsDir = (dir, config, manifest, isUserDir = false) => {
       const pluginPath = path.join(dir, name);
 
       // Skip if not a real directory (broken symlink, etc.)
-      const lstat = fs.lstatSync(pluginPath);
-      if (lstat.isSymbolicLink()) {
-        const realPath = fs.realpathSync(pluginPath);
-        if (!fs.existsSync(realPath)) return null;
-      } else if (!lstat.isDirectory()) {
+      try {
+        const lstat = fs.lstatSync(pluginPath);
+        if (lstat.isSymbolicLink()) {
+          // Try to resolve symlink - may fail on Windows
+          try {
+            const realPath = fs.realpathSync(pluginPath);
+            if (!fs.existsSync(realPath)) return null;
+          } catch {
+            // Symlink resolution failed, skip this entry
+            return null;
+          }
+        } else if (!lstat.isDirectory()) {
+          return null;
+        }
+      } catch {
+        // lstat failed, skip this entry
         return null;
       }
 
-      const pluginManifest = loadPluginManifest(pluginPath);
-      const pluginConfig = config[name] || {};
-      const catalogEntry = manifest.plugins?.[name];
+      try {
+        const pluginManifest = loadPluginManifest(pluginPath);
+        const pluginConfig = config[name] || {};
+        const catalogEntry = manifest.plugins?.[name];
 
-      return {
-        name,
-        installed: true,
-        enabled: pluginConfig.enabled !== false, // default true
-        builtIn: BUILT_IN_PLUGINS.includes(name),
-        userInstalled: isUserDir,
-        installationType: getInstallationType(name),
-        version: pluginManifest?.version || 'unknown',
-        description: pluginManifest?.description || catalogEntry?.description || '',
-        installedAt: pluginConfig.installedAt,
-        installedFrom: pluginConfig.installedFrom || (isUserDir ? 'user' : 'core'),
-        mountPath: pluginConfig.mountPath || pluginManifest?.defaultMountPath,
-        navConfig: pluginConfig.navConfig || {
-          navSection: pluginManifest?.nav?.section ?? null,
-          navTitle: pluginManifest?.nav?.title || name.replace('void-plugin-', ''),
-          navIcon: pluginManifest?.nav?.icon || 'box'
-        }
-      };
+        return {
+          name,
+          installed: true,
+          enabled: pluginConfig.enabled !== false, // default true
+          builtIn: BUILT_IN_PLUGINS.includes(name),
+          userInstalled: isUserDir,
+          installationType: getInstallationType(name),
+          version: pluginManifest?.version || 'unknown',
+          description: pluginManifest?.description || catalogEntry?.description || '',
+          installedAt: pluginConfig.installedAt,
+          installedFrom: pluginConfig.installedFrom || (isUserDir ? 'user' : 'core'),
+          mountPath: pluginConfig.mountPath || pluginManifest?.defaultMountPath,
+          navConfig: pluginConfig.navConfig || {
+            navSection: pluginManifest?.nav?.section ?? null,
+            navTitle: pluginManifest?.nav?.title || name.replace('void-plugin-', ''),
+            navIcon: pluginManifest?.nav?.icon || 'box'
+          }
+        };
+      } catch (err) {
+        console.error(`Failed to load plugin ${name}:`, err.message);
+        return null;
+      }
     })
     .filter(Boolean);
 };

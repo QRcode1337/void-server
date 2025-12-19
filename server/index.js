@@ -593,7 +593,8 @@ app.post('/api/server/restart', (req, res) => {
     spawn('npx', ['pm2', 'restart', 'void-client'], {
       stdio: 'ignore',
       detached: true,
-      windowsHide: true
+      windowsHide: true,
+      shell: true
     }).unref();
 
     // Give client restart a moment to start
@@ -697,7 +698,7 @@ app.get('/api/pm2/logs', (req, res) => {
       ? ['logs', '--lines', '0', '--raw']
       : ['logs', processName, '--lines', '0', '--raw'];
 
-    pm2Process = spawn('npx', ['pm2', ...pm2Args], { windowsHide: true });
+    pm2Process = spawn('npx', ['pm2', ...pm2Args], { windowsHide: true, shell: true });
     activeLogStreams.set(streamId, { process: pm2Process, processName });
 
     pm2Process.stdout.on('data', (data) => {
