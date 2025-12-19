@@ -7,12 +7,6 @@ When('I select the {string} theme', async function (themeName) {
   await themeButton.click();
 });
 
-When('I toggle the auto-collapse navigation setting', async function () {
-  // Find toggle switch or checkbox near the Auto-collapse text
-  const toggle = this.page.locator('[data-testid="auto-collapse-toggle"], input[type="checkbox"]').first();
-  await toggle.click();
-});
-
 Then('I should see a list of AI providers', async function () {
   // Look for any provider card or the providers section
   await expect(

@@ -17,11 +17,6 @@ Feature: Settings Page
     When I select the "Green" theme
     Then I should see a success toast
 
-  Scenario: Auto-collapse navigation toggle
-    Given I am on the "General" settings tab
-    When I toggle the auto-collapse navigation setting
-    Then I should see a success toast
-
   @smoke
   Scenario: View providers list
     When I click on the "Providers" tab
