@@ -53,6 +53,7 @@ backups/*
 
 .playwright-mcp
 
-# Test reports (generated artifacts)
+# Test reports and build outputs (generated artifacts)
 tests/e2e/reports/*.html
 tests/e2e/reports/*.json
+tests/e2e/dist/

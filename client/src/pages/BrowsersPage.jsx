@@ -214,9 +214,9 @@ export default function BrowsersPage() {
   const renderStatusBadge = browser => {
     if (browser.running) {
       return (
-        <span className="flex items-center gap-1 text-sm text-warning">
-          <RefreshCw size={14} className="animate-spin" />
-          Running
+        <span className="flex items-center gap-1 text-sm text-success">
+          <CheckCircle size={14} />
+          Listening on :{browser.port}
         </span>
       );
     }
