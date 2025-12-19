@@ -27,6 +27,10 @@ const BUILT_IN_PLUGINS = [
   'void-plugin-wallet'
 ];
 
+// Cache for plugin version checks (avoid rate limiting)
+const pluginVersionCache = new Map();
+const PLUGIN_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 // Ensure config directory exists
 if (!fs.existsSync(CONFIG_DIR)) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
@@ -398,8 +402,6 @@ const buildReleaseUrl = (repoUrl, version) => {
   // Extract user/repo from various URL formats
   const match = repoUrl.match(/github\.com[/:]([^/]+\/[^/.]+)/);
   const repoPath = match ? match[1] : null;
-
-  console.log(`🔧 buildReleaseUrl: repoUrl="${repoUrl}", repoPath="${repoPath}", version="${version}"`);
 
   if (!repoPath) {
     // Fallback: try to clean up URL directly
@@ -897,6 +899,20 @@ const checkPluginUpdate = async (pluginName) => {
 
   const currentVersion = pluginManifest.version;
 
+  // Check cache first
+  const cached = pluginVersionCache.get(pluginName);
+  if (cached && (Date.now() - cached.timestamp) < PLUGIN_CACHE_DURATION) {
+    const hasUpdate = compareVersions(cached.latestVersion, currentVersion) > 0;
+    return {
+      success: true,
+      hasUpdate,
+      currentVersion,
+      latestVersion: cached.latestVersion,
+      releaseUrl: cached.releaseUrl,
+      cached: true
+    };
+  }
+
   // Get repository URL from config or manifest
   const config = loadConfig();
   const pluginConfig = config[pluginName] || {};
@@ -914,8 +930,28 @@ const checkPluginUpdate = async (pluginName) => {
 
   const latestResult = await fetchLatestVersion(repoUrl);
   if (!latestResult.success) {
+    // On failure, return cached data if available (even if stale)
+    if (cached) {
+      const hasUpdate = compareVersions(cached.latestVersion, currentVersion) > 0;
+      return {
+        success: true,
+        hasUpdate,
+        currentVersion,
+        latestVersion: cached.latestVersion,
+        releaseUrl: cached.releaseUrl,
+        cached: true,
+        stale: true
+      };
+    }
     return { success: false, error: latestResult.error };
   }
+
+  // Update cache
+  pluginVersionCache.set(pluginName, {
+    latestVersion: latestResult.version,
+    releaseUrl: latestResult.releaseUrl,
+    timestamp: Date.now()
+  });
 
   const hasUpdate = compareVersions(latestResult.version, currentVersion) > 0;
 
