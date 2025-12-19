@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.13.3] - 2025-12-19
+
+### New Features
+
+- **Update scripts support zip downloads** - Non-git installations can now update via GitHub releases
+  - Detects if `.git` directory exists to choose update method
+  - Downloads latest release from GitHub API
+  - Preserves `data/` directory and `.env` file during update
+  - Works on both Unix (update.sh) and Windows (update.ps1)
+
+### Fixed
+
+- **Explicitly stop docker void-server container** - Ensures old container is removed during update
+  - Runs `docker stop void-server` and `docker rm void-server` explicitly
+  - Handles cases where compose project name differs from current config
+- **PM2 void-client on Windows** - Fixed SyntaxError when running npm via PM2 on Windows
+  - Runs vite directly (`./node_modules/vite/bin/vite.js`) instead of via npm
+  - PM2 was incorrectly parsing npm.CMD as JavaScript
+
+---
+
 ## [0.13.2] - 2025-12-19
 
 ### Fixed

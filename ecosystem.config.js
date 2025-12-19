@@ -39,10 +39,10 @@ module.exports = {
       listen_timeout: 3000
     },
     // Client dev server - only runs in development
+    // Runs vite directly (not via npm) for Windows compatibility
     ...(isProduction ? [] : [{
       name: 'void-client',
-      script: 'npm',
-      args: 'run dev',
+      script: './node_modules/vite/bin/vite.js',
       cwd: './client',
       env: {
         NODE_ENV: 'development'
