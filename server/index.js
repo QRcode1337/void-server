@@ -609,19 +609,14 @@ app.post('/api/server/restart', (req, res) => {
 
   // Delay restart slightly to allow response to be sent
   setTimeout(() => {
-    // Also restart void-client so Vite picks up new plugins
+    // Use PM2 to restart both server and client externally
     const { spawn } = require('child_process');
-    spawn('npx', ['pm2', 'restart', 'void-client'], {
+    spawn('npx', ['pm2', 'restart', 'void-server', 'void-client'], {
       stdio: 'ignore',
       detached: true,
       windowsHide: true,
       shell: true
     }).unref();
-
-    // Give client restart a moment to start
-    setTimeout(() => {
-      process.exit(0); // PM2 will auto-restart the server process
-    }, 200);
   }, 500);
 });
 
