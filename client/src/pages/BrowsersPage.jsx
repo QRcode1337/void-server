@@ -21,10 +21,10 @@ export default function BrowsersPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newBrowser, setNewBrowser] = useState({ id: '', name: '', description: '', port: '' });
+  const [newBrowser, setNewBrowser] = useState({ id: '', name: '', description: '', port: '', startUrl: '' });
   const [portRange, setPortRange] = useState({ start: 9111, end: 9199 });
   const [editingBrowser, setEditingBrowser] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', description: '', port: '' });
+  const [editForm, setEditForm] = useState({ name: '', description: '', port: '', startUrl: '' });
   const [isDocker, setIsDocker] = useState(false);
   const [authModal, setAuthModal] = useState(null); // { id, commands }
   const [selectedPlatform, setSelectedPlatform] = useState('darwin');
@@ -65,6 +65,7 @@ export default function BrowsersPage() {
       ...newBrowser,
       port: newBrowser.port ? parseInt(newBrowser.port, 10) : undefined,
       autoAssignPort: !newBrowser.port,
+      startUrl: newBrowser.startUrl || undefined,
     };
 
     const response = await fetch('/api/browsers', {
@@ -79,7 +80,7 @@ export default function BrowsersPage() {
     if (data.success) {
       toast.success(`Browser profile created (port ${data.browser.port})`);
       setShowCreateForm(false);
-      setNewBrowser({ id: '', name: '', description: '', port: '' });
+      setNewBrowser({ id: '', name: '', description: '', port: '', startUrl: '' });
       loadBrowsers();
     } else {
       toast.error(data.error || 'Failed to create browser profile');
@@ -92,12 +93,13 @@ export default function BrowsersPage() {
       name: browser.name || '',
       description: browser.description || '',
       port: browser.port || '',
+      startUrl: browser.startUrl || '',
     });
   };
 
   const cancelEditing = () => {
     setEditingBrowser(null);
-    setEditForm({ name: '', description: '', port: '' });
+    setEditForm({ name: '', description: '', port: '', startUrl: '' });
   };
 
   const handleUpdate = async id => {
@@ -105,6 +107,7 @@ export default function BrowsersPage() {
       name: editForm.name || undefined,
       description: editForm.description,
       port: editForm.port ? parseInt(editForm.port, 10) : null,
+      startUrl: editForm.startUrl,
     };
 
     const response = await fetch(`/api/browsers/${id}`, {
@@ -136,7 +139,7 @@ export default function BrowsersPage() {
     const data = await response.json();
 
     if (data.success) {
-      toast.success('Browser opened. Log in, then close when done.', {
+      toast.success('Browser opened. Close when done to save session.', {
         id: `launch-${id}`,
         duration: 5000,
       });
@@ -158,7 +161,7 @@ export default function BrowsersPage() {
         clearInterval(interval);
         loadBrowsers();
         if (data.authenticated) {
-          toast.success(`Browser "${data.name}" authenticated!`);
+          toast.success(`Browser "${data.name}" session saved`);
         }
       }
     }, 2000);
@@ -166,8 +169,9 @@ export default function BrowsersPage() {
     setTimeout(() => clearInterval(interval), 300000);
   };
 
-  const fetchAuthCommand = async (id, url = 'https://x.com/login') => {
-    const response = await fetch(`/api/browsers/${id}/auth-command?url=${encodeURIComponent(url)}`);
+  const fetchAuthCommand = async (id, url) => {
+    const queryParams = url ? `?url=${encodeURIComponent(url)}` : '';
+    const response = await fetch(`/api/browsers/${id}/auth-command${queryParams}`);
     const data = await response.json();
 
     if (data.success) {
@@ -225,7 +229,7 @@ export default function BrowsersPage() {
       return (
         <span className="flex items-center gap-1 text-sm text-success">
           <CheckCircle size={14} />
-          Authenticated
+          Has Session Data
         </span>
       );
     }
@@ -233,7 +237,7 @@ export default function BrowsersPage() {
     return (
       <span className="flex items-center gap-1 text-sm text-tertiary">
         <XCircle size={14} />
-        Not Authenticated
+        No Session Data
       </span>
     );
   };
@@ -309,11 +313,25 @@ export default function BrowsersPage() {
                 type="text"
                 value={newBrowser.description}
                 onChange={e => setNewBrowser({ ...newBrowser, description: e.target.value })}
-                placeholder="Browser profile for downloading X.com videos"
+                placeholder="Browser profile for authenticated sessions"
                 className="form-input w-full"
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">Start URL</label>
+              <input
+                type="text"
+                value={newBrowser.startUrl}
+                onChange={e => setNewBrowser({ ...newBrowser, startUrl: e.target.value })}
+                placeholder="https://example.com/login"
+                className="form-input w-full"
+              />
+              <p className="text-xs text-tertiary mt-1">URL to open on launch (optional)</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-secondary mb-1">CDP Port</label>
               <input
@@ -327,13 +345,14 @@ export default function BrowsersPage() {
               />
               <p className="text-xs text-tertiary mt-1">Leave empty for auto-assignment</p>
             </div>
+            <div></div>
           </div>
 
           <div className="flex justify-end gap-2">
             <button
               onClick={() => {
                 setShowCreateForm(false);
-                setNewBrowser({ id: '', name: '', description: '', port: '' });
+                setNewBrowser({ id: '', name: '', description: '', port: '', startUrl: '' });
               }}
               className="btn btn-secondary"
             >
@@ -377,7 +396,7 @@ export default function BrowsersPage() {
                     <span className="text-xs text-tertiary">ID: {browser.id}</span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-secondary mb-1">
                         Display Name
@@ -401,6 +420,22 @@ export default function BrowsersPage() {
                         placeholder="Description"
                         className="form-input w-full"
                       />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <label className="block text-sm font-medium text-secondary mb-1">
+                        Start URL
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.startUrl}
+                        onChange={e => setEditForm({ ...editForm, startUrl: e.target.value })}
+                        placeholder="https://example.com/login"
+                        className="form-input w-full"
+                      />
+                      <p className="text-xs text-tertiary mt-1">URL to open on launch (optional)</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-secondary mb-1">
@@ -445,6 +480,9 @@ export default function BrowsersPage() {
                       )}
                       <div className="flex items-center gap-3 mt-1">
                         <span className="text-xs text-tertiary">ID: {browser.id}</span>
+                        {browser.startUrl && (
+                          <span className="text-xs text-tertiary">URL: {browser.startUrl}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -464,31 +502,22 @@ export default function BrowsersPage() {
                         </button>
                       ) : isDocker ? (
                         <button
-                          onClick={() => fetchAuthCommand(browser.id, 'https://x.com/login')}
+                          onClick={() => fetchAuthCommand(browser.id)}
                           className="btn btn-primary btn-sm flex items-center gap-1"
-                          title="Get authentication command"
+                          title="Get launch command"
                         >
                           <Terminal size={16} />
-                          Authenticate
+                          Get Command
                         </button>
                       ) : (
-                        <>
-                          <button
-                            onClick={() => handleLaunch(browser.id, 'https://x.com/login')}
-                            className="btn btn-primary btn-sm flex items-center gap-1"
-                            title="Launch for X.com authentication"
-                          >
-                            <Play size={16} />
-                            Launch (X.com)
-                          </button>
-                          <button
-                            onClick={() => handleLaunch(browser.id)}
-                            className="btn btn-secondary btn-sm flex items-center gap-1"
-                            title="Launch with blank page"
-                          >
-                            <ExternalLink size={16} />
-                          </button>
-                        </>
+                        <button
+                          onClick={() => handleLaunch(browser.id)}
+                          className="btn btn-primary btn-sm flex items-center gap-1"
+                          title={browser.startUrl ? `Launch to ${browser.startUrl}` : 'Launch browser'}
+                        >
+                          <Play size={16} />
+                          Launch
+                        </button>
                       )}
                       <button
                         onClick={() => startEditing(browser)}

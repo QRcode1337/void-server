@@ -201,7 +201,7 @@ async function getBrowser(id) {
  * Create a new browser profile
  */
 async function createBrowser(id, options = {}) {
-  const { name, description = '', port: requestedPort, autoAssignPort = true } = options;
+  const { name, description = '', port: requestedPort, autoAssignPort = true, startUrl = '' } = options;
 
   if (!id || !id.match(/^[a-z0-9-]+$/)) {
     return { success: false, error: 'Invalid ID. Use lowercase letters, numbers, and hyphens only.' };
@@ -241,6 +241,7 @@ async function createBrowser(id, options = {}) {
     name: name || id,
     description,
     port,
+    startUrl: startUrl || null,
     createdAt: new Date().toISOString(),
     profileDir
   };
@@ -353,7 +354,7 @@ async function getBrowserStatus(id) {
  * Opens native Chrome/Chromium window with profile directory
  */
 async function launchBrowser(id, options = {}) {
-  const { url = 'about:blank' } = options;
+  const { url } = options;
 
   // Check if already running
   const existingInfo = runningBrowsers.get(id);
@@ -392,9 +393,10 @@ async function launchBrowser(id, options = {}) {
     `--remote-debugging-port=${cdpPort}`,
   ];
 
-  // Add URL if provided
-  if (url && url !== 'about:blank') {
-    args.push(url);
+  // Use provided URL, or fall back to profile's startUrl
+  const launchUrl = url || browser.startUrl;
+  if (launchUrl) {
+    args.push(launchUrl);
   }
 
   // Spawn Chrome process
@@ -558,6 +560,11 @@ async function updateBrowser(id, updates = {}) {
     browser.description = updates.description;
   }
 
+  // Handle startUrl update
+  if (updates.startUrl !== undefined) {
+    browser.startUrl = updates.startUrl || null;
+  }
+
   config.browsers[id] = browser;
   await saveConfig(config);
 
@@ -593,19 +600,25 @@ function isRunningInDocker() {
  * Generate platform-specific authentication commands for running Chrome on host
  * Used when server runs in Docker but browser auth needs to happen on host machine
  */
-async function getAuthCommand(id, url = 'https://x.com/login') {
+async function getAuthCommand(id, url) {
   const browser = await getBrowser(id);
   if (!browser) {
     return null;
   }
 
+  // Use provided URL, or fall back to profile's startUrl
+  const launchUrl = url || browser.startUrl;
+
   // Host path - data/browsers is mounted from host ./data/browsers
   const hostProfileDir = `./data/browsers/${id}`;
 
+  // Build URL argument only if we have a URL
+  const urlArg = launchUrl ? ` "${launchUrl}"` : '';
+
   return {
-    darwin: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --user-data-dir="${hostProfileDir}" "${url}"`,
-    win32: `start "" "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --user-data-dir="${hostProfileDir}" "${url}"`,
-    linux: `google-chrome --user-data-dir="${hostProfileDir}" "${url}"`
+    darwin: `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --user-data-dir="${hostProfileDir}"${urlArg}`,
+    win32: `start "" "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --user-data-dir="${hostProfileDir}"${urlArg}`,
+    linux: `google-chrome --user-data-dir="${hostProfileDir}"${urlArg}`
   };
 }
 

@@ -73,14 +73,14 @@ router.get('/:id/auth-command', async (req, res) => {
 
 // Create new browser profile
 router.post('/', async (req, res) => {
-  const { id, name, description, port, autoAssignPort = true } = req.body;
-  console.log(`🌐 POST /api/browsers id=${id} name="${name}" port=${port || 'auto'}`);
+  const { id, name, description, port, autoAssignPort = true, startUrl } = req.body;
+  console.log(`🌐 POST /api/browsers id=${id} name="${name}" port=${port || 'auto'} startUrl=${startUrl || 'none'}`);
 
   if (!id) {
     return res.status(400).json({ success: false, error: 'Browser ID is required' });
   }
 
-  const result = await browserService.createBrowser(id, { name, description, port, autoAssignPort });
+  const result = await browserService.createBrowser(id, { name, description, port, autoAssignPort, startUrl });
 
   if (!result.success) {
     return res.status(400).json(result);
@@ -91,10 +91,10 @@ router.post('/', async (req, res) => {
 
 // Update browser profile
 router.put('/:id', async (req, res) => {
-  const { name, description, port } = req.body;
-  console.log(`🌐 PUT /api/browsers/${req.params.id} port=${port}`);
+  const { name, description, port, startUrl } = req.body;
+  console.log(`🌐 PUT /api/browsers/${req.params.id} port=${port} startUrl=${startUrl !== undefined ? startUrl || 'none' : 'unchanged'}`);
 
-  const result = await browserService.updateBrowser(req.params.id, { name, description, port });
+  const result = await browserService.updateBrowser(req.params.id, { name, description, port, startUrl });
 
   if (!result.success) {
     return res.status(400).json(result);
