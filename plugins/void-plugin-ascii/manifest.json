@@ -1,6 +1,7 @@
 {
   "name": "void-plugin-ascii",
   "version": "1.0.0",
+  "minServerVersion": "0.14.0",
   "description": "ASCII text generator with block letters and terminal box styling",
   "server": {
     "entry": "server/index.js"

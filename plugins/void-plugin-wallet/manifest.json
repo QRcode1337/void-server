@@ -1,6 +1,7 @@
 {
   "name": "void-plugin-wallet",
   "version": "1.0.0",
+  "minServerVersion": "0.14.0",
   "description": "Crypto wallet management with send/sign capabilities",
   "server": {
     "entry": "server/index.js"

@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.14.0] - 2025-12-19
+
+### New Features
+
+- **Plugin version management UI** - Plugins page now shows version info and updates
+  - Version badge displayed for each installed plugin
+  - Update indicator when newer version available on GitHub
+  - One-click Update button to download and install latest version
+  - Automatic restart prompt after plugin updates
+
+### Fixed
+
+- **Windows spawn ENOENT errors** - Fixed `spawn npx ENOENT` on Windows
+  - Added `shell: true` to all npx spawn calls (required on Windows)
+  - Added `windowsHide: true` to exec calls for PM2 logs
+- **Plugin loading stability** - Wrapped filesystem operations in try-catch
+  - Gracefully handles symlink resolution failures
+  - Logs errors instead of crashing when plugin scan fails
+- **Plugin API response format** - Fixed plugins not appearing in UI
+  - Removed duplicate route registration returning wrong format
+  - Client now receives correct `{installed, available}` structure
+
+### Changed
+
+- **Update scripts** - Added `npx pm2 update` before starting services
+  - Prevents "In-memory PM2 is out of date" warnings
+- **Removed obsolete files** - Deleted `docker-start.sh` and duplicate `server/routes/plugins.js`
+
+---
+
 ## [0.13.7] - 2025-12-19
 
 ### Fixed

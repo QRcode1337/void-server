@@ -1,6 +1,7 @@
 {
   "name": "void-plugin-verify",
   "version": "1.0.0",
+  "minServerVersion": "0.14.0",
   "description": "Client-side Ed25519 signature verification",
   "server": {
     "entry": "server/index.js"
