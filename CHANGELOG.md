@@ -13,6 +13,7 @@
 
 - **E2E test port configuration** - Tests now use port 4420 consistently for native mode
 - **Removed obsolete auto-collapse test** - Test for removed navigation setting
+- **CI workflow** - Removed browser sidecar image build (no longer needed with native Chrome)
 
 ---
 
