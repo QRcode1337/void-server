@@ -10,136 +10,81 @@ A modular, plugin-based creative platform for building and running your own sove
 
 | Tool | Purpose | Install |
 |------|---------|---------|
-| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Run the app + all services | Required |
+| [Node.js 20+](https://nodejs.org/) | Run void-server | Required |
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) | Run Neo4j + IPFS | Required |
 | [LM Studio](https://lmstudio.ai/) | GPU-accelerated local AI | Optional* |
 | [Tailscale](https://tailscale.com/download) | Access from phone/anywhere | Optional |
 
-*Ollama runs inside Docker for local AI. LM Studio is optional but recommended for better GPU inference on the host machine. If using LM Studio, download an embedding model (e.g., `nomic-embed-text`) and a chat model, then start the local server.
+*LM Studio is optional but recommended for GPU inference. If using LM Studio, download an embedding model (e.g., `nomic-embed-text`) and a chat model, then start the local server. Ollama can also run in Docker as an alternative.
 
 ### 2. Run
 
-**With git:**
 ```bash
 git clone https://github.com/ClawedCode/void-server.git
 cd void-server
-docker-compose up -d
+./setup.sh    # Installs deps, starts Docker infra, starts void-server with PM2
 ```
 
-**Without git:**
-```bash
-curl -L https://github.com/ClawedCode/void-server/archive/refs/heads/main.zip -o void-server.zip
-unzip void-server.zip && cd void-server-main
-docker-compose up -d
-```
+The setup script:
+- Installs Node.js dependencies
+- Starts infrastructure (Neo4j, IPFS) via Docker
+- Starts void-server natively with PM2
 
 ### 3. Access
 
 - **Local:** http://localhost:4420
 - **Remote:** `http://<tailscale-ip>:4420` (if Tailscale installed)
 
-That's it! Docker Compose starts both Void Server and Neo4j with persistent storage.
+**Manage services:**
+```bash
+npm run status        # Check PM2 process status
+npm run logs          # View server logs
+npm run restart       # Restart void-server
+npm run infra         # Start Docker infrastructure
+npm run infra:down    # Stop Docker infrastructure
+```
 
 ---
 
-## More Options
-
-### Docker Ports
-
-Docker uses different ports to avoid conflicts with native installations:
-
-| Service | Docker Port | Native Port |
-|---------|-------------|-------------|
-| App | 4420 | 4401 |
-| Neo4j Browser | 4421 | 7474 |
-| Neo4j Bolt | 4422 | 7687 |
-
-**Manage Docker services:**
-```bash
-docker-compose logs -f      # View logs (Ctrl+C to exit)
-docker-compose restart      # Restart services
-docker-compose down         # Stop services
-docker-compose up -d        # Start services
-```
-
-### Native Installation
-
-For development or if you prefer running services directly on your machine.
-
-```bash
-git clone https://github.com/ClawedCode/void-server.git
-cd void-server
-./setup.sh
-```
-
-This installs dependencies, starts dev services with PM2, and configures auto-start.
-
-Development defaults:
-
-- API server: http://localhost:4401
-- Client (Vite dev with HMR): http://localhost:4480
-
-PM2 runs both: `void-server` (Express API) and `void-client` (Vite dev server). Use the Vite URL for the live-reload UI; API requests proxy to 4401.
-
-**Manage native services:**
-```bash
-npm run status    # Check status
-npm run logs      # View logs
-npm run restart   # Restart
-npm run stop      # Stop
-```
-
-## Docker Configuration
+## Configuration
 
 ### Environment Variables
 
-Customize your Docker deployment with environment variables:
+Customize your deployment with environment variables (`.env` file supported):
+
+Create a `.env` file to customize settings:
 
 ```bash
-# Custom Neo4j password
-NEO4J_PASSWORD=mysecurepassword docker-compose up -d
-
-# Or create a .env file
-echo "NEO4J_PASSWORD=mysecurepassword" > .env
-docker-compose up -d
+# Example .env file
+NEO4J_PASSWORD=mysecurepassword
+LM_STUDIO_URL=http://localhost:1234/v1
 ```
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `PORT` | `4420` | Server port |
+| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection URI |
+| `NEO4J_USER` | `neo4j` | Neo4j username |
 | `NEO4J_PASSWORD` | `voidserver` | Neo4j database password |
-| `NEO4J_URI` | `bolt://neo4j:7687` | Neo4j connection URI |
-| `OLLAMA_URL` | `http://ollama:11434/v1` | Ollama API endpoint |
-| `OLLAMA_MODELS` | — | Comma-separated models to auto-pull |
+| `IPFS_API_URL` | `http://localhost:5001` | IPFS API endpoint |
+| `IPFS_GATEWAY_URL` | `http://localhost:8080` | IPFS gateway URL |
+| `OLLAMA_URL` | `http://localhost:11434/v1` | Ollama API endpoint |
+| `LM_STUDIO_URL` | `http://localhost:1234/v1` | LM Studio API endpoint |
 | `EMBEDDING_PROVIDER` | `auto` | Embedding provider (`ollama`, `lmstudio`, `auto`) |
-| `LM_STUDIO_URL` | `http://host.docker.internal:1234/v1` | LM Studio API endpoint (optional) |
-| `BROWSER_NOVNC_PORT` | `6080` | Starting port for browser noVNC |
-| `DOCKER_GID` | `0` | Docker group ID for socket access |
-
-### Using External Services
-
-To use an external Neo4j instance instead of the bundled one:
-
-```bash
-NEO4J_URI=bolt://your-server:7687 \
-NEO4J_USER=neo4j \
-NEO4J_PASSWORD=yourpassword \
-docker-compose up -d void-server
-```
-
-### LM Studio Integration
-
-If running [LM Studio](https://lmstudio.ai/) on your host machine, the Docker container automatically connects via `host.docker.internal`. Just start LM Studio's local server and it will be available to the containerized app.
 
 ### Persistent Data
 
-Docker volumes preserve your data across restarts:
+All user data is stored in `./data/` for simple backup and migration:
 
-| Host Path | Container Path | Purpose |
-|-----------|----------------|---------|
-| `./data` | `/app/data` | All user data (v0.8.0+) |
-| `./logs` | `/app/logs` | Application logs |
-| `neo4j_data` | Neo4j volume | Graph database |
+| Directory | Purpose |
+|-----------|---------|
+| `data/chats/` | Chat history and turn logs |
+| `data/browsers/` | Browser profiles for plugins |
+| `data/prompts/` | Templates and variables |
+| `data/wallets/` | Wallet plugin data |
+| `data/models/` | Ollama models (if using Docker Ollama) |
 
-All user configuration and data is stored in `./data/` for simple backup and migration. See [docs/DATA.md](docs/DATA.md) for details.
+See [docs/DATA.md](docs/DATA.md) for the complete directory structure.
 
 ### Remote Access
 
@@ -147,7 +92,7 @@ Access your Void Server from your phone or anywhere using [Tailscale](https://ta
 
 1. Install Tailscale on your server and phone
 2. Sign in with the same account
-3. Access via Tailscale IP: `http://100.x.y.z:4420` (Docker) or `http://100.x.y.z:4401` (native)
+3. Access via Tailscale IP: `http://100.x.y.z:4420`
 
 See [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md) for detailed setup instructions.
 
@@ -172,19 +117,6 @@ See [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md) for detailed setup instructio
 | [Memories](docs/MEMORIES.md) | Neo4j memory system and knowledge graph |
 | [Remote Access](docs/REMOTE-ACCESS.md) | Tailscale setup for mobile/remote access |
 | [HTTP Client](docs/HTTP-CLIENT.md) | Server-side HTTP request utilities |
-
-## Ports
-
-| Service | Docker | Native |
-|---------|--------|--------|
-| App | 4420 | 4401 |
-| Neo4j Browser | 4421 | 7474 |
-| Neo4j Bolt | 4422 | 7687 |
-| IPFS API | 4423 | 5001 |
-| IPFS Gateway | 4424 | 8080 |
-| Ollama | 4425 | 11434 |
-| Browser (noVNC) | 6080+ | — |
-| Client (dev) | — | 4480 |
 
 ## Commands
 
@@ -237,23 +169,9 @@ For deployment, install plugins as git submodules:
 npm run plugin:add https://github.com/org/void-plugin-example.git
 ```
 
-## Configuration
-
-Environment variables (`.env` file supported):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `4401` | Server port |
-| `NODE_ENV` | `development` | Environment mode |
-| `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection URI |
-| `NEO4J_USER` | `neo4j` | Neo4j username |
-| `NEO4J_PASSWORD` | `voidserver` | Neo4j password |
-| `NEO4J_DATABASE` | `neo4j` | Neo4j database name |
-| `LM_STUDIO_URL` | `http://localhost:1234/v1` | LM Studio API endpoint |
-
-All user data and configuration is stored in `./data/`. See [docs/DATA.md](docs/DATA.md) for the full directory structure.
-
 ## Architecture
+
+Void Server uses a hybrid architecture: the application runs natively with PM2 while infrastructure services run in Docker.
 
 ```
     ┌──────────┐          ┌──────────┐
@@ -268,92 +186,77 @@ All user data and configuration is stored in `./data/`. See [docs/DATA.md](docs/
                     │  or localhost:4420
                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              Docker Compose Stack                           │
+│                          Host Machine (Native)                              │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                         void-server (:4420)                         │    │
+│  │                   void-server (PM2) :4420                           │    │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌───────────┐   │    │
 │  │  │   Express   │  │   React     │  │   Plugins   │  │  WebSocket│   │    │
 │  │  │   API       │  │   Client    │  │   System    │  │  Logs     │   │    │
 │  │  └──────┬──────┘  └─────────────┘  └─────────────┘  └───────────┘   │    │
 │  │         │                                                           │    │
-│  │         ├── Chat Service ──┬── Memory Service ──┬── Browser Mgr ─┐  │    │
-│  │         │                  │                    │                │  │    │
-│  │         ▼                  ▼                    ▼                │  │    │
-│  │  ┌───────────┐      ┌───────────┐        ┌──────────┐       Docker  │    │
-│  │  │   IPFS    │      │ Embeddings│        │  Graph   │       Socket  │    │
-│  │  │  Service  │      │   (LLM)   │        │ Queries  │         │     │    │
-│  │  └─────┬─────┘      └─────┬─────┘        └────┬─────┘         │     │    │
-│  └────────┼──────────────────┼───────────────────┼───────────────┼─────┘    │
-│           │                  │                   │               │          │
-│           ▼                  │                   ▼               │          │
-│  ┌─────────────────┐         │         ┌─────────────────┐       │          │
-│  │   ipfs (:4423)  │         │         │ neo4j (:4421)   │       │          │
-│  │  ┌───────────┐  │         │         │  ┌───────────┐  │       │          │
-│  │  │   Kubo    │  │         │         │  │   Graph   │  │       │          │
-│  │  │   Node    │  │         │         │  │  Database │  │       │          │
-│  │  ├───────────┤  │         │         │  ├───────────┤  │       │          │
-│  │  │  Gateway  │  │         │         │  │  Bolt     │  │       │          │
-│  │  │  (:4424)  │  │         │         │  │  (:4422)  │  │       │          │
-│  │  └───────────┘  │         │         │  └───────────┘  │       │          │
-│  │  ipfs_data vol  │         │         │  neo4j_data vol │       │          │
-│  └─────────────────┘         │         └─────────────────┘       │          │
-│           ┌──────────────────┤                                   │          │
-│           │                  ▼                                   ▼          │
-│  ┌────────▼────────┐  ┌─────────────────┐  ┌───────────────────────────┐    │
-│  │ ollama (:4425)  │  │ LM Studio       │  │    Browser Containers     │    │
-│  │  ┌───────────┐  │  │ (optional)      │  │  ┌─────────────────────┐  │    │
-│  │  │ Chat Model│  │  │                 │  │  │   void-browser-1    │  │    │
-│  │  │ (llama3,  │  │  │ via host.docker │  │  │     noVNC:6080      │  │    │
-│  │  │  qwen2)   │  │  │ .internal:1234  │  │  ├─────────────────────┤  │    │
-│  │  ├───────────┤  │  │                 │  │  │   void-browser-2    │  │    │
-│  │  │ Embedding │  │  │ Preferred for   │  │  │     noVNC:6081      │  │    │
-│  │  │ (nomic,   │  │  │ GPU inference   │  │  ├─────────────────────┤  │    │
-│  │  │  mxbai)   │  │  │                 │  │  │        ...          │  │    │
-│  │  └───────────┘  │  └────────┬────────┘  │  └─────────────────────┘  │    │
-│  │ ollama_data vol │           │           │  Spawned via Docker API   │    │
-│  └─────────────────┘           │           └───────────────────────────┘    │
-│                                │                                            │
-└────────────────────────────────┼────────────────────────────────────────────┘
-                                 │
-                   host.docker.internal
-                                 │
-                                 ▼
-                   ┌─────────────────────────┐
-                   │   LM Studio (:1234)     │
-                   │  ┌───────────────────┐  │
-                   │  │   Chat Model      │  │
-                   │  │   (Qwen, Llama)   │  │
-                   │  ├───────────────────┤  │
-                   │  │  Embedding Model  │  │
-                   │  │  (nomic-embed)    │  │
-                   │  └───────────────────┘  │
-                   │                         │
-                   │   Runs on Host Machine  │
-                   │   (Optional - for GPU)  │
-                   └─────────────────────────┘
+│  │         ├── Chat Service ──┬── Memory Service ──┬── Browser Mgr     │    │
+│  │         │                  │                    │                   │    │
+│  │         ▼                  ▼                    ▼                   │    │
+│  │  ┌───────────┐      ┌───────────┐        ┌──────────────────────┐   │    │
+│  │  │   IPFS    │      │ Embeddings│        │   Native Chrome      │   │    │
+│  │  │  Service  │      │   (LLM)   │        │   Profiles (CDP)     │   │    │
+│  │  └─────┬─────┘      └─────┬─────┘        │  ┌────────────────┐  │   │    │
+│  │        │                  │              │  │ x-auth :6081   │  │   │    │
+│  │        │                  │              │  │ profile-2 :6082│  │   │    │
+│  │        │                  │              │  └────────────────┘  │   │    │
+│  │        │                  │              │  Playwright connects │   │    │
+│  │        │                  │              │  via connectOverCDP  │   │    │
+│  └────────┼──────────────────┼──────────────┴──────────────────────┘   │    │
+│           │                  │                                          │    │
+│           │                  │          ┌─────────────────────────┐     │    │
+│           │                  │          │   LM Studio (:1234)     │     │    │
+│           │                  └─────────▶│  ┌───────────────────┐  │     │    │
+│           │                             │  │ Chat + Embedding  │  │     │    │
+│           │                             │  │ Models (GPU)      │  │     │    │
+│           │                             │  └───────────────────┘  │     │    │
+│           │                             │  Optional - for GPU     │     │    │
+│           │                             └─────────────────────────┘     │    │
+└───────────┼─────────────────────────────────────────────────────────────┘
+            │
+            │  localhost connections
+            ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Docker Infrastructure (docker-compose.infra.yml)         │
+│                                                                             │
+│  ┌─────────────────────┐              ┌─────────────────────┐               │
+│  │   neo4j (:7687)     │              │   ipfs (:5001)      │               │
+│  │  ┌───────────────┐  │              │  ┌───────────────┐  │               │
+│  │  │ Graph Database│  │              │  │  Kubo Node    │  │               │
+│  │  │ (Memories)    │  │              │  │  + Gateway    │  │               │
+│  │  ├───────────────┤  │              │  │  (:8080)      │  │               │
+│  │  │ Browser :7474 │  │              │  └───────────────┘  │               │
+│  │  └───────────────┘  │              │  ipfs_data volume   │               │
+│  │  neo4j_data volume  │              └─────────────────────┘               │
+│  └─────────────────────┘                                                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Port Reference
 
-| Service | Docker | Native | Purpose |
-|---------|--------|--------|---------|
-| Void Server | 4420 | 4401 | Main application |
-| Neo4j Browser | 4421 | 7474 | Database admin UI |
-| Neo4j Bolt | 4422 | 7687 | Database connection |
-| IPFS API | 4423 | 5001 | IPFS node API |
-| IPFS Gateway | 4424 | 8080 | Content gateway |
-| Ollama | 4425 | 11434 | Local AI inference |
-| Browser (noVNC) | 6080+ | — | Remote browser access |
-| Vite (dev) | — | 4480 | HMR dev server |
-| LM Studio | 1234 | 1234 | AI inference (optional) |
+| Service | Port | Purpose |
+|---------|------|---------|
+| Void Server | 4420 | Main application (Express + React) |
+| Neo4j Browser | 7474 | Database admin UI |
+| Neo4j Bolt | 7687 | Database connection |
+| IPFS API | 5001 | IPFS node API |
+| IPFS Gateway | 8080 | Content gateway |
+| Ollama | 11434 | Local AI inference (optional) |
+| LM Studio | 1234 | GPU AI inference (optional) |
+| Browser CDP | 6080+ | Chrome DevTools Protocol ports |
 
 ### Data Flow
 
-1. **Chat** → User message → Prompt template + Memory context → Ollama/LM Studio → Response
+1. **Chat** → User message → Prompt template + Memory context → LM Studio/Ollama → Response
 2. **Memory** → Extract entities → Generate embeddings → Store in Neo4j graph
-3. **IPFS** → Pin content locally → Announce to DHT → Optionally replicate to Pinata
-4. **Browser** → Plugin requests browser → Spawn container via Docker API → noVNC stream to UI
+3. **IPFS** → Pin content locally → Announce to DHT → Retrieve via gateway
+4. **Browser** → Plugin requests authenticated session → Connect to Chrome via CDP → Playwright automation
 
 ## Project Structure
 

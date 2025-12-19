@@ -40,6 +40,15 @@ Major architecture change: void-server now runs natively with PM2 while infrastr
 - **Docker prune flag compatibility** - Changed `docker system prune -y` to `--force` for broader Docker version support
 - **Native test configuration** - Added `tests/e2e/support/config/native.config.ts` for hybrid mode testing
 
+### UI Improvements
+
+- **Sidebar state persisted** - Navigation open/collapsed state saved to localStorage
+  - Removed auto-collapse setting in favor of simple persistence
+  - Desktop default: open; mobile: always collapsed
+- **Browser status shows port** - Changed "Running" to "Listening on :port" on Browsers page
+  - Shows the CDP port the browser is listening on (e.g., "Listening on :6081")
+  - Changed from warning (yellow) to success (green) color
+
 ---
 
 ## [0.12.0] - 2025-12-17
