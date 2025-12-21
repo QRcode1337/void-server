@@ -12,6 +12,7 @@ Feature: Wallet Plugin
   Scenario: Wallet page loads
     Then I should see the wallet interface
 
+  @wallet-crud
   Scenario: Create wallet from seed phrase
     When I click the create wallet button
     And I enter a valid seed phrase

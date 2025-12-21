@@ -1,5 +1,33 @@
-const { Given, When, Then } = require('@cucumber/cucumber');
+const { Given, When, Then, After, Before } = require('@cucumber/cucumber');
 const { expect } = require('@playwright/test');
+
+// Clean up test wallets before and after wallet scenarios
+Before({ tags: '@wallet-crud' }, async function () {
+  // Delete any leftover test wallets from previous runs
+  await cleanupTestWallets.call(this);
+});
+
+After({ tags: '@wallet-crud' }, async function () {
+  // Clean up test wallets created during this scenario
+  await cleanupTestWallets.call(this);
+});
+
+async function cleanupTestWallets() {
+  // Get all wallet groups
+  const response = await this.request.get(`${this.config.appUrl}/wallet/api/wallet/groups`);
+  const data = await response.json();
+
+  if (data.success && data.groups) {
+    for (const group of data.groups) {
+      // Delete test wallets (those with name containing "Test")
+      if (group.name?.includes('Test') || group.name?.includes('E2E')) {
+        for (const wallet of group.wallets || []) {
+          await this.request.delete(`${this.config.appUrl}/wallet/api/wallet/${wallet.id}`);
+        }
+      }
+    }
+  }
+}
 
 Given('the wallet plugin is enabled', async function () {
   const response = await this.request.get(`${this.config.appUrl}/api/plugins`);
