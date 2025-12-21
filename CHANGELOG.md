@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.15.1] - 2025-12-20
+
+### Fixed
+
+- **Update script killing itself** - Fixed issue where update triggered from UI would fail
+  - PM2 delete was happening before code update, killing the spawned script
+  - Now delays PM2 delete until after git pull and client rebuild complete
+  - Affects both update.sh (macOS/Linux) and update.ps1 (Windows)
+
+---
+
 ## [0.15.0] - 2025-12-20
 
 ### New Features
