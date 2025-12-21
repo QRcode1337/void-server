@@ -853,9 +853,9 @@ server.listen(PORT, () => {
 const gracefulShutdown = () => {
   console.log('🛑 Received shutdown signal, closing gracefully...');
 
-  // Kill log streamer
+  // Close log streamer
   if (logStreamer) {
-    logStreamer.kill();
+    logStreamer.close();
     console.log('📋 Log streaming stopped');
   }
 
