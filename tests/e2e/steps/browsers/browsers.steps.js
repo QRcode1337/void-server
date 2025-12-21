@@ -26,7 +26,7 @@ When('I fill in the profile form:', async function (dataTable) {
   }
   if (data.description) {
     await this.page
-      .locator('input[placeholder="Browser profile for downloading X.com videos"]')
+      .locator('input[placeholder="Browser profile for authenticated sessions"]')
       .fill(data.description);
   }
   // Store for cleanup
