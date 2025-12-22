@@ -11,33 +11,33 @@ This plan outlines improvements for void-server based on the existing architectu
 
 ---
 
-## Phase 1: Federation Protocol Foundation
+## Phase 1: Federation Protocol Foundation ✅ COMPLETE
 
 Enable void-server instances to discover and communicate with each other.
 
-### 1.1 Server Identity & Discovery
-- **File:** `server/services/federation-service.js` (new)
+### 1.1 Server Identity & Discovery ✅
+- **File:** `server/services/federation-service.js`
 - Generate unique server identity using Ed25519 keypair (leverage existing tweetnacl)
 - Server manifest endpoint: `GET /api/federation/manifest`
 - Returns: serverId, publicKey, capabilities, neo4j version, plugin list
 
-### 1.2 DHT-Based Peer Discovery
-- **File:** `server/services/dht-service.js` (new)
+### 1.2 DHT-Based Peer Discovery ✅
+- **File:** `server/services/dht-service.js`
 - Implement Kademlia-style DHT for decentralized peer discovery
 - Use libp2p or custom implementation with WebRTC/WebSocket transport
 - Bootstrap nodes for initial network entry
 - Peer announcement with server capabilities
 - NAT traversal support for home-hosted instances
 
-### 1.3 Peer Management
-- **File:** `server/services/peer-service.js` (new)
+### 1.3 Peer Management ✅
+- **File:** `server/services/peer-service.js`
 - Store discovered peers in Neo4j (leverage graph for trust relationships)
 - Health checking with exponential backoff
 - Trust levels: `unknown`, `verified`, `trusted`
 - Automatic peer scoring based on uptime and response quality
 
-### 1.4 Secure Communication
-- Use TweetNaCl box for encrypted peer-to-peer messages
+### 1.4 Secure Communication ✅
+- Use TweetNaCl box with ed2curve for encrypted peer-to-peer messages
 - Message signing for authenticity verification
 - Challenge-response for peer verification
 
@@ -47,12 +47,12 @@ Enable void-server instances to discover and communicate with each other.
 
 ---
 
-## Phase 2: Memory Sharing Network
+## Phase 2: Memory Sharing Network 🚧 IN PROGRESS
 
 Build on federation to enable cross-instance memory sharing with token economics.
 
-### 2.1 Memory Export/Import Protocol
-- **File:** `server/services/memory-sync-service.js` (new)
+### 2.1 Memory Export/Import Protocol ✅
+- **File:** `server/services/memory-sync-service.js`
 - Standardized memory schema for cross-instance compatibility
 - Selective export by category, stage, or tag
 - Content hashing for deduplication
