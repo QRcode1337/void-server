@@ -313,3 +313,69 @@ When('I POST to {string} with wallet header {string}', async function (endpoint,
   this.testData.lastResponse = await response.json();
   this.testData.lastStatus = response.status();
 });
+
+// Memory Marketplace Steps
+
+Then('the response should contain marketplace stats', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.stats).toBeDefined();
+  expect(typeof response.stats.available).toBe('boolean');
+  expect(response.stats.tiers).toBeDefined();
+  expect(response.stats.qualityWeights).toBeDefined();
+});
+
+When('I register contributor {string}', async function (serverId) {
+  const response = await this.request.post(`${this.config.appUrl}/api/federation/marketplace/contributor/${serverId}`, {
+    data: {
+      endpoint: `http://${serverId}.test.local:4420`,
+      publicKey: `TestPubKey-${serverId}`
+    }
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});
+
+Then('the response should contain contributor profile', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.contributor).toBeDefined();
+  expect(response.contributor.serverId).toBeDefined();
+  expect(response.contributor.tier).toBeDefined();
+});
+
+When('I POST to {string} with interaction {string}', async function (endpoint, interactionType) {
+  const response = await this.request.post(`${this.config.appUrl}${endpoint}`, {
+    data: { type: interactionType }
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});
+
+When('I POST to {string} with vote {int} from {string}', async function (endpoint, vote, voterId) {
+  const response = await this.request.post(`${this.config.appUrl}${endpoint}`, {
+    data: { vote, voterId }
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});
+
+Then('the response should contain vote result', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(typeof response.newVote).toBe('number');
+});
+
+Then('the response should contain quality score', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(typeof response.qualityScore).toBe('number');
+});
+
+When('I POST to {string} with citing memory {string}', async function (endpoint, citingMemoryId) {
+  const response = await this.request.post(`${this.config.appUrl}${endpoint}`, {
+    data: { citingMemoryId }
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});

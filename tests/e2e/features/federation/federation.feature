@@ -199,3 +199,63 @@ Feature: Federation System
     When I POST to "/api/federation/gated/memories/export" with wallet header "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
     Then the response status should be 403
     And the response should contain "Insufficient $CLAWED balance"
+
+  # Memory Marketplace Tests
+
+  @smoke
+  Scenario: Marketplace stats endpoint
+    When I GET "/api/federation/marketplace/stats"
+    Then the response should be successful
+    And the response should contain marketplace stats
+
+  Scenario: Marketplace top memories endpoint
+    When I GET "/api/federation/marketplace/top-memories"
+    Then the response should be successful
+    And the response should have "memories" array
+
+  Scenario: Marketplace top contributors endpoint
+    When I GET "/api/federation/marketplace/top-contributors"
+    Then the response should be successful
+    And the response should have "contributors" array
+
+  Scenario: Get contributor profile (non-existent)
+    When I GET "/api/federation/marketplace/contributor/void-nonexistent"
+    Then the response status should be 404
+
+  Scenario: Register and get contributor
+    When I register contributor "void-e2etest-contrib"
+    Then the response should be successful
+    And the response should contain contributor profile
+    When I GET "/api/federation/marketplace/contributor/void-e2etest-contrib"
+    Then the response should be successful
+    And the response should contain contributor profile
+
+  Scenario: Record view and interaction on memory
+    When I POST to "/api/federation/marketplace/memory/test-memory-001/view" with empty body
+    Then the response should be successful
+    When I POST to "/api/federation/marketplace/memory/test-memory-001/interaction" with interaction "used_in_chat"
+    Then the response should be successful
+
+  Scenario: Vote on memory requires valid vote
+    When I POST to "/api/federation/marketplace/memory/test-memory-002/vote" with empty body
+    Then the response status should be 400
+    And the response should contain "Vote must be 1 or -1"
+
+  Scenario: Vote on memory with voter
+    When I POST to "/api/federation/marketplace/memory/test-memory-003/vote" with vote 1 from "void-voter-test"
+    Then the response should be successful
+    And the response should contain vote result
+
+  Scenario: Get memory quality score
+    When I GET "/api/federation/marketplace/memory/test-memory-001/quality"
+    Then the response should be successful
+    And the response should contain quality score
+
+  Scenario: Get memory attribution chain
+    When I GET "/api/federation/marketplace/memory/test-memory-001/attribution"
+    Then the response should be successful
+    And the response should have "chain" array
+
+  Scenario: Record citation between memories
+    When I POST to "/api/federation/marketplace/memory/test-memory-004/cite" with citing memory "test-memory-005"
+    Then the response should be successful

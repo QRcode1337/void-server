@@ -814,6 +814,195 @@ router.post('/token-gate/clear-cache', (req, res) => {
   res.json({ success: true, cleared: wallet || 'all' });
 });
 
+// ============ Memory Marketplace Routes ============
+
+const { getMemoryMarketplaceService } = require('../services/memory-marketplace-service');
+
+/**
+ * Ensure marketplace service is initialized
+ */
+async function ensureMarketplaceInitialized() {
+  const marketplace = getMemoryMarketplaceService();
+  await marketplace.initialize();
+  return marketplace;
+}
+
+// GET /api/federation/marketplace/stats - Get marketplace statistics
+router.get('/marketplace/stats', async (req, res) => {
+  console.log(`🌐 GET /api/federation/marketplace/stats`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const stats = await marketplace.getStats();
+
+  res.json({
+    success: true,
+    stats
+  });
+});
+
+// GET /api/federation/marketplace/top-memories - Get top quality memories
+router.get('/marketplace/top-memories', async (req, res) => {
+  const { limit, category, minScore } = req.query;
+  console.log(`🌐 GET /api/federation/marketplace/top-memories`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const memories = await marketplace.getTopMemories({
+    limit: parseInt(limit) || 20,
+    category: category || null,
+    minScore: parseFloat(minScore) || 0
+  });
+
+  res.json({
+    success: true,
+    count: memories.length,
+    memories
+  });
+});
+
+// GET /api/federation/marketplace/top-contributors - Get top contributors
+router.get('/marketplace/top-contributors', async (req, res) => {
+  const { limit } = req.query;
+  console.log(`🌐 GET /api/federation/marketplace/top-contributors`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const contributors = await marketplace.getTopContributors({
+    limit: parseInt(limit) || 20
+  });
+
+  res.json({
+    success: true,
+    count: contributors.length,
+    contributors
+  });
+});
+
+// GET /api/federation/marketplace/contributor/:serverId - Get contributor profile
+router.get('/marketplace/contributor/:serverId', async (req, res) => {
+  const { serverId } = req.params;
+  console.log(`🌐 GET /api/federation/marketplace/contributor/${serverId}`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const contributor = await marketplace.getContributor(serverId);
+
+  if (!contributor) {
+    return res.status(404).json({ success: false, error: 'Contributor not found' });
+  }
+
+  res.json({
+    success: true,
+    contributor
+  });
+});
+
+// POST /api/federation/marketplace/contributor/:serverId - Register/update contributor
+router.post('/marketplace/contributor/:serverId', async (req, res) => {
+  const { serverId } = req.params;
+  const { endpoint, publicKey } = req.body;
+  console.log(`🌐 POST /api/federation/marketplace/contributor/${serverId}`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const contributor = await marketplace.registerContributor(serverId, { endpoint, publicKey });
+
+  res.json({
+    success: true,
+    contributor
+  });
+});
+
+// GET /api/federation/marketplace/memory/:memoryId/quality - Get memory quality score
+router.get('/marketplace/memory/:memoryId/quality', async (req, res) => {
+  const { memoryId } = req.params;
+  console.log(`🌐 GET /api/federation/marketplace/memory/${memoryId}/quality`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const score = await marketplace.calculateQualityScore(memoryId);
+
+  res.json({
+    success: true,
+    memoryId,
+    qualityScore: score
+  });
+});
+
+// GET /api/federation/marketplace/memory/:memoryId/attribution - Get memory attribution chain
+router.get('/marketplace/memory/:memoryId/attribution', async (req, res) => {
+  const { memoryId } = req.params;
+  console.log(`🌐 GET /api/federation/marketplace/memory/${memoryId}/attribution`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const chain = await marketplace.getAttributionChain(memoryId);
+
+  res.json({
+    success: true,
+    memoryId,
+    attributionChain: chain
+  });
+});
+
+// POST /api/federation/marketplace/memory/:memoryId/view - Record memory view
+router.post('/marketplace/memory/:memoryId/view', async (req, res) => {
+  const { memoryId } = req.params;
+  const { viewerId } = req.body;
+  console.log(`🌐 POST /api/federation/marketplace/memory/${memoryId}/view`);
+
+  const marketplace = await ensureMarketplaceInitialized();
+  await marketplace.recordView(memoryId, viewerId);
+
+  res.json({ success: true });
+});
+
+// POST /api/federation/marketplace/memory/:memoryId/interaction - Record memory interaction
+router.post('/marketplace/memory/:memoryId/interaction', async (req, res) => {
+  const { memoryId } = req.params;
+  const { type, metadata } = req.body;
+  console.log(`🌐 POST /api/federation/marketplace/memory/${memoryId}/interaction type=${type}`);
+
+  if (!type) {
+    return res.status(400).json({ success: false, error: 'type required' });
+  }
+
+  const marketplace = await ensureMarketplaceInitialized();
+  await marketplace.recordInteraction(memoryId, type, metadata || {});
+
+  res.json({ success: true });
+});
+
+// POST /api/federation/marketplace/memory/:memoryId/vote - Vote on memory
+router.post('/marketplace/memory/:memoryId/vote', async (req, res) => {
+  const { memoryId } = req.params;
+  const { voterId, vote } = req.body;
+  console.log(`🌐 POST /api/federation/marketplace/memory/${memoryId}/vote vote=${vote}`);
+
+  if (!voterId || vote === undefined) {
+    return res.status(400).json({ success: false, error: 'voterId and vote required' });
+  }
+
+  if (vote !== 1 && vote !== -1 && vote !== 0) {
+    return res.status(400).json({ success: false, error: 'vote must be 1, -1, or 0' });
+  }
+
+  const marketplace = await ensureMarketplaceInitialized();
+  const result = await marketplace.vote(memoryId, voterId, vote);
+
+  res.json(result);
+});
+
+// POST /api/federation/marketplace/memory/:memoryId/cite - Record citation
+router.post('/marketplace/memory/:memoryId/cite', async (req, res) => {
+  const { memoryId } = req.params;
+  const { citingMemoryId } = req.body;
+  console.log(`🌐 POST /api/federation/marketplace/memory/${memoryId}/cite from=${citingMemoryId}`);
+
+  if (!citingMemoryId) {
+    return res.status(400).json({ success: false, error: 'citingMemoryId required' });
+  }
+
+  const marketplace = await ensureMarketplaceInitialized();
+  await marketplace.recordCitation(citingMemoryId, memoryId);
+
+  res.json({ success: true });
+});
+
 // ============ Memory Sync Routes ============
 
 const { getMemorySyncService } = require('../services/memory-sync-service');

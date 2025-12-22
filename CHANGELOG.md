@@ -67,6 +67,16 @@
   - Token gate configuration and check endpoints
   - Token-gated memory export/import/sync endpoints
 
+- **Memory Marketplace** - Quality and reputation system for federated memories
+  - Memory quality scoring based on views, interactions, citations, and votes
+  - Age decay to favor recent content (0.99 daily decay)
+  - Contributor reputation tracking with 5 tiers (NEWCOMER → CONTRIBUTOR → TRUSTED → EXPERT → SAGE)
+  - Attribution chains for memory provenance tracking
+  - Upvote/downvote system for community governance
+  - Citation tracking between memories
+  - Top memories and top contributors leaderboards
+  - Neo4j storage for marketplace data (quality scores, votes, contributors)
+
 ### Files Added
 
 - `server/services/federation-service.js` - Federation identity and peer management
@@ -74,6 +84,7 @@
 - `server/services/peer-service.js` - Neo4j peer management with trust graphs
 - `server/services/memory-sync-service.js` - Cross-instance memory sharing
 - `server/services/token-gate-service.js` - $CLAWED token-based access control
+- `server/services/memory-marketplace-service.js` - Quality scoring and reputation tracking
 - `server/routes/federation.js` - Federation, DHT, peer, and token gate API endpoints
 - `client/src/pages/FederationPage.jsx` - Federation UI dashboard
 - `tests/e2e/features/federation/federation.feature` - Federation tests
