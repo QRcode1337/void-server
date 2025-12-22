@@ -13,6 +13,7 @@ import VariablesPage from './pages/VariablesPage';
 import MemoriesPage from './pages/MemoriesPage';
 import BrowsersPage from './pages/BrowsersPage';
 import IPFSPage from './pages/IPFSPage';
+import FederationPage from './pages/FederationPage';
 
 function App() {
   const [plugins, setPlugins] = useState([]);
@@ -50,6 +51,7 @@ function App() {
         <Route path="memories/:tab" element={<MemoriesPage />} />
         <Route path="browsers" element={<BrowsersPage />} />
         <Route path="ipfs" element={<IPFSPage />} />
+        <Route path="federation" element={<FederationPage />} />
 
         {/* Dynamic plugin routes - all handled by PluginViewer */}
         {pluginsLoaded &&

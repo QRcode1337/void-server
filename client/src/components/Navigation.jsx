@@ -16,6 +16,7 @@ import {
   Braces,
   Brain,
   Globe,
+  Network,
   ArrowUpCircle,
   RefreshCw,
   HardDrive,
@@ -256,6 +257,13 @@ function Navigation({ sidebarOpen, toggleSidebar, plugins = [] }) {
       title: 'Browsers',
       icon: Globe,
       path: '/browsers',
+      single: true,
+    });
+
+    contentItems.push({
+      title: 'Federation',
+      icon: Network,
+      path: '/federation',
       single: true,
     });
 

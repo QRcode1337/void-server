@@ -45,6 +45,9 @@ const ipfsRoutes = require('./routes/ipfs');
 const ollamaRoutes = require('./routes/ollama');
 const ollamaService = require('./services/ollama-service');
 
+// Federation management
+const federationRoutes = require('./routes/federation');
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -234,6 +237,9 @@ app.use('/api/ipfs', ipfsRoutes);
 
 // Ollama API
 app.use('/api/ollama', ollamaRoutes);
+
+// Federation API
+app.use('/api/federation', federationRoutes);
 
 // Plugins API
 // Note: Plugin routes are defined inline below for enhanced functionality

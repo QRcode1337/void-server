@@ -1,5 +1,74 @@
 # Changelog
 
+## [Unreleased]
+
+### New Features
+
+- **Federation Protocol Foundation** - Enable void-server instances to discover and communicate
+  - Server identity with Ed25519 keypair for cryptographic authentication
+  - Federation manifest endpoint (`GET /api/federation/manifest`)
+  - Peer management endpoints (add, remove, list peers)
+  - Challenge-response verification for peer authentication
+  - TweetNaCl encryption for secure peer-to-peer messaging
+  - Capabilities detection (memory, chat, neo4j, ipfs, wallet)
+  - Health checking with ping endpoint
+
+- **DHT-Based Peer Discovery** - Decentralized peer discovery using Kademlia-style DHT
+  - 256-bit node IDs derived from server public keys
+  - XOR distance metric for routing table organization
+  - K-buckets (K=20) for peer organization
+  - Bootstrap node support for initial network entry
+  - Iterative node lookup with ALPHA=3 parallel queries
+  - Automatic peer announcement to network
+  - Periodic routing table refresh
+
+- **Neo4j Peer Management** - Persistent peer storage with trust graph relationships
+  - Store discovered peers in Neo4j graph database
+  - Trust levels: unknown, seen, verified, trusted, blocked
+  - Health checking with automatic scoring (decay on failure, recovery on success)
+  - Trust score calculation based on network position (PageRank-style)
+  - Trust graph queries for visualization
+  - CRUD operations for peers in Neo4j
+  - Trust relationship management between peers
+  - Sync peers from in-memory to Neo4j persistence
+
+- **Secure Communication** - End-to-end encrypted peer-to-peer messaging
+  - TweetNaCl box encryption with ed2curve key conversion
+  - Message signing with Ed25519 for authenticity verification
+  - Challenge-response protocol for peer verification
+  - Mutual authentication between peers
+  - Secure message sending with automatic signature and encryption
+  - Crypto self-test endpoint for debugging
+
+- **Federation UI Dashboard** - Visual interface for federation management
+  - Server identity display with public key copy
+  - DHT network status and node count
+  - Peer list with trust levels and health scores
+  - Trust graph visualization
+  - Add/remove/block/unblock peers
+  - Crypto self-test button
+
+- **Memory Sync Service** - Cross-instance memory sharing protocol
+  - Standardized memory schema for federation compatibility
+  - SHA-256 content hashing for deduplication
+  - Selective export by category, stage, tags, or importance
+  - Delta sync support (only new/modified memories since last sync)
+  - Import with collision detection and provenance tracking
+  - Signature verification for data integrity
+
+### Files Added
+
+- `server/services/federation-service.js` - Federation identity and peer management
+- `server/services/dht-service.js` - Kademlia-style DHT for peer discovery
+- `server/services/peer-service.js` - Neo4j peer management with trust graphs
+- `server/services/memory-sync-service.js` - Cross-instance memory sharing
+- `server/routes/federation.js` - Federation, DHT, and peer API endpoints
+- `client/src/pages/FederationPage.jsx` - Federation UI dashboard
+- `tests/e2e/features/federation/federation.feature` - Federation tests
+- `tests/e2e/steps/federation/federation.steps.js` - Federation step definitions
+
+---
+
 ## [0.15.2] - 2025-12-20
 
 ### Fixed
