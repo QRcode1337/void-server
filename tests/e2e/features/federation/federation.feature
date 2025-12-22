@@ -162,3 +162,40 @@ Feature: Federation System
   Scenario: Delta sync requires known peer
     When I POST to "/api/federation/memories/sync/unknown-peer"
     Then the response status should be 404
+
+  # Token Gate Tests
+
+  @smoke
+  Scenario: Token gate config endpoint
+    When I GET "/api/federation/token-gate/config"
+    Then the response should be successful
+    And the response should contain token gate config
+
+  Scenario: Token gate check requires wallet
+    When I GET "/api/federation/token-gate/check"
+    Then the response status should be 400
+
+  Scenario: Token gate check with invalid wallet
+    When I GET "/api/federation/token-gate/check?wallet=invalid"
+    Then the response status should be 400
+    And the response should contain "Invalid wallet address format"
+
+  Scenario: Token gate check with valid wallet
+    When I GET "/api/federation/token-gate/check?wallet=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    Then the response should be successful
+    And the response should contain tier information
+
+  Scenario: Token gate check with feature
+    When I GET "/api/federation/token-gate/check?wallet=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU&feature=federation:read_memories"
+    Then the response should be successful
+    And the response should contain access information
+
+  Scenario: Gated endpoint requires wallet
+    When I POST to "/api/federation/gated/memories/export" with empty body
+    Then the response status should be 401
+    And the response should contain "Wallet address required"
+
+  Scenario: Gated endpoint rejects insufficient balance
+    When I POST to "/api/federation/gated/memories/export" with wallet header "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    Then the response status should be 403
+    And the response should contain "Insufficient $CLAWED balance"

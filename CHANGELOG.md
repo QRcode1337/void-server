@@ -59,13 +59,22 @@
   - Memory sync stats and sync state tracking
   - Preview import before committing changes
 
+- **$CLAWED Token Gate** - Token-based access control for federation
+  - Balance verification via Solana RPC
+  - Tiered access levels (INITIATE → SEEKER → DISCIPLE → ACOLYTE → ASCENDED → ARCHITECT)
+  - Feature-based gating (read at 500K, write at 1M tokens)
+  - Balance caching for performance (1 minute TTL)
+  - Token gate configuration and check endpoints
+  - Token-gated memory export/import/sync endpoints
+
 ### Files Added
 
 - `server/services/federation-service.js` - Federation identity and peer management
 - `server/services/dht-service.js` - Kademlia-style DHT for peer discovery
 - `server/services/peer-service.js` - Neo4j peer management with trust graphs
 - `server/services/memory-sync-service.js` - Cross-instance memory sharing
-- `server/routes/federation.js` - Federation, DHT, and peer API endpoints
+- `server/services/token-gate-service.js` - $CLAWED token-based access control
+- `server/routes/federation.js` - Federation, DHT, peer, and token gate API endpoints
 - `client/src/pages/FederationPage.jsx` - Federation UI dashboard
 - `tests/e2e/features/federation/federation.feature` - Federation tests
 - `tests/e2e/steps/federation/federation.steps.js` - Federation step definitions

@@ -58,10 +58,11 @@ Build on federation to enable cross-instance memory sharing with token economics
 - Content hashing for deduplication
 - Delta sync support (only new/modified memories)
 
-### 2.2 $CLAWED Token Integration
-- **File:** `server/services/token-gate-service.js` (new)
-- Leverage existing void-plugin-wallet for balance checks
-- Use Helius RPC for balance verification
+### 2.2 $CLAWED Token Integration ✅
+- **File:** `server/services/token-gate-service.js`
+- Balance verification via Solana RPC (Helius or public mainnet)
+- Tiered access: INITIATE → SEEKER → DISCIPLE → ACOLYTE → ASCENDED → ARCHITECT
+- Feature-based gating with configurable thresholds
 
 **Token Mechanics (Write-Gating Model):**
 | Action | Token Requirement |

@@ -267,3 +267,49 @@ Then('the import should be a dry run', async function () {
   expect(typeof response.imported).toBe('number');
   expect(typeof response.skipped).toBe('number');
 });
+
+// Token Gate Steps
+
+Then('the response should contain token gate config', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.config).toBeDefined();
+  expect(response.config.token).toBeDefined();
+  expect(response.config.token.symbol).toBe('CLAWED');
+  expect(response.config.tiers).toBeDefined();
+  expect(response.config.features).toBeDefined();
+});
+
+Then('the response should contain tier information', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.wallet).toBeDefined();
+  expect(typeof response.balance).toBe('number');
+  expect(response.tier).toBeDefined();
+  expect(response.token).toBeDefined();
+});
+
+Then('the response should contain access information', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.feature).toBeDefined();
+  expect(typeof response.allowed).toBe('boolean');
+  expect(typeof response.required).toBe('number');
+  expect(response.requiredTier).toBeDefined();
+});
+
+Then('the response should contain {string}', async function (expectedText) {
+  const responseText = JSON.stringify(this.testData.lastResponse);
+  expect(responseText).toContain(expectedText);
+});
+
+When('I POST to {string} with wallet header {string}', async function (endpoint, walletAddress) {
+  const response = await this.request.post(`${this.config.appUrl}${endpoint}`, {
+    headers: {
+      'X-Wallet-Address': walletAddress
+    },
+    data: { limit: 2 }
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});

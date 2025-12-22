@@ -755,6 +755,65 @@ router.post('/peers/neo4j/health-check', async (req, res) => {
   });
 });
 
+// ============ Token Gate Routes ============
+
+const tokenGate = require('../services/token-gate-service');
+
+// GET /api/federation/token-gate/config - Get token gate configuration
+router.get('/token-gate/config', (req, res) => {
+  console.log(`🌐 GET /api/federation/token-gate/config`);
+  res.json({
+    success: true,
+    config: tokenGate.getConfig()
+  });
+});
+
+// GET /api/federation/token-gate/check - Check wallet access level
+router.get('/token-gate/check', async (req, res) => {
+  const { wallet, feature } = req.query;
+  console.log(`🌐 GET /api/federation/token-gate/check wallet=${wallet?.slice(0, 8)}... feature=${feature || 'none'}`);
+
+  if (!wallet) {
+    return res.status(400).json({ success: false, error: 'wallet query param required' });
+  }
+
+  if (!tokenGate.isValidWallet(wallet)) {
+    return res.status(400).json({ success: false, error: 'Invalid wallet address format' });
+  }
+
+  const balance = await tokenGate.getClawedBalance(wallet);
+  const tier = tokenGate.getTierForBalance(balance);
+
+  const result = {
+    success: true,
+    wallet,
+    balance,
+    tier,
+    token: tokenGate.CLAWED_TOKEN
+  };
+
+  // If feature specified, check access
+  if (feature) {
+    const access = await tokenGate.checkAccess(wallet, feature);
+    result.feature = feature;
+    result.allowed = access.allowed;
+    result.required = access.required;
+    result.requiredTier = access.requiredTier;
+  }
+
+  res.json(result);
+});
+
+// POST /api/federation/token-gate/clear-cache - Clear balance cache
+router.post('/token-gate/clear-cache', (req, res) => {
+  const { wallet } = req.body;
+  console.log(`🌐 POST /api/federation/token-gate/clear-cache wallet=${wallet || 'all'}`);
+
+  tokenGate.clearCache(wallet);
+
+  res.json({ success: true, cleared: wallet || 'all' });
+});
+
 // ============ Memory Sync Routes ============
 
 const { getMemorySyncService } = require('../services/memory-sync-service');
@@ -879,6 +938,81 @@ router.post('/memories/sync/:peerId/preview', async (req, res) => {
 
   res.json(result);
 });
+
+// ============ Token-Gated Memory Routes ============
+// These endpoints require $CLAWED token holdings for access
+
+// POST /api/federation/gated/memories/export - Token-gated memory export
+router.post('/gated/memories/export',
+  tokenGate.requireTokens('federation:read_memories'),
+  async (req, res) => {
+    const { category, stage, tags, minImportance, since, limit } = req.body;
+    console.log(`🌐 POST /api/federation/gated/memories/export tier=${req.tokenGate.tier}`);
+
+    const syncService = ensureMemorySyncServiceInitialized();
+    const exportData = await syncService.exportMemories({
+      category,
+      stage,
+      tags,
+      minImportance,
+      since,
+      limit
+    });
+
+    res.json({
+      success: true,
+      tokenGate: req.tokenGate,
+      data: exportData
+    });
+  }
+);
+
+// POST /api/federation/gated/memories/import - Token-gated memory import
+router.post('/gated/memories/import',
+  tokenGate.requireTokens('federation:write_memories'),
+  async (req, res) => {
+    const { exportData, skipDuplicates, dryRun } = req.body;
+    console.log(`🌐 POST /api/federation/gated/memories/import tier=${req.tokenGate.tier}`);
+
+    if (!exportData || !exportData.manifest || !exportData.memories) {
+      return res.status(400).json({ success: false, error: 'exportData with manifest and memories required' });
+    }
+
+    const syncService = ensureMemorySyncServiceInitialized();
+    const result = await syncService.importMemories(exportData, {
+      skipDuplicates: skipDuplicates !== false,
+      dryRun: dryRun || false
+    });
+
+    res.json({
+      ...result,
+      tokenGate: req.tokenGate
+    });
+  }
+);
+
+// POST /api/federation/gated/memories/sync/:peerId - Token-gated delta sync
+router.post('/gated/memories/sync/:peerId',
+  tokenGate.requireTokens('federation:sync_peers'),
+  async (req, res) => {
+    const { peerId } = req.params;
+    console.log(`🌐 POST /api/federation/gated/memories/sync/${peerId} tier=${req.tokenGate.tier}`);
+
+    const syncService = ensureMemorySyncServiceInitialized();
+    const federation = getFederationService();
+    const peer = federation.getPeer(peerId);
+
+    if (!peer) {
+      return res.status(404).json({ success: false, error: 'Peer not found' });
+    }
+
+    const result = await syncService.deltaSync(peerId);
+    res.json({
+      ...result,
+      tokenGate: req.tokenGate
+    });
+  }
+);
 
 // ============ Status ============
 
