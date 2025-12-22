@@ -182,21 +182,35 @@ class MemorySyncService {
     const federation = getFederationService();
     const { manifest, signature, memories } = exportData;
 
-    // Verify signature from source server
-    const peer = federation.getPeer(manifest.sourceServerId);
-    if (!peer) {
-      return {
-        success: false,
-        error: `Unknown source server: ${manifest.sourceServerId}. Add as peer first.`
-      };
-    }
+    // Allow self-import (for testing and local memory backup/restore)
+    const isSelfImport = manifest.sourceServerId === federation.identity.serverId;
 
-    const isValid = federation.verify(manifest, signature, peer.publicKey);
-    if (!isValid) {
-      return {
-        success: false,
-        error: 'Invalid signature - manifest may have been tampered with'
-      };
+    if (!isSelfImport) {
+      // Verify signature from source server
+      const peer = federation.getPeer(manifest.sourceServerId);
+      if (!peer) {
+        return {
+          success: false,
+          error: `Unknown source server: ${manifest.sourceServerId}. Add as peer first.`
+        };
+      }
+
+      const isValid = federation.verify(manifest, signature, peer.publicKey);
+      if (!isValid) {
+        return {
+          success: false,
+          error: 'Invalid signature - manifest may have been tampered with'
+        };
+      }
+    } else {
+      // For self-import, verify our own signature
+      const isValid = federation.verify(manifest, signature, federation.identity.publicKey);
+      if (!isValid) {
+        return {
+          success: false,
+          error: 'Invalid signature on self-import'
+        };
+      }
     }
 
     // Check for duplicates

@@ -187,3 +187,83 @@ Then('the response should contain successful crypto test', async function () {
   expect(response.signing).toBeDefined();
   expect(response.signing.verified).toBe(true);
 });
+
+// Memory Sync Steps
+
+When('I POST to {string} with limit {int}', async function (endpoint, limit) {
+  const response = await this.request.post(`${this.config.appUrl}${endpoint}`, {
+    data: { limit },
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+  this.testData.lastExportData = this.testData.lastResponse.data;
+});
+
+When('I POST to {string} with category {string}', async function (endpoint, category) {
+  const response = await this.request.post(`${this.config.appUrl}${endpoint}`, {
+    data: { category, limit: 10 },
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});
+
+Then('the response should contain memory export manifest', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.data).toBeDefined();
+  expect(response.data.manifest).toBeDefined();
+  expect(response.data.manifest.sourceServerId).toBeDefined();
+  expect(response.data.manifest.sourcePublicKey).toBeDefined();
+  expect(response.data.manifest.exportedAt).toBeDefined();
+  expect(typeof response.data.manifest.count).toBe('number');
+  expect(response.data.signature).toBeDefined();
+  expect(Array.isArray(response.data.memories)).toBe(true);
+});
+
+Then('the exported memories should have content hashes', async function () {
+  const response = this.testData.lastResponse;
+  const memories = response.data.memories;
+  expect(memories.length).toBeGreaterThan(0);
+  for (const memory of memories) {
+    expect(memory.federation).toBeDefined();
+    expect(memory.federation.contentHash).toBeDefined();
+    expect(typeof memory.federation.contentHash).toBe('string');
+    expect(memory.federation.contentHash.length).toBe(64); // SHA-256 hex
+  }
+});
+
+Then('the response should contain sync stats', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.stats).toBeDefined();
+  expect(typeof response.stats.totalFederated).toBe('number');
+  expect(response.stats.bySource).toBeDefined();
+  expect(Array.isArray(response.stats.syncStates)).toBe(true);
+});
+
+Then('the exported memories should all have category {string}', async function (category) {
+  const response = this.testData.lastResponse;
+  const memories = response.data.memories;
+  if (memories.length > 0) {
+    for (const memory of memories) {
+      expect(memory.category).toBe(category);
+    }
+  }
+});
+
+When('I import the exported memories with dry run', async function () {
+  const exportData = this.testData.lastExportData;
+  const response = await this.request.post(`${this.config.appUrl}/api/federation/memories/import`, {
+    data: { exportData, dryRun: true },
+  });
+  this.testData.lastResponse = await response.json();
+  this.testData.lastStatus = response.status();
+});
+
+Then('the import should be a dry run', async function () {
+  const response = this.testData.lastResponse;
+  expect(response.success).toBe(true);
+  expect(response.dryRun).toBe(true);
+  expect(typeof response.imported).toBe('number');
+  expect(typeof response.skipped).toBe('number');
+});

@@ -124,3 +124,41 @@ Feature: Federation System
   Scenario: Verify peer requires serverId
     When I POST to "/api/federation/verify-peer" with empty body
     Then the response status should be 400
+
+  # Memory Sync Tests
+
+  @smoke
+  Scenario: Memory export endpoint
+    When I POST to "/api/federation/memories/export" with limit 5
+    Then the response should be successful
+    And the response should contain memory export manifest
+    And the exported memories should have content hashes
+
+  Scenario: Memory sync stats endpoint
+    When I GET "/api/federation/memories/sync/stats"
+    Then the response should be successful
+    And the response should contain sync stats
+
+  Scenario: Memory sync states endpoint
+    When I GET "/api/federation/memories/sync/states"
+    Then the response should be successful
+    And the response should have "states" array
+
+  Scenario: Memory export with category filter
+    When I POST to "/api/federation/memories/export" with category "emergence"
+    Then the response should be successful
+    And the exported memories should all have category "emergence"
+
+  Scenario: Memory import requires export data
+    When I POST to "/api/federation/memories/import" with empty body
+    Then the response status should be 400
+
+  Scenario: Memory import dry run
+    When I POST to "/api/federation/memories/export" with limit 2
+    And I import the exported memories with dry run
+    Then the response should be successful
+    And the import should be a dry run
+
+  Scenario: Delta sync requires known peer
+    When I POST to "/api/federation/memories/sync/unknown-peer"
+    Then the response status should be 404

@@ -55,6 +55,9 @@
   - Delta sync support (only new/modified memories since last sync)
   - Import with collision detection and provenance tracking
   - Signature verification for data integrity
+  - Self-import support for backup/restore
+  - Memory sync stats and sync state tracking
+  - Preview import before committing changes
 
 ### Files Added
 

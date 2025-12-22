@@ -199,7 +199,7 @@ router.post('/verify/complete', (req, res) => {
 });
 
 // POST /api/federation/message - Receive an encrypted message from a peer
-router.post('/message', (req, res) => {
+router.post('/message', async (req, res) => {
   const { fromServerId, encrypted, signature } = req.body;
   console.log(`🌐 POST /api/federation/message from=${fromServerId}`);
 
@@ -231,7 +231,7 @@ router.post('/message', (req, res) => {
   console.log(`✅ Received message from ${fromServerId}: ${message.type || 'unknown type'}`);
 
   // Handle different message types
-  const response = handleFederationMessage(message, peer, federation);
+  const response = await handleFederationMessage(message, peer, federation);
 
   res.json({
     success: true,
@@ -755,6 +755,131 @@ router.post('/peers/neo4j/health-check', async (req, res) => {
   });
 });
 
+// ============ Memory Sync Routes ============
+
+const { getMemorySyncService } = require('../services/memory-sync-service');
+
+/**
+ * Ensure memory sync service is initialized
+ */
+function ensureMemorySyncServiceInitialized() {
+  return getMemorySyncService();
+}
+
+// POST /api/federation/memories/export - Export memories with filters
+router.post('/memories/export', async (req, res) => {
+  const { category, stage, tags, minImportance, since, limit, requesterId } = req.body;
+  console.log(`🌐 POST /api/federation/memories/export requesterId=${requesterId || 'local'}`);
+
+  const syncService = ensureMemorySyncServiceInitialized();
+  const exportData = await syncService.exportMemories({
+    category,
+    stage,
+    tags,
+    minImportance,
+    since,
+    limit
+  });
+
+  res.json({
+    success: true,
+    data: exportData
+  });
+});
+
+// POST /api/federation/memories/import - Import memories from a peer export
+router.post('/memories/import', async (req, res) => {
+  const { exportData, skipDuplicates, dryRun } = req.body;
+  console.log(`🌐 POST /api/federation/memories/import dryRun=${dryRun || false}`);
+
+  if (!exportData || !exportData.manifest || !exportData.memories) {
+    return res.status(400).json({ success: false, error: 'exportData with manifest and memories required' });
+  }
+
+  const syncService = ensureMemorySyncServiceInitialized();
+  const result = await syncService.importMemories(exportData, {
+    skipDuplicates: skipDuplicates !== false,
+    dryRun: dryRun || false
+  });
+
+  res.json(result);
+});
+
+// GET /api/federation/memories/sync/stats - Get memory sync statistics
+router.get('/memories/sync/stats', async (req, res) => {
+  console.log(`🌐 GET /api/federation/memories/sync/stats`);
+
+  const syncService = ensureMemorySyncServiceInitialized();
+  const stats = await syncService.getStats();
+
+  res.json({
+    success: true,
+    stats
+  });
+});
+
+// GET /api/federation/memories/sync/states - Get all sync states
+router.get('/memories/sync/states', async (req, res) => {
+  console.log(`🌐 GET /api/federation/memories/sync/states`);
+
+  const syncService = ensureMemorySyncServiceInitialized();
+  const states = await syncService.getAllSyncStates();
+
+  res.json({
+    success: true,
+    states
+  });
+});
+
+// GET /api/federation/memories/sync/:peerId - Get sync state for a specific peer
+router.get('/memories/sync/:peerId', async (req, res) => {
+  const { peerId } = req.params;
+  console.log(`🌐 GET /api/federation/memories/sync/${peerId}`);
+
+  const syncService = ensureMemorySyncServiceInitialized();
+  const state = await syncService.getSyncState(peerId);
+
+  res.json({
+    success: true,
+    peerId,
+    state
+  });
+});
+
+// POST /api/federation/memories/sync/:peerId - Perform delta sync with a peer
+router.post('/memories/sync/:peerId', async (req, res) => {
+  const { peerId } = req.params;
+  console.log(`🌐 POST /api/federation/memories/sync/${peerId}`);
+
+  const syncService = ensureMemorySyncServiceInitialized();
+  const federation = getFederationService();
+  const peer = federation.getPeer(peerId);
+
+  if (!peer) {
+    return res.status(404).json({ success: false, error: 'Peer not found' });
+  }
+
+  const result = await syncService.deltaSync(peerId);
+  res.json(result);
+});
+
+// POST /api/federation/memories/sync/:peerId/preview - Preview what would be imported
+router.post('/memories/sync/:peerId/preview', async (req, res) => {
+  const { peerId } = req.params;
+  const { category, stage, tags, minImportance } = req.body;
+  console.log(`🌐 POST /api/federation/memories/sync/${peerId}/preview`);
+
+  const syncService = ensureMemorySyncServiceInitialized();
+  const result = await syncService.previewImport(peerId, {
+    category,
+    stage,
+    tags,
+    minImportance
+  });
+
+  res.json(result);
+});
+
 // ============ Status ============
 
 // GET /api/federation/status - Get federation status
@@ -805,15 +930,34 @@ router.get('/status', async (req, res) => {
 /**
  * Handle incoming federation messages
  */
-function handleFederationMessage(message, peer, federation) {
-  switch (message.type) {
-    case 'memory_query':
-      // Reserved for Phase 2: Memory sharing
-      return { type: 'memory_query_response', status: 'not_implemented' };
+async function handleFederationMessage(message, peer, federation) {
+  const syncService = getMemorySyncService();
 
-    case 'memory_share':
-      // Reserved for Phase 2: Memory sharing
-      return { type: 'memory_share_response', status: 'not_implemented' };
+  switch (message.type) {
+    case 'memory_query': {
+      // Handle memory export request from peer
+      const exportData = await syncService.exportMemories(message.filters || {});
+      return {
+        type: 'memory_query_response',
+        success: true,
+        data: exportData
+      };
+    }
+
+    case 'memory_share': {
+      // Handle memory import from peer
+      if (!message.exportData) {
+        return { type: 'memory_share_response', success: false, error: 'No export data provided' };
+      }
+      const result = await syncService.importMemories(message.exportData, {
+        skipDuplicates: true,
+        dryRun: message.dryRun || false
+      });
+      return {
+        type: 'memory_share_response',
+        ...result
+      };
+    }
 
     case 'capability_check':
       return {
