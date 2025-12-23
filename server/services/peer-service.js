@@ -20,6 +20,7 @@ class PeerService {
   constructor() {
     this.healthCheckInterval = null;
     this.federationService = null;
+    this.relayClient = null;
   }
 
   /**
@@ -29,6 +30,20 @@ class PeerService {
     this.federationService = federationService;
     this.startHealthChecks();
     console.log('🌐 Peer service initialized with Neo4j backend');
+  }
+
+  /**
+   * Set relay client reference for relay-based health checks
+   */
+  setRelayClient(relayClient) {
+    this.relayClient = relayClient;
+  }
+
+  /**
+   * Check if a peer is connected via relay
+   */
+  isPeerOnRelay(serverId) {
+    return this.relayClient?.isPeerConnected(serverId) || false;
   }
 
   /**
@@ -600,9 +615,16 @@ class PeerService {
     for (const peer of peers) {
       const startTime = Date.now();
 
-      const isHealthy = await this.pingPeer(peer.endpoint).catch(() => false);
-      const responseTime = Date.now() - startTime;
+      // Check relay presence first (for NAT-friendly peers)
+      let isHealthy = false;
+      if (this.isPeerOnRelay(peer.serverId)) {
+        isHealthy = true;
+      } else if (peer.endpoint && !peer.endpoint.startsWith('relay://')) {
+        // Fall back to HTTP ping for direct-URL peers
+        isHealthy = await this.pingPeer(peer.endpoint).catch(() => false);
+      }
 
+      const responseTime = Date.now() - startTime;
       await this.updateHealth(peer.serverId, isHealthy, isHealthy ? responseTime : null);
 
       if (isHealthy) {
@@ -621,9 +643,13 @@ class PeerService {
   }
 
   /**
-   * Ping a peer to check health
+   * Ping a peer to check health (for direct-URL peers only)
    */
   async pingPeer(endpoint) {
+    if (!endpoint || endpoint.startsWith('relay://')) {
+      return false; // Can't HTTP ping relay peers
+    }
+
     const url = `${endpoint.replace(/\/$/, '')}/api/federation/ping`;
 
     const response = await fetch(url, {
@@ -636,6 +662,34 @@ class PeerService {
     });
 
     return response.ok;
+  }
+
+  /**
+   * Handle relay peer presence update (called by relay client)
+   */
+  async handleRelayPeerJoined(serverId, manifest) {
+    const peer = {
+      serverId,
+      publicKey: manifest.publicKey,
+      endpoint: `relay://${serverId}`,
+      version: manifest.version,
+      capabilities: manifest.capabilities || [],
+      trustLevel: 'seen',
+      healthScore: 1.0,
+      failedChecks: 0,
+      lastSeen: new Date().toISOString()
+    };
+
+    await this.upsertPeer(peer);
+    console.log(`🌐 Relay peer joined: ${serverId}`);
+  }
+
+  /**
+   * Handle relay peer disconnect
+   */
+  async handleRelayPeerLeft(serverId) {
+    await this.updateHealth(serverId, false);
+    console.log(`🌐 Relay peer left: ${serverId}`);
   }
 
   /**

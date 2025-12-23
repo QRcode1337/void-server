@@ -13,6 +13,9 @@ import {
   Copy,
   Lock,
   Unlock,
+  Radio,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useWebSocket } from '../contexts/WebSocketContext';
@@ -150,29 +153,27 @@ const TrustGraph = ({ nodes, edges }) => {
 const FederationPage = () => {
   const [manifest, setManifest] = useState(null);
   const [status, setStatus] = useState(null);
-  const [dhtStatus, setDhtStatus] = useState(null);
+  const [relayStatus, setRelayStatus] = useState(null);
   const [neo4jPeers, setNeo4jPeers] = useState([]);
   const [trustGraph, setTrustGraph] = useState({ nodes: [], edges: [] });
   const [loading, setLoading] = useState(true);
   const [addPeerEndpoint, setAddPeerEndpoint] = useState('');
-  const [addPeerNodeId, setAddPeerNodeId] = useState('');
-  const [connectMode, setConnectMode] = useState('endpoint'); // 'endpoint' or 'nodeId'
   const [confirmAction, setConfirmAction] = useState(null); // { type: 'block'|'delete', peer }
   const [cryptoTest, setCryptoTest] = useState(null); // { loading, results }
   const { on, off } = useWebSocket();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [manifestRes, statusRes, dhtRes, peersRes, graphRes] = await Promise.all([
+    const [manifestRes, statusRes, relayRes, peersRes, graphRes] = await Promise.all([
       fetch('/api/federation/manifest').then((r) => r.json()),
       fetch('/api/federation/status').then((r) => r.json()),
-      fetch('/api/federation/dht/status').then((r) => r.json()),
+      fetch('/api/federation/relay/status').then((r) => r.json()),
       fetch('/api/federation/peers/neo4j').then((r) => r.json()),
       fetch('/api/federation/peers/neo4j/graph').then((r) => r.json()),
     ]);
     setManifest(manifestRes.manifest);
     setStatus(statusRes.status);
-    setDhtStatus(dhtRes);
+    setRelayStatus(relayRes);
     setNeo4jPeers(peersRes.peers || []);
     setTrustGraph(graphRes);
     setLoading(false);
@@ -180,48 +181,32 @@ const FederationPage = () => {
 
   // Listen for WebSocket federation events
   useEffect(() => {
-    const handleBootstrap = (data) => {
-      switch (data.status) {
-        case 'started':
-          toast.loading(data.message, { id: 'bootstrap' });
-          break;
-        case 'connecting':
-          toast.loading(data.message, { id: 'bootstrap' });
-          break;
-        case 'connected':
-          toast.success(`Connected to ${data.serverId}`, { duration: 3000 });
-          break;
-        case 'failed':
-          toast.error(data.message, { duration: 4000 });
-          break;
-        case 'complete':
-          toast.dismiss('bootstrap');
-          if (data.contacted > 0) {
-            toast.success(data.message, { duration: 4000 });
-          } else {
-            toast.error('Bootstrap failed: no nodes reached', { duration: 4000 });
-          }
-          // Refresh data after bootstrap completes
-          fetchData();
-          break;
+    const handleRelayStatus = (data) => {
+      if (data.connected) {
+        toast.success('Connected to relay hub', { duration: 3000, id: 'relay-status' });
+      } else if (data.error) {
+        toast.error(`Relay: ${data.error}`, { duration: 4000, id: 'relay-status' });
       }
+      fetchData();
     };
 
     const handlePeerUpdate = (data) => {
-      if (data.type === 'added') {
+      if (data.type === 'joined') {
+        toast.success(`Peer joined: ${data.peer.serverId}`, { duration: 3000 });
+      } else if (data.type === 'left') {
+        toast(`Peer left: ${data.peer.serverId}`, { icon: '👋', duration: 2000 });
+      } else if (data.type === 'added') {
         toast.success(`New peer: ${data.peer.serverId}`, { duration: 3000 });
-      } else if (data.type === 'updated') {
-        toast(`Peer updated: ${data.peer.serverId}`, { icon: '🔄', duration: 2000 });
       }
       // Refresh peer list
       fetchData();
     };
 
-    on('federation:bootstrap', handleBootstrap);
+    on('federation:relay-status', handleRelayStatus);
     on('federation:peer-update', handlePeerUpdate);
 
     return () => {
-      off('federation:bootstrap', handleBootstrap);
+      off('federation:relay-status', handleRelayStatus);
       off('federation:peer-update', handlePeerUpdate);
     };
   }, [on, off, fetchData]);
@@ -251,28 +236,6 @@ const FederationPage = () => {
       fetchData();
     } else {
       toast.error(data.error || 'Failed to add peer');
-    }
-  };
-
-  const connectByNodeId = async () => {
-    if (!addPeerNodeId) return;
-    const res = await fetch('/api/federation/peers/connect-by-id', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nodeId: addPeerNodeId }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      toast.success(`Connected via DHT: ${data.peer.serverId}`);
-      setAddPeerNodeId('');
-      fetchData();
-    } else {
-      const errorMsg = data.error || 'Node not found';
-      if (data.closestNodes?.length > 0) {
-        toast.error(`${errorMsg}. Found ${data.closestNodes.length} similar nodes.`);
-      } else {
-        toast.error(errorMsg);
-      }
     }
   };
 
@@ -476,124 +439,91 @@ const FederationPage = () => {
           </div>
         </Card>
 
-        {/* DHT Status */}
-        <Card title="DHT Network" icon={Network}>
+        {/* Relay Status */}
+        <Card title="Relay Network" icon={Radio}>
           <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-void-fg-muted text-sm">Status</span>
+              <div className="flex items-center gap-2">
+                {relayStatus?.connected ? (
+                  <Wifi className="w-4 h-4 text-green-400" />
+                ) : (
+                  <WifiOff className="w-4 h-4 text-red-400" />
+                )}
+                <StatusBadge
+                  status={relayStatus?.connected ? 'connected' : 'offline'}
+                  label={relayStatus?.connected ? 'Connected' : 'Disconnected'}
+                />
+              </div>
+            </div>
             <div>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-void-fg-muted text-sm">Node ID</span>
-                <button
-                  onClick={() => copyToClipboard(dhtStatus?.nodeId)}
-                  className="p-1 hover:bg-void-bg-tertiary rounded"
-                  title="Copy Node ID"
-                >
-                  <Copy className="w-3 h-3 text-void-fg-muted" />
-                </button>
+                <span className="text-void-fg-muted text-sm">Relay Hub</span>
               </div>
               <code className="block text-void-fg-primary font-mono text-xs bg-void-bg-primary px-2 py-1 rounded border border-void-border break-all">
-                {dhtStatus?.nodeId}
+                {relayStatus?.relayUrl || 'Not configured'}
               </code>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-void-fg-muted text-sm">Known Nodes</span>
-              <span className="text-void-fg-primary text-sm">{dhtStatus?.nodeCount || 0}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-void-fg-muted text-sm">Bootstrap Nodes</span>
-              <span className="text-void-fg-primary text-sm">{dhtStatus?.bootstrapNodes || 0}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-void-fg-muted text-sm">Bootstrapped</span>
+              <span className="text-void-fg-muted text-sm">Mode</span>
               <StatusBadge
-                status={dhtStatus?.isBootstrapped ? 'connected' : 'offline'}
-                label={dhtStatus?.isBootstrapped ? 'Yes' : 'No'}
+                status={relayStatus?.mode === 'relay' ? 'verified' : 'unknown'}
+                label={relayStatus?.mode || 'unknown'}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-void-fg-muted text-sm">K-Buckets</span>
-              <span className="text-void-fg-primary text-sm">
-                {dhtStatus?.bucketCount || 0} active
-              </span>
+              <span className="text-void-fg-muted text-sm">Relay Peers</span>
+              <span className="text-void-fg-primary text-sm">{relayStatus?.connectedPeers || 0} online</span>
             </div>
+            {relayStatus?.peers?.length > 0 && (
+              <div className="pt-2 border-t border-void-border">
+                <span className="text-void-fg-muted text-xs block mb-2">Online via Relay:</span>
+                <div className="flex flex-wrap gap-1">
+                  {relayStatus.peers.map((peer) => (
+                    <span
+                      key={peer.serverId}
+                      className="px-2 py-0.5 text-xs bg-green-400/10 text-green-400 rounded font-mono"
+                    >
+                      {peer.serverId}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
 
         {/* Add Peer */}
         <Card title="Add Peer" icon={Plus}>
           <div className="space-y-3">
-            {/* Mode Toggle */}
-            <div className="flex gap-1 p-1 bg-void-bg-primary rounded-lg">
+            {relayStatus?.connected && (
+              <div className="bg-green-400/10 border border-green-400/20 rounded-lg p-3 mb-3">
+                <p className="text-xs text-green-400">
+                  <Wifi className="w-3 h-3 inline mr-1" />
+                  Peers are auto-discovered via relay. Anyone connected to the same relay hub will appear automatically.
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={addPeerEndpoint}
+                onChange={(e) => setAddPeerEndpoint(e.target.value)}
+                placeholder="https://peer.example.com:4420"
+                className="flex-1 px-3 py-2 bg-void-bg-primary border border-void-border rounded-lg text-sm text-void-fg-primary placeholder:text-void-fg-muted focus:outline-none focus:border-void-accent"
+              />
               <button
-                onClick={() => setConnectMode('endpoint')}
-                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  connectMode === 'endpoint'
-                    ? 'bg-void-accent text-white'
-                    : 'text-void-fg-muted hover:text-void-fg-primary'
-                }`}
+                onClick={addPeer}
+                disabled={!addPeerEndpoint}
+                className="px-4 py-2 bg-void-accent text-white rounded-lg text-sm font-medium hover:bg-void-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Endpoint URL
-              </button>
-              <button
-                onClick={() => setConnectMode('nodeId')}
-                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  connectMode === 'nodeId'
-                    ? 'bg-void-accent text-white'
-                    : 'text-void-fg-muted hover:text-void-fg-primary'
-                }`}
-              >
-                Node ID (DHT)
+                Connect
               </button>
             </div>
-
-            {/* Endpoint Input */}
-            {connectMode === 'endpoint' && (
-              <>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={addPeerEndpoint}
-                    onChange={(e) => setAddPeerEndpoint(e.target.value)}
-                    placeholder="https://peer.example.com:4420"
-                    className="flex-1 px-3 py-2 bg-void-bg-primary border border-void-border rounded-lg text-sm text-void-fg-primary placeholder:text-void-fg-muted focus:outline-none focus:border-void-accent"
-                  />
-                  <button
-                    onClick={addPeer}
-                    disabled={!addPeerEndpoint}
-                    className="px-4 py-2 bg-void-accent text-white rounded-lg text-sm font-medium hover:bg-void-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Connect
-                  </button>
-                </div>
-                <p className="text-xs text-void-fg-muted">
-                  Enter the full URL of another void-server instance
-                </p>
-              </>
-            )}
-
-            {/* Node ID Input */}
-            {connectMode === 'nodeId' && (
-              <>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={addPeerNodeId}
-                    onChange={(e) => setAddPeerNodeId(e.target.value)}
-                    placeholder="abc123... (full or partial node ID)"
-                    className="flex-1 px-3 py-2 bg-void-bg-primary border border-void-border rounded-lg text-sm text-void-fg-primary placeholder:text-void-fg-muted focus:outline-none focus:border-void-accent font-mono"
-                  />
-                  <button
-                    onClick={connectByNodeId}
-                    disabled={!addPeerNodeId}
-                    className="px-4 py-2 bg-void-accent text-white rounded-lg text-sm font-medium hover:bg-void-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    Lookup
-                  </button>
-                </div>
-                <p className="text-xs text-void-fg-muted">
-                  Enter a Node ID to find via DHT routing. Partial IDs match locally, full IDs search the network.
-                </p>
-              </>
-            )}
+            <p className="text-xs text-void-fg-muted">
+              For direct connections, enter the full URL of another void-server instance
+            </p>
           </div>
         </Card>
 
@@ -632,10 +562,27 @@ const FederationPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-void-border">
-                {neo4jPeers.map((peer) => (
+                {neo4jPeers.map((peer) => {
+                  const isViaRelay = peer.endpoint?.startsWith('relay://');
+                  const isOnlineNow = relayStatus?.peers?.some(p => p.serverId === peer.serverId);
+                  return (
                   <tr key={peer.serverId} className="text-void-fg-primary">
-                    <td className="py-2 font-mono text-xs">{peer.serverId}</td>
-                    <td className="py-2 text-xs truncate max-w-32">{peer.endpoint}</td>
+                    <td className="py-2 font-mono text-xs">
+                      {peer.serverId}
+                      {isOnlineNow && (
+                        <span className="ml-1 inline-block w-2 h-2 bg-green-400 rounded-full" title="Online now" />
+                      )}
+                    </td>
+                    <td className="py-2 text-xs truncate max-w-32">
+                      {isViaRelay ? (
+                        <span className="flex items-center gap-1">
+                          <Radio className="w-3 h-3 text-purple-400" />
+                          <span className="text-purple-400">via relay</span>
+                        </span>
+                      ) : (
+                        peer.endpoint
+                      )}
+                    </td>
                     <td className="py-2">
                       <StatusBadge status={peer.trustLevel} />
                     </td>
@@ -704,7 +651,8 @@ const FederationPage = () => {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -189,6 +189,7 @@ class FederationService {
     this.peers = new Map();
     this.capabilities = [];
     this.dht = null;
+    this.relayClient = null;
   }
 
   /**
@@ -200,12 +201,61 @@ class FederationService {
     this.detectCapabilities();
     console.log(`🌐 Federation service initialized: ${this.identity.serverId}`);
 
-    // Initialize DHT after a short delay (allows routes to be registered first)
+    // Initialize based on federation mode
+    const federationMode = process.env.FEDERATION_MODE || 'relay';
+
     setTimeout(() => {
-      this.initializeDHT();
+      if (federationMode === 'dht') {
+        // Legacy DHT mode
+        this.initializeDHT();
+      } else {
+        // Default: Relay mode (NAT-friendly)
+        this.initializeRelay();
+      }
     }, 1000);
 
     return this.identity;
+  }
+
+  /**
+   * Initialize the relay client (NAT-friendly mode)
+   */
+  initializeRelay() {
+    const { getRelayClient } = require('./relay-client-service');
+    const { getPeerService } = require('./peer-service');
+
+    this.relayClient = getRelayClient();
+    this.relayClient.initialize(this);
+
+    // Wire up peer service with relay client for health checks
+    const peerService = getPeerService();
+    peerService.setRelayClient(this.relayClient);
+
+    // Register message handlers
+    this.setupRelayMessageHandlers();
+
+    console.log('🌐 Federation: Using relay mode (NAT-friendly)');
+  }
+
+  /**
+   * Setup handlers for relayed messages
+   */
+  setupRelayMessageHandlers() {
+    if (!this.relayClient) return;
+
+    // Handle ping requests
+    this.relayClient.onMessage('federation:ping', (from, payload) => {
+      return {
+        pong: true,
+        serverId: this.identity.serverId,
+        timestamp: Date.now()
+      };
+    });
+
+    // Handle peer info requests
+    this.relayClient.onMessage('federation:get-manifest', (from, payload) => {
+      return this.getManifest();
+    });
   }
 
   /**
@@ -240,6 +290,31 @@ class FederationService {
     const packagePath = path.resolve(__dirname, '../../package.json');
     const pkg = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
     return pkg.version;
+  }
+
+  /**
+   * Get relay connection status
+   */
+  getRelayStatus() {
+    if (!this.relayClient) {
+      return {
+        mode: 'dht',
+        relayEnabled: false
+      };
+    }
+
+    return {
+      mode: 'relay',
+      relayEnabled: true,
+      ...this.relayClient.getStatus()
+    };
+  }
+
+  /**
+   * Get federation mode
+   */
+  getFederationMode() {
+    return process.env.FEDERATION_MODE || 'relay';
   }
 
   /**

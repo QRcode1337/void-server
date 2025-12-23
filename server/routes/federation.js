@@ -1409,6 +1409,19 @@ router.post('/gated/memories/sync/:peerId',
 
 // ============ Status ============
 
+// GET /api/federation/relay/status - Get relay connection status
+router.get('/relay/status', (req, res) => {
+  console.log(`🌐 GET /api/federation/relay/status`);
+
+  const federation = getFederationService();
+  const relayStatus = federation.getRelayStatus();
+
+  res.json({
+    success: true,
+    ...relayStatus
+  });
+});
+
 // GET /api/federation/status - Get federation status
 router.get('/status', async (req, res) => {
   console.log(`🌐 GET /api/federation/status`);
@@ -1420,11 +1433,14 @@ router.get('/status', async (req, res) => {
   const verifiedCount = peers.filter(p => p.trustLevel === 'verified').length;
   const healthyCount = peers.filter(p => p.healthScore > 0.5).length;
 
-  // Get DHT status if initialized
+  // Get DHT status if initialized (legacy mode)
   let dhtStatus = null;
   if (federation.dht) {
     dhtStatus = federation.dht.getStatus();
   }
+
+  // Get relay status if initialized (default mode)
+  const relayStatus = federation.getRelayStatus();
 
   // Get Neo4j peer stats if available
   let neo4jPeerStats = null;
@@ -1449,6 +1465,7 @@ router.get('/status', async (req, res) => {
         neo4j: neo4jPeerStats
       },
       dht: dhtStatus,
+      relay: relayStatus,
       uptime: process.uptime()
     }
   });
