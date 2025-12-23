@@ -222,10 +222,17 @@ class RoutingTable {
 
   /**
    * Add a node to the routing table
+   * Cleans up any stale nodes with same endpoint but different nodeId
    */
   addNode(node) {
     if (node.nodeId === this.localNodeId) {
       return false; // Don't add self
+    }
+
+    // Clean up stale nodes with same endpoint but different nodeId
+    const removed = this.removeNodesByEndpoint(node.endpoint, node.nodeId);
+    if (removed.length > 0) {
+      console.log(`🌐 DHT: Cleaned up ${removed.length} stale node(s) for endpoint ${node.endpoint}`);
     }
 
     const distance = xorDistance(this.localNodeId, node.nodeId);
@@ -290,6 +297,24 @@ class RoutingTable {
    */
   getBucketsNeedingRefresh() {
     return this.buckets.filter(b => b.needsRefresh() && b.nodes.length > 0);
+  }
+
+  /**
+   * Remove all nodes with a given endpoint (except the specified nodeId)
+   * Used to clean up stale entries when a server's identity changes
+   */
+  removeNodesByEndpoint(endpoint, exceptNodeId = null) {
+    const removed = [];
+    for (const bucket of this.buckets) {
+      const toRemove = bucket.nodes.filter(n =>
+        n.endpoint === endpoint && n.nodeId !== exceptNodeId
+      );
+      for (const node of toRemove) {
+        bucket.removeNode(node.nodeId);
+        removed.push(node.nodeId);
+      }
+    }
+    return removed;
   }
 
   toJSON() {
