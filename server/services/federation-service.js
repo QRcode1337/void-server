@@ -12,6 +12,17 @@ const ed2curve = require('ed2curve');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { broadcast } = require('../utils/broadcast');
+
+// Lazy load peer-service to avoid circular dependencies
+let peerServiceInstance = null;
+function getPeerServiceLazy() {
+  if (!peerServiceInstance) {
+    const { getPeerService } = require('./peer-service');
+    peerServiceInstance = getPeerService();
+  }
+  return peerServiceInstance;
+}
 
 const DATA_DIR = path.resolve(__dirname, '../../data');
 const FEDERATION_DIR = path.join(DATA_DIR, 'federation');
@@ -311,6 +322,7 @@ class FederationService {
    * Add or update a peer
    */
   addPeer(manifest, endpoint) {
+    const isNew = !this.peers.has(manifest.serverId);
     const peer = {
       serverId: manifest.serverId,
       publicKey: manifest.publicKey,
@@ -330,6 +342,24 @@ class FederationService {
     this.peers.set(manifest.serverId, peer);
     this.savePeers();
     console.log(`🌐 Added/updated peer: ${peer.serverId}`);
+
+    // Save to Neo4j for persistent storage
+    const peerService = getPeerServiceLazy();
+    peerService.upsertPeer(peer).catch(err => {
+      console.error(`🌐 Failed to save peer to Neo4j: ${err.message}`);
+    });
+
+    // Broadcast to connected clients
+    broadcast('federation:peer-update', {
+      type: isNew ? 'added' : 'updated',
+      peer: {
+        serverId: peer.serverId,
+        endpoint: peer.endpoint,
+        capabilities: peer.capabilities,
+        trustLevel: peer.trustLevel
+      }
+    });
+
     return peer;
   }
 

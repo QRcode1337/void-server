@@ -13,6 +13,7 @@ import {
   Unlock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useWebSocket } from '../contexts/WebSocketContext';
 
 const StatusBadge = ({ status, label }) => {
   const config = {
@@ -154,6 +155,7 @@ const FederationPage = () => {
   const [addPeerEndpoint, setAddPeerEndpoint] = useState('');
   const [addPeerNodeId, setAddPeerNodeId] = useState('');
   const [connectMode, setConnectMode] = useState('endpoint'); // 'endpoint' or 'nodeId'
+  const { on, off } = useWebSocket();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -171,6 +173,54 @@ const FederationPage = () => {
     setTrustGraph(graphRes);
     setLoading(false);
   }, []);
+
+  // Listen for WebSocket federation events
+  useEffect(() => {
+    const handleBootstrap = (data) => {
+      switch (data.status) {
+        case 'started':
+          toast.loading(data.message, { id: 'bootstrap' });
+          break;
+        case 'connecting':
+          toast.loading(data.message, { id: 'bootstrap' });
+          break;
+        case 'connected':
+          toast.success(`Connected to ${data.serverId}`, { duration: 3000 });
+          break;
+        case 'failed':
+          toast.error(data.message, { duration: 4000 });
+          break;
+        case 'complete':
+          toast.dismiss('bootstrap');
+          if (data.contacted > 0) {
+            toast.success(data.message, { duration: 4000 });
+          } else {
+            toast.error('Bootstrap failed: no nodes reached', { duration: 4000 });
+          }
+          // Refresh data after bootstrap completes
+          fetchData();
+          break;
+      }
+    };
+
+    const handlePeerUpdate = (data) => {
+      if (data.type === 'added') {
+        toast.success(`New peer: ${data.peer.serverId}`, { duration: 3000 });
+      } else if (data.type === 'updated') {
+        toast(`Peer updated: ${data.peer.serverId}`, { icon: '🔄', duration: 2000 });
+      }
+      // Refresh peer list
+      fetchData();
+    };
+
+    on('federation:bootstrap', handleBootstrap);
+    on('federation:peer-update', handlePeerUpdate);
+
+    return () => {
+      off('federation:bootstrap', handleBootstrap);
+      off('federation:peer-update', handlePeerUpdate);
+    };
+  }, [on, off, fetchData]);
 
   useEffect(() => {
     fetchData();

@@ -9,6 +9,7 @@
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { broadcast } = require('../utils/broadcast');
 
 const DATA_DIR = path.resolve(__dirname, '../../data');
 const DHT_DIR = path.join(DATA_DIR, 'federation');
@@ -409,15 +410,28 @@ class DHTService {
   async bootstrap() {
     if (this.bootstrapNodes.length === 0) {
       console.log('🌐 No bootstrap nodes configured');
+      broadcast('federation:bootstrap', { status: 'skipped', message: 'No bootstrap nodes configured' });
       return { success: true, contacted: 0, added: 0 };
     }
 
     console.log(`🌐 Bootstrapping DHT with ${this.bootstrapNodes.length} nodes...`);
+    broadcast('federation:bootstrap', {
+      status: 'started',
+      message: `Connecting to ${this.bootstrapNodes.length} bootstrap node(s)...`,
+      total: this.bootstrapNodes.length
+    });
 
     let contacted = 0;
     let added = 0;
 
     for (const bootstrap of this.bootstrapNodes) {
+      broadcast('federation:bootstrap', {
+        status: 'connecting',
+        message: `Connecting to ${bootstrap.name || bootstrap.endpoint}...`,
+        current: contacted + 1,
+        total: this.bootstrapNodes.length
+      });
+
       const result = await this.pingNode(bootstrap.endpoint).catch(() => null);
 
       if (result) {
@@ -440,10 +454,23 @@ class DHTService {
             publicKey: result.publicKey,
             capabilities: result.capabilities || ['dht-bootstrap']
           }, bootstrap.endpoint);
+
+          broadcast('federation:bootstrap', {
+            status: 'connected',
+            message: `Connected to ${result.serverId}`,
+            serverId: result.serverId,
+            endpoint: bootstrap.endpoint
+          });
         }
 
         // Find nodes near us for better connectivity
         await this.findNode(this.nodeId).catch(() => null);
+      } else {
+        broadcast('federation:bootstrap', {
+          status: 'failed',
+          message: `Failed to reach ${bootstrap.name || bootstrap.endpoint}`,
+          endpoint: bootstrap.endpoint
+        });
       }
     }
 
@@ -451,6 +478,13 @@ class DHTService {
     this.saveState();
 
     console.log(`🌐 Bootstrap complete: contacted ${contacted}, added ${added} nodes`);
+    broadcast('federation:bootstrap', {
+      status: 'complete',
+      message: `Bootstrap complete: ${contacted} contacted, ${added} added`,
+      contacted,
+      added,
+      isBootstrapped: this.isBootstrapped
+    });
 
     return { success: true, contacted, added };
   }
