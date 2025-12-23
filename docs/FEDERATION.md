@@ -10,9 +10,97 @@ Federation enables multiple void-server instances to:
 - Build trust relationships between peers
 - Pin memories to IPFS for decentralized storage
 
-## Bootstrap Nodes
+## Connection Methods
 
-Bootstrap nodes are the entry points to the federation network. They help new nodes discover existing peers via DHT (Distributed Hash Table) routing.
+void-server supports two federation modes:
+
+| Mode | Best For | Requirements |
+|------|----------|--------------|
+| **Relay** (default) | Home users, NAT/firewall environments | None - just run void-server |
+| **DHT** (legacy) | Public servers with static IPs | `PUBLIC_URL` environment variable |
+
+## WebSocket Relay (Recommended)
+
+The relay mode is **NAT-friendly** - peers connect through a central relay hub without exposing their IP addresses or requiring port forwarding.
+
+### How It Works
+
+```
+                    void-mud (Relay Hub)
+                    ┌─────────────────┐
+                    │  WebSocket Hub  │
+                    │  - Peer registry│
+                    │  - Msg routing  │
+                    └────────┬────────┘
+              ┌──────────────┼──────────────┐
+              │ WSS          │ WSS          │ WSS
+              ▼              ▼              ▼
+         void-server    void-server    void-server
+           (NAT)          (NAT)         (public)
+```
+
+1. When void-server starts, it connects outbound to the relay hub (void-mud.onrender.com)
+2. The relay hub notifies all connected peers when someone joins/leaves
+3. Messages between peers are routed through the relay hub
+4. Large payloads (memory exports) use chunked transfer protocol
+
+### Automatic Peer Discovery
+
+With relay mode, **peers are discovered automatically**. When another void-server connects to the same relay hub, both instances immediately see each other in the Federation UI.
+
+No manual peer configuration needed!
+
+### Check Relay Status
+
+**Via the UI:**
+1. Navigate to **Federation** in the sidebar
+2. The **Relay Network** card shows:
+   - Connection status (Connected/Disconnected)
+   - Relay hub URL
+   - Number of online peers
+   - List of currently connected peer IDs
+
+**Via API:**
+```bash
+curl http://localhost:4420/api/federation/relay/status
+
+# Response:
+{
+  "success": true,
+  "mode": "relay",
+  "relayEnabled": true,
+  "connected": true,
+  "relayUrl": "https://void-mud.onrender.com",
+  "connectedPeers": 2,
+  "peers": [
+    { "serverId": "void-a1b2c3d4", ... },
+    { "serverId": "void-e5f6g7h8", ... }
+  ]
+}
+```
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RELAY_URL` | `https://void-mud.onrender.com` | Custom relay hub URL |
+| `FEDERATION_MODE` | `relay` | Set to `dht` for legacy DHT mode |
+
+## DHT Mode (Legacy)
+
+DHT (Distributed Hash Table) mode requires peers to have public URLs and direct connectivity. Use this if you're running servers with static public IPs.
+
+### Enable DHT Mode
+
+```bash
+# In .env
+FEDERATION_MODE=dht
+PUBLIC_URL=https://your-server.com:4420
+```
+
+## Bootstrap Nodes (DHT Mode)
+
+Bootstrap nodes are the entry points to the DHT network. They help new nodes discover existing peers via DHT routing.
 
 ### How It Works
 

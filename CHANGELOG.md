@@ -8,6 +8,15 @@
 
 ### New Features
 
+- **WebSocket Relay Federation** - NAT-friendly peer communication via void-mud relay hub
+  - Peers auto-discover via WebSocket relay (no PUBLIC_URL required)
+  - Works behind NAT/firewalls - only outbound connections needed
+  - Relay hub at void-mud.onrender.com routes messages between peers
+  - Chunked transfer protocol for large payloads (memory exports 2-5MB)
+  - Real-time presence updates (peer joined/left notifications)
+  - Relay status endpoint (`GET /api/federation/relay/status`)
+  - Falls back to DHT mode via `FEDERATION_MODE=dht` environment variable
+
 - **Federation Protocol Foundation** - Enable void-server instances to discover and communicate
   - Server identity with Ed25519 keypair for cryptographic authentication
   - Federation manifest endpoint (`GET /api/federation/manifest`)
@@ -97,14 +106,15 @@
 ### Files Added
 
 - `server/services/federation-service.js` - Federation identity and peer management
-- `server/services/dht-service.js` - Kademlia-style DHT for peer discovery
+- `server/services/relay-client-service.js` - WebSocket relay client for NAT-friendly federation
+- `server/services/dht-service.js` - Kademlia-style DHT for peer discovery (legacy)
 - `server/services/peer-service.js` - Neo4j peer management with trust graphs
 - `server/services/memory-sync-service.js` - Cross-instance memory sharing
 - `server/services/token-gate-service.js` - $CLAWED token-based access control
 - `server/services/memory-marketplace-service.js` - Quality scoring and reputation tracking
 - `server/services/memory-ipfs-service.js` - IPFS-based memory distribution
-- `server/routes/federation.js` - Federation, DHT, peer, token gate, and IPFS API endpoints
-- `client/src/pages/FederationPage.jsx` - Federation UI dashboard
+- `server/routes/federation.js` - Federation, DHT, relay, peer, token gate, and IPFS API endpoints
+- `client/src/pages/FederationPage.jsx` - Federation UI dashboard with relay status
 - `tests/e2e/features/federation/federation.feature` - Federation tests
 - `tests/e2e/steps/federation/federation.steps.js` - Federation step definitions
 - `docs/FEDERATION.md` - Federation guide and API reference
