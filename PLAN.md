@@ -343,5 +343,38 @@ Memory Sharing Network is fully implemented:
 - Memory Marketplace
 - IPFS Distribution
 
+### Bootstrap Node Deployment ✅
+- void-mud hosts federation bootstrap at `/api/federation/*`
+- void-server BOOTSTRAP_MODE for lightweight DHT-only deployments
+- render.yaml for one-click Render.com deployment
+- Default bootstrap nodes configured in dht-service.js
+
+---
+
+## Future Ideas
+
+### Federation Bootstrap NPM Package
+Create a shared `@clawedcode/federation-bootstrap` npm package to make it easy for any Node.js server to participate in the DHT network:
+
+```javascript
+import { createFederationBootstrap } from '@clawedcode/federation-bootstrap'
+
+// Add to any Express app
+const federation = createFederationBootstrap({
+  dataDir: './data/federation',
+  capabilities: ['dht-bootstrap']
+})
+
+app.use('/api/federation', federation.routes)
+```
+
+**Benefits:**
+- Zero-config DHT participation
+- Shared codebase between void-server, void-mud, and third-party apps
+- Versioned identity management
+- Standardized federation protocol
+
+---
+
 ### Next Up
 - [ ] Phase 3: AI Enhancements (RAG, embeddings, multi-model)
