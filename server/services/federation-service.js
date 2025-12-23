@@ -323,6 +323,7 @@ class FederationService {
    */
   addPeer(manifest, endpoint) {
     const isNew = !this.peers.has(manifest.serverId);
+    const existingPeer = this.peers.get(manifest.serverId);
     const peer = {
       serverId: manifest.serverId,
       publicKey: manifest.publicKey,
@@ -330,18 +331,17 @@ class FederationService {
       version: manifest.version,
       capabilities: manifest.capabilities,
       plugins: manifest.plugins,
-      trustLevel: 'unknown',
+      trustLevel: manifest.trustLevel || existingPeer?.trustLevel || 'unknown',
+      isProtected: manifest.isProtected || existingPeer?.isProtected || false,
       lastSeen: new Date().toISOString(),
-      addedAt: this.peers.has(manifest.serverId)
-        ? this.peers.get(manifest.serverId).addedAt
-        : new Date().toISOString(),
+      addedAt: existingPeer?.addedAt || new Date().toISOString(),
       healthScore: 1.0,
       failedChecks: 0
     };
 
     this.peers.set(manifest.serverId, peer);
     this.savePeers();
-    console.log(`🌐 Added/updated peer: ${peer.serverId}`);
+    console.log(`🌐 Added/updated peer: ${peer.serverId}${peer.isProtected ? ' (protected)' : ''}`);
 
     // Save to Neo4j for persistent storage
     const peerService = getPeerServiceLazy();
@@ -356,7 +356,8 @@ class FederationService {
         serverId: peer.serverId,
         endpoint: peer.endpoint,
         capabilities: peer.capabilities,
-        trustLevel: peer.trustLevel
+        trustLevel: peer.trustLevel,
+        isProtected: peer.isProtected
       }
     });
 

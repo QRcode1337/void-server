@@ -374,7 +374,8 @@ class DHTService {
     // These are official ClawedCode bootstrap nodes for initial network entry
     const defaultBootstrap = [
       // Primary bootstrap node hosted on void-mud (Render.com)
-      { endpoint: 'https://void-mud.onrender.com', name: 'ClawedCode Primary' }
+      // This is a trusted network anchor - cannot be blocked or deleted
+      { endpoint: 'https://void-mud.onrender.com', name: 'ClawedCode Primary', trusted: true, protected: true }
     ];
 
     if (fs.existsSync(BOOTSTRAP_PATH)) {
@@ -452,7 +453,9 @@ class DHTService {
           this.federationService.addPeer({
             serverId: result.serverId,
             publicKey: result.publicKey,
-            capabilities: result.capabilities || ['dht-bootstrap']
+            capabilities: result.capabilities || ['dht-bootstrap'],
+            trustLevel: bootstrap.trusted ? 'trusted' : 'unknown',
+            isProtected: bootstrap.protected || false
           }, bootstrap.endpoint);
 
           broadcast('federation:bootstrap', {

@@ -4,6 +4,8 @@ import {
   Server,
   Users,
   Shield,
+  ShieldCheck,
+  ShieldOff,
   Network,
   RefreshCw,
   Plus,
@@ -155,6 +157,7 @@ const FederationPage = () => {
   const [addPeerEndpoint, setAddPeerEndpoint] = useState('');
   const [addPeerNodeId, setAddPeerNodeId] = useState('');
   const [connectMode, setConnectMode] = useState('endpoint'); // 'endpoint' or 'nodeId'
+  const [confirmAction, setConfirmAction] = useState(null); // { type: 'block'|'delete', peer }
   const { on, off } = useWebSocket();
 
   const fetchData = useCallback(async () => {
@@ -282,7 +285,10 @@ const FederationPage = () => {
     }
   };
 
-  const blockPeer = async (serverId) => {
+  const confirmBlockPeer = async () => {
+    if (!confirmAction || confirmAction.type !== 'block') return;
+    const { serverId } = confirmAction.peer;
+
     const res = await fetch(`/api/federation/peers/neo4j/${serverId}/block`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -292,6 +298,7 @@ const FederationPage = () => {
       toast.success(`Blocked ${serverId}`);
       fetchData();
     }
+    setConfirmAction(null);
   };
 
   const unblockPeer = async (serverId) => {
@@ -304,7 +311,10 @@ const FederationPage = () => {
     }
   };
 
-  const deletePeer = async (serverId) => {
+  const confirmDeletePeer = async () => {
+    if (!confirmAction || confirmAction.type !== 'delete') return;
+    const { serverId } = confirmAction.peer;
+
     const res = await fetch(`/api/federation/peers/neo4j/${serverId}`, {
       method: 'DELETE',
     });
@@ -312,6 +322,7 @@ const FederationPage = () => {
       toast.success(`Deleted ${serverId}`);
       fetchData();
     }
+    setConfirmAction(null);
   };
 
   if (loading && !manifest) {
@@ -610,32 +621,40 @@ const FederationPage = () => {
                       {peer.lastSeen ? new Date(peer.lastSeen).toLocaleString() : 'Never'}
                     </td>
                     <td className="py-2">
-                      <div className="flex items-center gap-1">
-                        {peer.trustLevel === 'blocked' ? (
+                      {peer.isProtected ? (
+                        <div className="flex items-center gap-1 text-void-fg-muted" title="Protected bootstrap peer">
+                          <ShieldCheck className="w-4 h-4 text-green-400" />
+                          <span className="text-xs">Protected</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          {peer.trustLevel === 'blocked' ? (
+                            <button
+                              onClick={() => unblockPeer(peer.serverId)}
+                              className="p-1 hover:bg-void-bg-tertiary rounded text-green-400"
+                              title="Unblock peer"
+                            >
+                              <Unlock className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmAction({ type: 'block', peer })}
+                              className="flex items-center gap-1 px-2 py-1 hover:bg-void-bg-tertiary rounded text-yellow-400 text-xs"
+                              title="Block peer"
+                            >
+                              <ShieldOff className="w-4 h-4" />
+                              <span>Block</span>
+                            </button>
+                          )}
                           <button
-                            onClick={() => unblockPeer(peer.serverId)}
-                            className="p-1 hover:bg-void-bg-tertiary rounded text-green-400"
-                            title="Unblock"
+                            onClick={() => setConfirmAction({ type: 'delete', peer })}
+                            className="p-1 hover:bg-void-bg-tertiary rounded text-red-400"
+                            title="Delete peer"
                           >
-                            <Unlock className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                        ) : (
-                          <button
-                            onClick={() => blockPeer(peer.serverId)}
-                            className="p-1 hover:bg-void-bg-tertiary rounded text-yellow-400"
-                            title="Block"
-                          >
-                            <Lock className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deletePeer(peer.serverId)}
-                          className="p-1 hover:bg-void-bg-tertiary rounded text-red-400"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -644,6 +663,58 @@ const FederationPage = () => {
           </div>
         )}
       </Card>
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setConfirmAction(null)}
+        >
+          <div
+            className="bg-void-bg-secondary border border-void-border rounded-lg p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-medium text-void-fg-primary mb-2">
+              {confirmAction.type === 'block' ? 'Block Peer' : 'Delete Peer'}
+            </h3>
+            <p className="text-void-fg-muted mb-4">
+              {confirmAction.type === 'block' ? (
+                <>Are you sure you want to block <strong>{confirmAction.peer.serverId}</strong>? This will prevent communication with this peer.</>
+              ) : (
+                <>Are you sure you want to delete <strong>{confirmAction.peer.serverId}</strong>? This will remove this peer from your federation network.</>
+              )}
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmAction(null)}
+                className="px-4 py-2 text-sm bg-void-bg-tertiary hover:bg-void-bg-elevated rounded-lg border border-void-border transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAction.type === 'block' ? confirmBlockPeer : confirmDeletePeer}
+                className={`px-4 py-2 text-sm text-white rounded-lg transition-colors flex items-center gap-2 ${
+                  confirmAction.type === 'block'
+                    ? 'bg-yellow-600 hover:bg-yellow-700'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                {confirmAction.type === 'block' ? (
+                  <>
+                    <ShieldOff className="w-4 h-4" />
+                    Block
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
