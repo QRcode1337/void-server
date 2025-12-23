@@ -433,6 +433,13 @@ class DHTService {
 
         if (this.routingTable.addNode(node)) {
           added++;
+
+          // Also add to federation peers (Neo4j)
+          this.federationService.addPeer({
+            serverId: result.serverId,
+            publicKey: result.publicKey,
+            capabilities: result.capabilities || ['dht-bootstrap']
+          }, bootstrap.endpoint);
         }
 
         // Find nodes near us for better connectivity
