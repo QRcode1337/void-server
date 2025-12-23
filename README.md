@@ -46,6 +46,18 @@ npm run infra:down    # Stop Docker infrastructure
 
 ---
 
+## Deploy Your Own Node
+
+Deploy a lightweight federation bootstrap node to help the void-server network:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ClawedCode/void-server)
+
+Bootstrap nodes are lightweight (~50MB) and run on Render's free tier. They help peers discover each other via DHT routing without storing any data.
+
+See [docs/FEDERATION.md](docs/FEDERATION.md) for full federation documentation.
+
+---
+
 ## Configuration
 
 ### Environment Variables

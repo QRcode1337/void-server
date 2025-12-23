@@ -10,6 +10,54 @@ Federation enables multiple void-server instances to:
 - Build trust relationships between peers
 - Pin memories to IPFS for decentralized storage
 
+## Bootstrap Nodes
+
+Bootstrap nodes are the entry points to the federation network. They help new nodes discover existing peers via DHT (Distributed Hash Table) routing.
+
+### How It Works
+
+1. When void-server starts, it connects to known bootstrap nodes
+2. Bootstrap nodes share their routing tables with the new node
+3. The new node can now discover and connect to other peers via DHT lookup
+4. Once connected to any peer, DHT queries can find any other node in the network
+
+### Deploy Your Own Bootstrap Node
+
+Deploy a lightweight bootstrap node with one click:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ClawedCode/void-server)
+
+Bootstrap nodes run in "Bootstrap Mode" which:
+- Enables only federation/DHT endpoints
+- Disables memory storage, AI, plugins, and other features
+- Uses minimal resources (~50MB RAM)
+- Works on Render.com's free tier
+
+### Configure Bootstrap Nodes
+
+Add known bootstrap nodes to your local configuration:
+
+```bash
+# Via API
+curl -X POST http://localhost:4420/api/federation/dht/bootstrap-nodes \
+  -H "Content-Type: application/json" \
+  -d '{"endpoint": "https://your-bootstrap.onrender.com", "name": "My Bootstrap"}'
+
+# Or edit the config file directly
+# data/federation/bootstrap-nodes.json
+[
+  { "endpoint": "https://void-bootstrap-1.onrender.com", "name": "Primary" }
+]
+```
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BOOTSTRAP_MODE` | `false` | Enable lightweight bootstrap mode |
+| `PORT` | `4420` | Server port |
+| `PUBLIC_URL` | auto | Your server's public URL (for federation) |
+
 ## Getting Your Connection Info
 
 ### Via the UI

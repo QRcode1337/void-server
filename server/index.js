@@ -8,45 +8,59 @@ const { Server } = require('socket.io');
 const { spawn } = require('child_process');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
-// Plugin management module
-const pluginManager = require('./plugins');
+// Bootstrap mode: lightweight DHT routing node (no Neo4j, IPFS, Ollama, memories)
+const BOOTSTRAP_MODE = process.env.BOOTSTRAP_MODE === 'true';
+if (BOOTSTRAP_MODE) {
+  console.log('🌐 Starting in BOOTSTRAP MODE (DHT routing only)');
+}
 
-// Provider system
-const aiProvider = require('./services/ai-provider');
-const aiProvidersRoutes = require('./routes/ai-providers');
+// Plugin management module (skip in bootstrap mode)
+const pluginManager = BOOTSTRAP_MODE ? null : require('./plugins');
 
-// Prompt and Chat system
-const promptExecutor = require('./services/prompt-executor');
-const promptsRoutes = require('./routes/prompts');
-const chatRoutes = require('./routes/chat');
-
-// Memory system
-const memoriesRoutes = require('./routes/memories');
-
-// Backup system
-const backupRoutes = require('./routes/backup');
-const { setIO } = require('./utils/broadcast');
-
-// Browser management
-const browsersRoutes = require('./routes/browsers');
-const browserService = require('./services/browser-service');
-
-// FFmpeg service (for plugins that need video processing)
-const ffmpegService = require('./services/ffmpeg-service');
-
-// Version management
-const versionRoutes = require('./routes/version');
-const versionService = require('./services/version-service');
-
-// IPFS management
-const ipfsRoutes = require('./routes/ipfs');
-
-// Ollama management
-const ollamaRoutes = require('./routes/ollama');
-const ollamaService = require('./services/ollama-service');
-
-// Federation management
+// Federation management (always loaded - core of bootstrap mode)
 const federationRoutes = require('./routes/federation');
+
+// The following services are skipped in bootstrap mode
+let aiProvider, aiProvidersRoutes, promptExecutor, promptsRoutes, chatRoutes;
+let memoriesRoutes, backupRoutes, browsersRoutes, browserService, ffmpegService;
+let versionRoutes, versionService, ipfsRoutes, ollamaRoutes, ollamaService;
+let setIO;
+
+if (!BOOTSTRAP_MODE) {
+  // Provider system
+  aiProvider = require('./services/ai-provider');
+  aiProvidersRoutes = require('./routes/ai-providers');
+
+  // Prompt and Chat system
+  promptExecutor = require('./services/prompt-executor');
+  promptsRoutes = require('./routes/prompts');
+  chatRoutes = require('./routes/chat');
+
+  // Memory system
+  memoriesRoutes = require('./routes/memories');
+
+  // Backup system
+  backupRoutes = require('./routes/backup');
+  setIO = require('./utils/broadcast').setIO;
+
+  // Browser management
+  browsersRoutes = require('./routes/browsers');
+  browserService = require('./services/browser-service');
+
+  // FFmpeg service (for plugins that need video processing)
+  ffmpegService = require('./services/ffmpeg-service');
+
+  // Version management
+  versionRoutes = require('./routes/version');
+  versionService = require('./services/version-service');
+
+  // IPFS management
+  ipfsRoutes = require('./routes/ipfs');
+
+  // Ollama management
+  ollamaRoutes = require('./routes/ollama');
+  ollamaService = require('./services/ollama-service');
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -57,8 +71,10 @@ const io = new Server(server, {
   }
 });
 
-// Set up broadcast utility with socket.io instance
-setIO(io);
+// Set up broadcast utility with socket.io instance (skip in bootstrap mode)
+if (!BOOTSTRAP_MODE && setIO) {
+  setIO(io);
+}
 
 const PORT = process.env.PORT || 4401;
 if (!process.env.CONTENT_DIR) {
@@ -213,54 +229,68 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: APP_VERSION });
 });
 
-// Providers API
-app.use('/api/ai-providers', aiProvidersRoutes);
-
-// Prompts and Chat API
-app.use('/api/prompts', promptsRoutes);
-app.use('/api/chat', chatRoutes);
-
-// Memories API
-app.use('/api/memories', memoriesRoutes);
-
-// Backup API
-app.use('/api/backup', backupRoutes);
-
-// Browsers API
-app.use('/api/browsers', browsersRoutes);
-
-// Version API
-app.use('/api/version', versionRoutes);
-
-// IPFS API
-app.use('/api/ipfs', ipfsRoutes);
-
-// Ollama API
-app.use('/api/ollama', ollamaRoutes);
-
-// Federation API
+// Federation API (always mounted - core of bootstrap mode)
 app.use('/api/federation', federationRoutes);
+
+// The following routes are skipped in bootstrap mode
+if (!BOOTSTRAP_MODE) {
+  // Providers API
+  app.use('/api/ai-providers', aiProvidersRoutes);
+
+  // Prompts and Chat API
+  app.use('/api/prompts', promptsRoutes);
+  app.use('/api/chat', chatRoutes);
+
+  // Memories API
+  app.use('/api/memories', memoriesRoutes);
+
+  // Backup API
+  app.use('/api/backup', backupRoutes);
+
+  // Browsers API
+  app.use('/api/browsers', browsersRoutes);
+
+  // Version API
+  app.use('/api/version', versionRoutes);
+
+  // IPFS API
+  app.use('/api/ipfs', ipfsRoutes);
+
+  // Ollama API
+  app.use('/api/ollama', ollamaRoutes);
+}
 
 // Plugins API
 // Note: Plugin routes are defined inline below for enhanced functionality
 // (Docker auto-rebuild, runtime status, etc.)
 
-// Initialize Provider system
-aiProvider.initialize();
+// Initialize services (skip in bootstrap mode)
+if (!BOOTSTRAP_MODE) {
+  // Initialize Provider system
+  aiProvider.initialize();
 
-// Pull configured Ollama models on startup (non-blocking)
-if (process.env.OLLAMA_MODELS) {
-  ollamaService.pullConfiguredModels().then(results => {
-    const success = results.filter(r => r.success).length;
-    console.log(`🦙 Ollama: pulled ${success}/${results.length} models`);
-  }).catch(() => {});
+  // Pull configured Ollama models on startup (non-blocking)
+  if (process.env.OLLAMA_MODELS) {
+    ollamaService.pullConfiguredModels().then(results => {
+      const success = results.filter(r => r.success).length;
+      console.log(`🦙 Ollama: pulled ${success}/${results.length} models`);
+    }).catch(() => {});
+  }
+
+  // Initialize Prompt Executor (which initializes prompt and chat services)
+  promptExecutor.initialize();
 }
 
-// Initialize Prompt Executor (which initializes prompt and chat services)
-promptExecutor.initialize();
-
-// Plugin Manager
+// Plugin Manager (skip in bootstrap mode)
 const plugins = [];
+
+// Bootstrap mode skips all plugin functionality
+if (BOOTSTRAP_MODE) {
+  // Minimal API for bootstrap mode - just return empty plugins
+  app.get('/api/plugins', (req, res) => {
+    res.json({ installed: [], available: [], loadedPlugins: [], bootstrapMode: true });
+  });
+}
 
 // Load saved plugin configurations
 function loadPluginConfig() {
@@ -415,10 +445,13 @@ function loadPlugins() {
   }
 }
 
-// Load plugins BEFORE defining the catch-all route
-loadPlugins();
+// Load plugins BEFORE defining the catch-all route (skip in bootstrap mode)
+if (!BOOTSTRAP_MODE) {
+  loadPlugins();
+}
 
-// API to get plugins (enhanced to include installed and available)
+// API to get plugins (enhanced to include installed and available) - skip in bootstrap mode
+if (!BOOTSTRAP_MODE) {
 app.get('/api/plugins', (req, res) => {
   const installed = pluginManager.listInstalledPlugins();
   const available = pluginManager.listAvailablePlugins();
@@ -607,6 +640,7 @@ app.post('/api/plugins/:name/update', async (req, res) => {
   const result = await pluginManager.updatePlugin(name);
   res.json(result);
 });
+} // End of !BOOTSTRAP_MODE block for plugin routes
 
 // API to restart the server
 app.post('/api/server/restart', (req, res) => {
@@ -820,8 +854,14 @@ if (isDev) {
 }
 
 server.listen(PORT, () => {
-  console.log(`🚀 Void Server Core running on port ${PORT}`);
-  console.log(`📂 Content Directory: ${CONTENT_DIR}`);
+  if (BOOTSTRAP_MODE) {
+    console.log(`🌐 Void Bootstrap Node running on port ${PORT}`);
+    console.log(`🔗 Federation endpoints: /api/federation/*`);
+    console.log(`💡 Connect peers to this node for DHT discovery`);
+  } else {
+    console.log(`🚀 Void Server Core running on port ${PORT}`);
+    console.log(`📂 Content Directory: ${CONTENT_DIR}`);
+  }
   console.log(`🔌 WebSocket server ready`);
 
   // Start PM2 log streaming if running under PM2
@@ -830,8 +870,8 @@ server.listen(PORT, () => {
     console.log(`📋 PM2 log streaming initialized`);
   }
 
-  // Check if user plugins need to be rebuilt into client bundle (production only)
-  if (!isDev) {
+  // Check if user plugins need to be rebuilt into client bundle (production only, skip in bootstrap mode)
+  if (!isDev && !BOOTSTRAP_MODE && versionService) {
     const pluginsNeedingRebuild = versionService.getPluginsNeedingRebuild();
     if (pluginsNeedingRebuild.length > 0) {
       console.log(`🔧 User plugins not in client bundle: ${pluginsNeedingRebuild.join(', ')}`);

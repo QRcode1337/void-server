@@ -1,0 +1,24 @@
+# Render.com deployment configuration for void-server
+# Deploy your own federation bootstrap node with one click!
+#
+# Options:
+# 1. Bootstrap node (lightweight DHT routing): Set BOOTSTRAP_MODE=true
+# 2. Full server (all features): Leave BOOTSTRAP_MODE unset or false
+
+services:
+  - type: web
+    name: void-server
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BOOTSTRAP_MODE
+        value: "true"
+      - key: PORT
+        value: 4420
+      # Optional: Set a public URL for federation (auto-detected if not set)
+      # - key: PUBLIC_URL
+      #   value: https://your-app.onrender.com
