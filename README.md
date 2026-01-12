@@ -20,7 +20,7 @@ A modular, plugin-based creative platform for building and running your own sove
 ### 2. Run
 
 ```bash
-git clone https://github.com/ClawedCode/void-server.git
+git clone https://github.com/QRCode1337/void-server.git
 cd void-server
 ./setup.sh    # Installs deps, starts Docker infra, starts void-server with PM2
 ```
@@ -32,8 +32,8 @@ The setup script:
 
 ### 3. Access
 
-- **Local:** http://localhost:4420
-- **Remote:** `http://<tailscale-ip>:4420` (if Tailscale installed)
+- **Local:** http://localhost:4401
+- **Remote:** `http://<tailscale-ip>:4401` (if Tailscale installed)
 
 **Manage services:**
 ```bash
