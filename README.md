@@ -74,7 +74,7 @@ LM_STUDIO_URL=http://localhost:1234/v1
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `4420` | Server port |
+| `PORT` | `4401` | Server port |
 | `NEO4J_URI` | `bolt://localhost:7687` | Neo4j connection URI |
 | `NEO4J_USER` | `neo4j` | Neo4j username |
 | `NEO4J_PASSWORD` | `voidserver` | Neo4j database password |
@@ -104,7 +104,7 @@ Access your Void Server from your phone or anywhere using [Tailscale](https://ta
 
 1. Install Tailscale on your server and phone
 2. Sign in with the same account
-3. Access via Tailscale IP: `http://100.x.y.z:4420`
+3. Access via Tailscale IP: `http://100.x.y.z:4401`
 
 See [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md) for detailed setup instructions.
 
@@ -192,17 +192,17 @@ Void Server uses a hybrid architecture: the application runs natively with PM2 w
                       │
               ┌───────┴───────┐
               │ Tailscale VPN │
-              │ 100.x.y.z:4420│
+              │ 100.x.y.z:4401│
               └───────┬───────┘
                       │
-              (or localhost:4420)
+              (or localhost:4401)
                       │
                       ▼
 ┌───────────────────────────────────────────────────────────┐
 │                  HOST MACHINE (NATIVE)                    │
 │                                                           │
 │  ┌─────────────────────────────────────────────────────┐  │
-│  │               void-server (PM2) :4420               │  │
+│  │               void-server (PM2) :4401               │  │
 │  │  ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌───────┐│  │
 │  │  │ Express │   │  React  │   │ Plugins │   │ WS    ││  │
 │  │  │   API   │   │  Client │   │ System  │   │ Logs  ││  │
@@ -253,7 +253,7 @@ Void Server uses a hybrid architecture: the application runs natively with PM2 w
 
 | Service | Port | Purpose |
 |---------|------|---------|
-| Void Server | 4420 | Main application (Express + React) |
+| Void Server | 4401 | Main application (Express + React) |
 | Neo4j Browser | 7474 | Database admin UI |
 | Neo4j Bolt | 7687 | Database connection |
 | IPFS API | 5001 | IPFS node API |
